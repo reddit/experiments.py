@@ -1,4 +1,4 @@
-from baseplate.experiments.variant_sets.base import VariantSet
+from baseplate.lib.experiments.variant_sets.base import VariantSet
 
 
 class SingleVariantSet(VariantSet):

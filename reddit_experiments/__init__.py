@@ -3,11 +3,11 @@ import logging
 
 from enum import Enum
 
-from baseplate import config
-from baseplate.context import ContextFactory
-from baseplate.events import DebugLogger
-from baseplate.experiments.providers import parse_experiment
-from baseplate.file_watcher import FileWatcher, WatchedFileNotAvailableError
+from baseplate.lib import config
+from baseplate.clients import ContextFactory
+from baseplate.lib.events import DebugLogger
+from baseplate.lib.experiments.providers import parse_experiment
+from baseplate.lib.file_watcher import FileWatcher, WatchedFileNotAvailableError
 
 
 logger = logging.getLogger(__name__)
@@ -21,13 +21,13 @@ class EventType(Enum):
 class ExperimentsContextFactory(ContextFactory):
     """Experiment client context factory.
 
-    This factory will attach a new :py:class:`baseplate.experiments.Experiments`
+    This factory will attach a new :py:class:`baseplate.lib.experiments.Experiments`
     to an attribute on the :term:`context object`.
 
     :param str path: Path to the experiment config file.
-    :param baseplate.events.EventLogger event_logger: The logger to use to log
+    :param baseplate.lib.events.EventLogger event_logger: The logger to use to log
         experiment eligibility events. If not provided, a
-        baseplate.events.DebugLogger will be created and used.
+        baseplate.lib.events.DebugLogger will be created and used.
     :param float timeout: How long, in seconds, to block instantiation waiting
         for the watched experiments file to become available (defaults to not
         blocking).
@@ -133,7 +133,7 @@ class Experiments:
         disabled bucketing events for that check.
 
         :param str name: Name of the experiment you want to run.
-        :param baseplate.core.User user: (Optional) User object for the user
+        :param baseplate.lib.edge_context.User user: (Optional) User object for the user
             you want to check the experiment variant for.  If you set user,
             the experiment parameters for that user ("user_id", "logged_in",
             and "user_roles") will be extracted and added to the inputs to the
@@ -208,7 +208,7 @@ class Experiments:
 
         :param str experiment_name: Name of the experiment that was exposed.
         :param str variant_name: Name of the variant that was exposed.
-        :param baseplate.core.User user: (Optional) User object for the user
+        :param baseplate.lib.edge_context.User user: (Optional) User object for the user
             you want to check the experiment variant for. If unset, it is
             expected that user_id and logged_in values will be set in the kwargs
         :param kwargs: Additional arguments that will be passed to logger.
@@ -252,7 +252,7 @@ def experiments_client_from_config(app_config, event_logger, prefix="experiments
 
     :param dict raw_config: The application configuration which should have
         settings for the experiments client.
-    :param baseplate.events.EventLogger event_logger: The EventLogger to be used
+    :param baseplate.lib.events.EventLogger event_logger: The EventLogger to be used
         to log bucketing events.
     :param str prefix: the prefix used to filter keys (defaults to "experiments.").
 

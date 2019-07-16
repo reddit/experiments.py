@@ -1,4 +1,4 @@
-from baseplate.experiments.providers.r2 import R2Experiment
+from baseplate.lib.experiments.providers.r2 import R2Experiment
 
 
 class FeatureFlag(R2Experiment):

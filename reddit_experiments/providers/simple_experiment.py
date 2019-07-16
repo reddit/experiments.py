@@ -2,12 +2,12 @@ import logging
 import hashlib
 import time
 
-from baseplate.experiments.providers.base import Experiment
-from baseplate.experiments.targeting.tree_targeting import create_targeting_tree
-from baseplate.experiments.variant_sets.multi_variant_set import MultiVariantSet
-from baseplate.experiments.variant_sets.range_variant_set import RangeVariantSet
-from baseplate.experiments.variant_sets.rollout_variant_set import RolloutVariantSet
-from baseplate.experiments.variant_sets.single_variant_set import SingleVariantSet
+from baseplate.lib.experiments.providers.base import Experiment
+from baseplate.lib.experiments.targeting.tree_targeting import create_targeting_tree
+from baseplate.lib.experiments.variant_sets.multi_variant_set import MultiVariantSet
+from baseplate.lib.experiments.variant_sets.range_variant_set import RangeVariantSet
+from baseplate.lib.experiments.variant_sets.rollout_variant_set import RolloutVariantSet
+from baseplate.lib.experiments.variant_sets.single_variant_set import SingleVariantSet
 
 
 logger = logging.getLogger(__name__)
@@ -90,8 +90,8 @@ class SimpleExperiment(Experiment):
     providers.
 
     :param int id: The experiment id. This should be unique.
-    :param string name: The human-readable name of the experiment.
-    :param string owner: Who is responsible for this experiement.
+    :param str name: The human-readable name of the experiment.
+    :param str owner: Who is responsible for this experiement.
     :param int start_ts: When this experiment is due to start.
         Variant requests prior to this time will return None. Expects
         timestamp in seconds.

@@ -3,11 +3,11 @@ import time
 
 from datetime import datetime
 
-from baseplate.experiments.providers.feature_flag import FeatureFlag
-from baseplate.experiments.providers.forced_variant import ForcedVariantExperiment
-from baseplate.experiments.providers.r2 import R2Experiment
-from baseplate.experiments.providers.simple_experiment import SimpleExperiment
-from baseplate._utils import warn_deprecated
+from baseplate.lib.experiments.providers.feature_flag import FeatureFlag
+from baseplate.lib.experiments.providers.forced_variant import ForcedVariantExperiment
+from baseplate.lib.experiments.providers.r2 import R2Experiment
+from baseplate.lib.experiments.providers.simple_experiment import SimpleExperiment
+from baseplate.lib import warn_deprecated
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ def parse_experiment(config):
           log bucketing events to the event pipeline.
 
     :param dict config: Configuration dict for the experiment you wish to run.
-    :rtype: :py:class:`baseplate.experiments.providers.base.Experiment`
+    :rtype: :py:class:`baseplate.lib.experiments.providers.base.Experiment`
     :return: A subclass of :py:class:`Experiment` for the given experiment
         type.
     """

@@ -1,7 +1,7 @@
 import logging
 import hashlib
 
-from baseplate.experiments.providers.base import Experiment
+from baseplate.lib.experiments.providers.base import Experiment
 
 
 logger = logging.getLogger(__name__)
@@ -121,7 +121,7 @@ class R2Experiment(Experiment):
         :param str name: The name of the experiment from the base config.
         :param str owner: The owner of the experiment from the base config.
         :param dict config: The "experiment" config dict from the base config.
-        :rtype: :py:class:`baseplate.experiments.providers.r2.R2Experiment`
+        :rtype: :py:class:`baseplate.lib.experiments.providers.r2.R2Experiment`
         """
         return cls(
             id=id,
