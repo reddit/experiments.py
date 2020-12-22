@@ -1,7 +1,7 @@
 from typing import Any
 from typing import Optional
 
-from baseplate.lib.experiments.providers.base import Experiment
+from reddit_experiments.providers.base import Experiment
 
 
 class ForcedVariantExperiment(Experiment):

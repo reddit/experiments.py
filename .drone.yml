@@ -1,0 +1,32 @@
+---
+kind: pipeline
+name: Lint & Test
+
+steps:
+  - name: "Lint"
+    image: python:3.8
+    commands:
+      - pip install -r requirements.txt
+      - make lint
+    depends_on: [clone]
+
+  - name: "Test - Py3.6"
+    image: python:3.6
+    commands:
+      - pip install -r requirements.txt
+      - make test
+    depends_on: [clone]
+
+  - name: "Test - Py3.7"
+    image: python:3.7
+    commands:
+      - pip install -r requirements.txt
+      - make test
+    depends_on: [clone]
+
+  - name: "Test - Py3.8"
+    image: python:3.8
+    commands:
+      - pip install -r requirements.txt
+      - make test
+    depends_on: [clone]

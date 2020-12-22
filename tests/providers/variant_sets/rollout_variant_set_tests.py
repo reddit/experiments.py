@@ -1,7 +1,7 @@
 import logging
 import unittest
 
-from baseplate.lib.experiments.variant_sets.rollout_variant_set import RolloutVariantSet
+from reddit_experiments.variant_sets.rollout_variant_set import RolloutVariantSet
 
 logger = logging.getLogger(__name__)
 

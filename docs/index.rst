@@ -1,7 +1,7 @@
-``baseplate.lib.experiments``
+``reddit_experiments``
 ===============================
 
-.. automodule:: baseplate.lib.experiments
+.. automodule:: reddit_experiments
 
 Configuration Parsing
 ---------------------

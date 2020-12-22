@@ -15,10 +15,11 @@ from baseplate.lib import warn_deprecated
 from baseplate.lib.edge_context import User
 from baseplate.lib.events import DebugLogger
 from baseplate.lib.events import EventLogger
-from baseplate.lib.experiments.providers import parse_experiment
-from baseplate.lib.experiments.providers.base import Experiment
 from baseplate.lib.file_watcher import FileWatcher
 from baseplate.lib.file_watcher import WatchedFileNotAvailableError
+
+from reddit_experiments.providers import parse_experiment
+from reddit_experiments.providers.base import Experiment
 
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ class ExperimentsContextFactory(ContextFactory):
     """Experiment client context factory.
 
     This factory will attach a new
-    :py:class:`baseplate.lib.experiments.Experiments` to an attribute on the
+    :py:class:`reddit_experiments.Experiments` to an attribute on the
     :py:class:`~baseplate.RequestContext`.
 
     :param path: Path to the experiment configuration file.

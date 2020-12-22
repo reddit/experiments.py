@@ -1,8 +1,8 @@
 import unittest
 
-from baseplate.lib.experiments.targeting.tree_targeting import create_targeting_tree
-from baseplate.lib.experiments.targeting.tree_targeting import TargetingNodeError
-from baseplate.lib.experiments.targeting.tree_targeting import UnknownTargetingOperatorError
+from reddit_experiments.targeting.tree_targeting import create_targeting_tree
+from reddit_experiments.targeting.tree_targeting import TargetingNodeError
+from reddit_experiments.targeting.tree_targeting import UnknownTargetingOperatorError
 
 
 def get_simple_config():

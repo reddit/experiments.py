@@ -1,7 +1,7 @@
 from typing import Any
 from typing import Dict
 
-from baseplate.lib.experiments.providers.r2 import R2Experiment
+from reddit_experiments.providers.r2 import R2Experiment
 
 
 class FeatureFlag(R2Experiment):

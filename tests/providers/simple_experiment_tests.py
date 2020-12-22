@@ -6,12 +6,12 @@ import unittest
 from datetime import timedelta
 from unittest import mock
 
-from baseplate.lib.experiments.providers import parse_experiment
-from baseplate.lib.experiments.providers.simple_experiment import _generate_overrides
-from baseplate.lib.experiments.providers.simple_experiment import _generate_targeting
-from baseplate.lib.experiments.targeting.base import Targeting
-from baseplate.lib.experiments.targeting.tree_targeting import EqualNode
-from baseplate.lib.experiments.targeting.tree_targeting import OverrideNode
+from reddit_experiments.providers import parse_experiment
+from reddit_experiments.providers.simple_experiment import _generate_overrides
+from reddit_experiments.providers.simple_experiment import _generate_targeting
+from reddit_experiments.targeting.base import Targeting
+from reddit_experiments.targeting.tree_targeting import EqualNode
+from reddit_experiments.targeting.tree_targeting import OverrideNode
 
 
 THIRTY_DAYS = timedelta(days=30).total_seconds()
@@ -228,9 +228,7 @@ class TestSimpleExperiment(unittest.TestCase):
             percent_equal = float(actual) / expected
             self.assertAlmostEqual(percent_equal, 1.0, delta=0.10, msg="bucket: %s" % bucket)
 
-    @mock.patch(
-        "baseplate.lib.experiments.providers.simple_experiment.SimpleExperiment._choose_variant"
-    )
+    @mock.patch("reddit_experiments.providers.simple_experiment.SimpleExperiment._choose_variant")
     def test_variant_returns_none_if_out_of_time_window(self, choose_variant_mock):
         choose_variant_mock.return_value = "fake_variant"
         valid_cfg = get_simple_config()
@@ -284,9 +282,7 @@ class TestSimpleExperiment(unittest.TestCase):
         variant = experiment.variant(user_id="t2_1")
         self.assertIs(variant, None)
 
-    @mock.patch(
-        "baseplate.lib.experiments.providers.simple_experiment.SimpleExperiment._choose_variant"
-    )
+    @mock.patch("reddit_experiments.providers.simple_experiment.SimpleExperiment._choose_variant")
     def test_bucket_val(self, choose_variant_mock):
         choose_variant_mock.return_value = "fake_variant"
         cfg = {
@@ -475,9 +471,7 @@ class TestSimpleExperiment(unittest.TestCase):
             experiment_with_overrides.get_override(user_id="t2_4"), "override_variant_1"
         )
 
-    @mock.patch(
-        "baseplate.lib.experiments.providers.simple_experiment.SimpleExperiment._choose_variant"
-    )
+    @mock.patch("reddit_experiments.providers.simple_experiment.SimpleExperiment._choose_variant")
     def test_variant_call_with_overrides(self, choose_variant_mock):
         choose_variant_mock.return_value = "mocked_variant"
 

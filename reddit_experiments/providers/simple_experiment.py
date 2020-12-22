@@ -8,14 +8,14 @@ from typing import List
 from typing import Optional
 from typing import Type
 
-from baseplate.lib.experiments.providers.base import Experiment
-from baseplate.lib.experiments.targeting.base import Targeting
-from baseplate.lib.experiments.targeting.tree_targeting import create_targeting_tree
-from baseplate.lib.experiments.variant_sets.base import VariantSet
-from baseplate.lib.experiments.variant_sets.multi_variant_set import MultiVariantSet
-from baseplate.lib.experiments.variant_sets.range_variant_set import RangeVariantSet
-from baseplate.lib.experiments.variant_sets.rollout_variant_set import RolloutVariantSet
-from baseplate.lib.experiments.variant_sets.single_variant_set import SingleVariantSet
+from reddit_experiments.providers.base import Experiment
+from reddit_experiments.targeting.base import Targeting
+from reddit_experiments.targeting.tree_targeting import create_targeting_tree
+from reddit_experiments.variant_sets.base import VariantSet
+from reddit_experiments.variant_sets.multi_variant_set import MultiVariantSet
+from reddit_experiments.variant_sets.range_variant_set import RangeVariantSet
+from reddit_experiments.variant_sets.rollout_variant_set import RolloutVariantSet
+from reddit_experiments.variant_sets.single_variant_set import SingleVariantSet
 
 
 logger = logging.getLogger(__name__)

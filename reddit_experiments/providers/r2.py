@@ -6,7 +6,7 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
-from baseplate.lib.experiments.providers.base import Experiment
+from reddit_experiments.providers.base import Experiment
 
 
 logger = logging.getLogger(__name__)

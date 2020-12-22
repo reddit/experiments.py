@@ -5,11 +5,12 @@ from datetime import datetime
 from typing import Dict
 
 from baseplate.lib import warn_deprecated
-from baseplate.lib.experiments.providers.base import Experiment
-from baseplate.lib.experiments.providers.feature_flag import FeatureFlag
-from baseplate.lib.experiments.providers.forced_variant import ForcedVariantExperiment
-from baseplate.lib.experiments.providers.r2 import R2Experiment
-from baseplate.lib.experiments.providers.simple_experiment import SimpleExperiment
+
+from reddit_experiments.providers.base import Experiment
+from reddit_experiments.providers.feature_flag import FeatureFlag
+from reddit_experiments.providers.forced_variant import ForcedVariantExperiment
+from reddit_experiments.providers.r2 import R2Experiment
+from reddit_experiments.providers.simple_experiment import SimpleExperiment
 
 logger = logging.getLogger(__name__)
 

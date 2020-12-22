@@ -3,7 +3,7 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
-from baseplate.lib.experiments.variant_sets.base import VariantSet
+from reddit_experiments.variant_sets.base import VariantSet
 
 
 class RolloutVariantSet(VariantSet):

@@ -10,11 +10,12 @@ from baseplate import ServerSpan
 from baseplate.lib.edge_context import AuthenticationToken
 from baseplate.lib.edge_context import User
 from baseplate.lib.events import DebugLogger
-from baseplate.lib.experiments import EventType
-from baseplate.lib.experiments import Experiments
-from baseplate.lib.experiments import experiments_client_from_config
-from baseplate.lib.experiments import ExperimentsContextFactory
 from baseplate.lib.file_watcher import FileWatcher
+
+from reddit_experiments import EventType
+from reddit_experiments import Experiments
+from reddit_experiments import experiments_client_from_config
+from reddit_experiments import ExperimentsContextFactory
 
 
 THIRTY_DAYS = timedelta(days=30).total_seconds()
@@ -63,7 +64,7 @@ class TestExperiments(unittest.TestCase):
         )
 
         with mock.patch(
-            "baseplate.lib.experiments.providers.r2.R2Experiment.variant", return_value="active"
+            "reddit_experiments.providers.r2.R2Experiment.variant", return_value="active"
         ):
             self.assertEqual(self.event_logger.log.call_count, 0)
             experiments.variant("test", user=self.user, app_name="r2")
@@ -110,7 +111,7 @@ class TestExperiments(unittest.TestCase):
         )
 
         with mock.patch(
-            "baseplate.lib.experiments.providers.r2.R2Experiment.variant", return_value="active"
+            "reddit_experiments.providers.r2.R2Experiment.variant", return_value="active"
         ):
             self.assertEqual(self.event_logger.log.call_count, 0)
             experiments.variant("test", user=self.user, app_name="r2")
@@ -157,7 +158,7 @@ class TestExperiments(unittest.TestCase):
         )
 
         with mock.patch(
-            "baseplate.lib.experiments.providers.r2.R2Experiment.variant", return_value="active"
+            "reddit_experiments.providers.r2.R2Experiment.variant", return_value="active"
         ):
             self.assertEqual(self.event_logger.log.call_count, 0)
             experiments.variant("test", user_id="t2_2", app_name="r2", logged_in=True)
@@ -203,7 +204,7 @@ class TestExperiments(unittest.TestCase):
         )
 
         with mock.patch(
-            "baseplate.lib.experiments.providers.r2.R2Experiment.variant", return_value="active"
+            "reddit_experiments.providers.r2.R2Experiment.variant", return_value="active"
         ):
             self.assertEqual(self.event_logger.log.call_count, 0)
             experiments.variant("test", user=self.user)
@@ -278,7 +279,7 @@ class TestExperiments(unittest.TestCase):
             event_logger=self.event_logger,
         )
 
-        with mock.patch("baseplate.lib.experiments.providers.r2.R2Experiment.variant") as p:
+        with mock.patch("reddit_experiments.providers.r2.R2Experiment.variant") as p:
             p.return_value = "active"
             self.assertEqual(self.event_logger.log.call_count, 0)
             experiments.variant("test", user=self.user, bucketing_event_override=True)
@@ -305,7 +306,7 @@ class TestExperiments(unittest.TestCase):
             context_name="test",
             event_logger=self.event_logger,
         )
-        with mock.patch("baseplate.lib.experiments.providers.r2.R2Experiment.variant") as p:
+        with mock.patch("reddit_experiments.providers.r2.R2Experiment.variant") as p:
             p.return_value = "active"
             is_valid = experiments.is_valid_experiment("test")
             self.assertEqual(is_valid, True)
@@ -335,7 +336,7 @@ class TestExperiments(unittest.TestCase):
             event_logger=self.event_logger,
         )
 
-        with mock.patch("baseplate.lib.experiments.providers.r2.R2Experiment.variant") as p:
+        with mock.patch("reddit_experiments.providers.r2.R2Experiment.variant") as p:
             p.return_value = "active"
             is_valid = experiments.is_valid_experiment("test")
             self.assertEqual(is_valid, True)
@@ -372,7 +373,7 @@ class TestExperiments(unittest.TestCase):
             context_name="test",
             event_logger=self.event_logger,
         )
-        with mock.patch("baseplate.lib.experiments.providers.r2.R2Experiment.variant") as p:
+        with mock.patch("reddit_experiments.providers.r2.R2Experiment.variant") as p:
             p.return_value = "active"
             experiment_names = experiments.get_all_experiment_names()
             self.assertEqual(len(experiment_names), 2)
@@ -411,7 +412,7 @@ class TestExperiments(unittest.TestCase):
             event_logger=self.event_logger,
         )
 
-        with mock.patch("baseplate.lib.experiments.providers.r2.R2Experiment.variant") as p:
+        with mock.patch("reddit_experiments.providers.r2.R2Experiment.variant") as p:
             p.return_value = "active"
             experiment_names = experiments.get_all_experiment_names()
             self.assertEqual(len(experiment_names), 2)
@@ -441,7 +442,7 @@ class TestExperiments(unittest.TestCase):
             event_logger=self.event_logger,
         )
 
-        with mock.patch("baseplate.lib.experiments.providers.r2.R2Experiment.variant") as p:
+        with mock.patch("reddit_experiments.providers.r2.R2Experiment.variant") as p:
             p.return_value = "active"
             self.assertEqual(self.event_logger.log.call_count, 0)
             experiments.variant("test", user=self.user, bucketing_event_override=False)
@@ -474,9 +475,7 @@ class TestExperiments(unittest.TestCase):
             event_logger=self.event_logger,
         )
 
-        with mock.patch(
-            "baseplate.lib.experiments.providers.r2.R2Experiment.variant", return_value=None
-        ):
+        with mock.patch("reddit_experiments.providers.r2.R2Experiment.variant", return_value=None):
             self.assertEqual(self.event_logger.log.call_count, 0)
             experiments.variant("test", user=self.user)
             self.assertEqual(self.event_logger.log.call_count, 0)
@@ -506,9 +505,9 @@ class TestExperiments(unittest.TestCase):
         )
 
         with mock.patch(
-            "baseplate.lib.experiments.providers.r2.R2Experiment.variant", return_value="active"
+            "reddit_experiments.providers.r2.R2Experiment.variant", return_value="active"
         ), mock.patch(
-            "baseplate.lib.experiments.providers.r2.R2Experiment.should_log_bucketing",
+            "reddit_experiments.providers.r2.R2Experiment.should_log_bucketing",
             return_value=False,
         ):
             self.assertEqual(self.event_logger.log.call_count, 0)
@@ -642,7 +641,7 @@ class TestExperiments(unittest.TestCase):
         self.assertEqual(variant, None)
 
 
-@mock.patch("baseplate.lib.experiments.FileWatcher")
+@mock.patch("reddit_experiments.FileWatcher")
 class ExperimentsClientFromConfigTests(unittest.TestCase):
     def test_make_clients(self, file_watcher_mock):
         event_logger = mock.Mock(spec=DebugLogger)
@@ -718,7 +717,7 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
         self.assertTrue("test" in self.experiments_factory._global_cache)
         self.assertEqual(exp_res.name, "test")
 
-    @mock.patch("baseplate.lib.experiments.parse_experiment")
+    @mock.patch("reddit_experiments.parse_experiment")
     def test_experiments_with_same_name_same_cache(self, m_parse_experiment):
         self.experiments_factory.cfg_mtime = 0.0
         cfg_data = {
@@ -749,7 +748,7 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
         m_parse_experiment.assert_called_once()
         self.assertTrue("test" in self.experiments_factory._global_cache)
 
-    @mock.patch("baseplate.lib.experiments.parse_experiment")
+    @mock.patch("reddit_experiments.parse_experiment")
     def test_experiments_with_different_name_same_cache(self, m_parse_experiment):
         self.experiments_factory.cfg_mtime = 0.0
         value1 = {

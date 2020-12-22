@@ -7,7 +7,7 @@ from typing import Dict
 from typing import List
 from typing import Type
 
-from baseplate.lib.experiments.targeting.base import Targeting
+from reddit_experiments.targeting.base import Targeting
 
 
 logger = logging.getLogger(__name__)

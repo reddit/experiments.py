@@ -4,9 +4,9 @@ import unittest
 from datetime import datetime
 from datetime import timedelta
 
-from baseplate.lib.experiments.providers import ISO_DATE_FMT
-from baseplate.lib.experiments.providers import parse_experiment
-from baseplate.lib.experiments.providers.forced_variant import ForcedVariantExperiment
+from reddit_experiments.providers import ISO_DATE_FMT
+from reddit_experiments.providers import parse_experiment
+from reddit_experiments.providers.forced_variant import ForcedVariantExperiment
 
 THIRTY_DAYS = timedelta(days=30).total_seconds()
 
