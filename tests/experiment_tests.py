@@ -7,10 +7,10 @@ from datetime import timedelta
 from unittest import mock
 
 from baseplate import ServerSpan
-from baseplate.lib.edge_context import AuthenticationToken
-from baseplate.lib.edge_context import User
 from baseplate.lib.events import DebugLogger
 from baseplate.lib.file_watcher import FileWatcher
+from reddit_edgecontext import AuthenticationToken
+from reddit_edgecontext import User
 
 from reddit_experiments import EventType
 from reddit_experiments import Experiments
