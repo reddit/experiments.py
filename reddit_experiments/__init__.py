@@ -1,5 +1,6 @@
 import json
 import logging
+import warnings
 
 from enum import Enum
 from typing import Dict
@@ -132,7 +133,7 @@ class Experiments:
             self._cfg_data = self._get_config()
 
         if name not in self._cfg_data:
-            logger.info("Experiment <%r> not found in experiment config", name)
+            warnings.warn(f"Experiment <{repr(name)}> not found in experiment config")
             return None
 
         try:
