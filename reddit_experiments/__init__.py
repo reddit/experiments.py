@@ -24,7 +24,6 @@ from reddit_experiments.providers.base import Experiment
 
 
 logger = logging.getLogger(__name__)
-logging.captureWarnings(True)
 
 
 class EventType(Enum):
@@ -134,7 +133,7 @@ class Experiments:
             self._cfg_data = self._get_config()
 
         if name not in self._cfg_data:
-            warnings.warn(f"Experiment <{repr(name)}> not found in experiment config", RuntimeWarning)
+            warnings.warn(f"Experiment <{repr(name)}> not found in experiment config")
             return None
 
         try:
