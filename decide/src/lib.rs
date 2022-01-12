@@ -17,7 +17,7 @@ pub struct PyContext {
 
 #[pyclass]
 pub struct PyDecision {
-    inner: Decision,
+    inner: Option<Decision>,
 }
 
 #[pymethods]
@@ -27,7 +27,7 @@ impl PyDecider {
     }
 
     pub fn choose(&self, feature_name: String, ctx: &PyContext) -> Option<PyDecision> {
-        let result = self.inner.choose(feature_name.to_string(), ctx.inner);
+        let result = self.inner.choose(feature_name.to_string(), &ctx.inner);
 
         return match result {
             Ok(res) => Some(PyDecision{inner : res}),
