@@ -1,0 +1,14 @@
+**/*.tmp
+/var/lib/docker/containers/*-json.log
+__pycache__/
+.eggs/
+/*.egg-info
+/.mypy_cache
+/*.md
+/.dockerignore
+/.git
+/Dockerfile
+/tests/range_variant_tests/data/original_zk_config.json
+/tests/range_variant_tests/data/range_variant_zk_config.json
+/tests/range_variant_tests/data/output.json
+venv*
