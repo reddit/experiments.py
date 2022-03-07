@@ -1,17 +1,20 @@
 import json
 import unittest
+
 from unittest import mock
 
 from baseplate import ServerSpan
 from baseplate.lib.file_watcher import FileWatcher
 from reddit_edgecontext import AuthenticationToken
 from reddit_edgecontext import User
+
 from reddit_experiments import Experiments
 
-ORIGINAL_ZK_CONFIG_FILE = 'tests/range_variant_tests/data/original_zk_config.json'
-RANGE_VARIANT_ZK_CONFIG_FILE = 'tests/range_variant_tests/data/range_variant_zk_config.json'
-RESULTS_OUTPUT = 'tests/range_variant_tests/data/output.json'
+ORIGINAL_ZK_CONFIG_FILE = "tests/range_variant_tests/data/original_zk_config.json"
+RANGE_VARIANT_ZK_CONFIG_FILE = "tests/range_variant_tests/data/range_variant_zk_config.json"
+RESULTS_OUTPUT = "tests/range_variant_tests/data/output.json"
 NUMBER_OF_TEST_USERS = 1000
+
 
 class TestExperiments(unittest.TestCase):
     def setUp(self):
@@ -32,14 +35,14 @@ class TestExperiments(unittest.TestCase):
             config_watcher=self.mock_filewatcher,
             server_span=self.mock_span,
             context_name="test",
-            cfg_data=self.original_zk_config
+            cfg_data=self.original_zk_config,
         )
 
         rv_experiments = Experiments(
             config_watcher=self.mock_filewatcher,
             server_span=self.mock_span,
             context_name="test",
-            cfg_data=self.range_variant_zk_config
+            cfg_data=self.range_variant_zk_config,
         )
 
         # results = {}
@@ -52,8 +55,12 @@ class TestExperiments(unittest.TestCase):
                     loid=uuid,
                     cookie_created_ms=10000,
                 )
-                og_variant = original_experiments.variant(experiment_name, user=user, app_name="", build_number=0)
-                rv_variant = rv_experiments.variant(experiment_name, user=user, app_name="", build_number=0)
+                og_variant = original_experiments.variant(
+                    experiment_name, user=user, app_name="", build_number=0
+                )
+                rv_variant = rv_experiments.variant(
+                    experiment_name, user=user, app_name="", build_number=0
+                )
 
                 if og_variant != rv_variant:
                     print(f"\n\nexperiment: {experiment_name}")
