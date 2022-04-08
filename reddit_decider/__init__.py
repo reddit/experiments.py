@@ -1,6 +1,5 @@
 import logging
 
-from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional
 
 from baseplate import Span
@@ -19,18 +18,6 @@ logger = logging.getLogger(__name__)
 
 EMPLOYEE_ROLES = ("employee", "contractor")
 EVENT_TYPE = "expose"
-
-
-@dataclass
-class ExperimentConfig:
-    id: int
-    version: int
-    name: str
-    variant: str
-    bucket_val: str
-    start_ts: int
-    stop_ts: int
-    owner: str
 
 
 class DeciderContext:
@@ -197,94 +184,13 @@ class Decider:
 
         return variant
 
-    def get_variant_without_expose(self, experiment_name: str) -> Optional[str]:
-        """Return a bucketing variant, if any, without emitting exposure event.
+    # todo:
+    # def get_variant_without_expose(self, experiment_name: str) -> Optional[str]:
 
-        The `expose()` function is available to manually call afterward.
-
-        :param experiment_name: Name of the experiment you want to run.
-
-        :param exposure_kwargs:  Additional arguments that will be passed
-            to events_logger under "inputs" key.
-
-        :return: Variant name if a variant is assigned, None otherwise.
-        """
-        decider = self._get_decider()
-        if decider is None:
-            logger.warning("Rust decider did not initialize.")
-            return None
-
-        # `choose()` is executed in Rust Decider lib
-        #  https://github.snooguts.net/reddit/decider
-        choice = decider.choose(experiment_name, self._decider_context.to_dict())
-        error = choice.err()
-        variant = choice.decision()
-
-        if error:
-            logger.warning(f"Encountered error in Rust Decider: {error}")
-            return None
-        else:
-            pass
-            # todo: implement HG expose (requires rust updates)
-            # context_fields = self._decider_context.to_dict()
-            # inputs = self._decider_context.get_user_event_fields()
-            # force expose for Holdout Groups
-            # for event in choice.events:
-            #     # decider event:
-            #     “experiment_id:experiment_name:experiment_version:variant_name:bucket_val:start_ts:stop_ts:owner:event_type"
-            #     id, name, version, variant, bucket_val, start_ts, stop_ts, owner, event_type = event.split(“:”)
-            #     if event_type == "1": # 0 for primary, 1 for Holdout
-            #         experiment = ExperimentConfig(
-            #             id=id,
-            #             name=name,
-            #             version=version,
-            #             variant=variant,
-            #             bucket_val=bucket_val,
-            #             start_ts=start_ts,
-            #             stop_ts=stop_ts,
-            #             owner=owner
-            #         )
-            #         self._event_logger.log(
-            #             experiment=experiment,
-            #             variant=variant,
-            #             span=self._span,
-            #             event_type=EVENT_TYPE,
-            #             inputs=inputs,
-            #             **context_fields,
-            #         )
-
-        return variant
-
-    def expose(
-        self, experiment_name: str, variant_name: str, **exposure_kwargs: Optional[Dict[str, Any]]
-    ) -> None:
-        """Log an event to indicate that a user has been exposed to an experimental treatment.
-
-        Meant to be used after calling `get_variant_without_expose()`
-        since `get_variant()` emits exposure event automatically.
-
-        :param experiment_name: Name of the experiment that was exposed.
-        :param variant_name: Name of the variant that was exposed.
-        :param exposure_kwargs: Additional arguments that will be passed to events_logger under "inputs" key.
-
-        """
-        # context_fields = self._decider_context.to_dict()
-        # inputs = self._decider_context.get_user_event_fields()
-        # inputs.update(exposure_kwargs or {})
-
-        # todo: either implement `rust_decider.get_experiment(experiment_name)`
-        # or get experiment from json.parse(file.name) in `init_decider_parser()`
-        #
-        # experiment_fields = self.get_decider.get_experiment_fields()
-        # experiment = ExperimentConfig(**experiment_fields)
-        # self._event_logger.log(
-        #     experiment=experiment,
-        #     variant=variant_name,
-        #     span=self._span,
-        #     event_type=EVENT_TYPE,
-        #     inputs=inputs,
-        #     **context_fields,
-        # )
+    # todo:
+    # def expose(
+    #     self, experiment_name: str, variant_name: str, **exposure_kwargs: Optional[Dict[str, Any]]
+    # ) -> None:
 
 
 class DeciderContextFactory(ContextFactory):
@@ -370,37 +276,6 @@ class DeciderContextFactory(ContextFactory):
             server_span=span,
             context_name=name,
             event_logger=self._event_logger,
-        )
-
-
-class DeciderClient(config.Parser):
-    """Configure an experiments client.
-
-    This is meant to be used with
-    :py:meth:`baseplate.Baseplate.configure_context`.
-
-    See :py:func:`decider_client_from_config` for available configuration settings.
-
-    :param event_logger: The EventLogger instance to be used to log bucketing events.
-
-    :param request_field_extractor: an optional function used to populate
-        "app_name" & "build_number" fields in DeciderContext()
-    """
-
-    def __init__(
-        self,
-        event_logger: EventLogger,
-        request_field_extractor: Callable[[BaseplateRequest], Dict[str, str]] = None
-    ):
-        self.event_logger = event_logger
-        self.request_field_extractor = request_field_extractor
-
-    def parse(self, key_path: str, raw_config: config.RawConfig) -> DeciderContextFactory:
-        return decider_client_from_config(
-            app_config=raw_config,
-            event_logger=self.event_logger,
-            prefix=f"{key_path}.",
-            request_field_extractor=self.request_field_extractor
         )
 
 
