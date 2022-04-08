@@ -155,10 +155,11 @@ class TestDeciderGetVariant(unittest.TestCase):
                 "owner": "test_owner",
                 "experiment": {
                     "variants": [
-                        {"range_start": 0.0, "range_end": 0.2, "name": "active"},
-                        {"range_start": 0.2, "range_end": 0.4, "name": "control_1"},
-                        {"range_start": 0.4, "range_end": 0.6, "name": "control_2"},
+                        {"range_start": 0.0, "range_end": 0.2, "name": "control_1"},
+                        {"range_start": 0.2, "range_end": 0.4, "name": "control_2"},
+                        {"range_start": 0.4, "range_end": 0.6, "name": "variant_2"},
                         {"range_start": 0.6, "range_end": 0.8, "name": "variant_3"},
+                        {"range_start": 0.8, "range_end": 1.0, "name": "variant_4"},
                     ],
                     "experiment_version": 2,
                     "shuffle_version": 0,

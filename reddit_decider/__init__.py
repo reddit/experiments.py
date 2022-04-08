@@ -120,7 +120,7 @@ class Decider:
     ) -> Optional[str]:
         """Return a bucketing variant, if any, with auto-exposure.
 
-        Since calling get_variant)() will fire an exposure event, it
+        Since calling get_variant() will fire an exposure event, it
         is best to call this when you are making the decision that
         will expose the experiment to the user.
         If you absolutely must check the status of an experiment
