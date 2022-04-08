@@ -52,7 +52,7 @@ class DeciderContext:
         build_number: Optional[str] = None,
         loid: Optional[str] = None,
         cookie_created_timestamp: Optional[float] = None,
-        event_fields: Dict[str, Any] = None
+        user_event_fields: Dict[str, Any] = None
     ):
         self._user_id = user_id
         self._country_code = country_code
@@ -65,10 +65,10 @@ class DeciderContext:
         self._build_number = build_number
         self._loid = loid
         self._cookie_created_timestamp = cookie_created_timestamp
-        self._event_fields = event_fields
+        self._user_event_fields = user_event_fields
 
-    def get_event_fields(self):
-        return self._event_fields or {}
+    def get_user_event_fields(self):
+        return self._user_event_fields or {}
 
     def to_dict(self):
         return {
@@ -146,7 +146,7 @@ class DeciderContextFactory(ContextFactory):
         else:
             extracted_fields = {}
 
-        event_fields = ec.user.event_fields()
+        user_event_fields = ec.user.event_fields()
         try:
             decider_context = DeciderContext(
                 user_id=ec.user.id,
@@ -159,8 +159,8 @@ class DeciderContextFactory(ContextFactory):
                 authentication_token=ec.authentication_token,
                 app_name=extracted_fields.get("app_name"),
                 build_number=extracted_fields.get("build_number"),
-                cookie_created_timestamp=event_fields.get("cookie_created_timestamp"),
-                event_fields=event_fields,
+                cookie_created_timestamp=user_event_fields.get("cookie_created_timestamp"),
+                user_event_fields=user_event_fields,
             )
         except Exception as exc:
             logger.warning("Could not create full DeciderContext(): %s", str(exc))
@@ -217,21 +217,22 @@ class Decider:
         experiment_name: Optional[str] = None,
         **exposure_kwargs: Optional[Dict[str, Any]]
     ) -> Optional[str]:
-        r"""Return a bucketing variant, if any.
+        """Return a bucketing variant, if any, with auto-exposure.
 
         Since calling get_variant)() will fire an exposure event, it
         is best to call this when you are making the decision that
-        will expose the experiment to the user.  If you absolutely must check
-        the status of an experiment before you are sure that the experiment
-        will be exposed to the user, you can use `get_variant_without_expose()` to
-        disabled exposure events for that check and call `expose()` manually later.
+        will expose the experiment to the user.
+        If you absolutely must check the status of an experiment
+        before you are sure that the experiment will be exposed to the user,
+        you can use `get_variant_without_expose()` to disable exposure events
+        and call `expose()` manually later.
 
         :param experiment_name: Name of the experiment you want to run.
 
-        :param exposure_kwargs:  Addiotional arguments that will be passed to expose().
+        :param exposure_kwargs:  Additional arguments that will be passed
+            to events_logger under "inputs" key.
 
         :return: Variant name if a variant is assigned, None otherwise.
-
         """
         decider = self._get_decider()
         if decider is None:
@@ -250,7 +251,8 @@ class Decider:
             return None
         else:
             pass
-            # inputs = self._decider_context.get_event_fields()
+            # todo: implement expose (requires rust updates)
+            # inputs = self._decider_context.get_user_event_fields()
             # inputs.update(exposure_kwargs or {})
             # for event in choice.events:
             #     decider event:
@@ -282,6 +284,17 @@ class Decider:
         return variant
 
     def get_variant_without_expose(self, experiment_name: str) -> Optional[str]:
+        """Return a bucketing variant, if any, without emitting exposure event.
+
+        The `expose()` function is available to manually call afterward.
+
+        :param experiment_name: Name of the experiment you want to run.
+
+        :param exposure_kwargs:  Additional arguments that will be passed
+            to events_logger under "inputs" key.
+
+        :return: Variant name if a variant is assigned, None otherwise.
+        """
         decider = self._get_decider()
         if decider is None:
             logger.warning("Rust decider did not initialize.")
@@ -298,8 +311,9 @@ class Decider:
             return None
         else:
             pass
+            # todo: implement HG expose (requires rust updates)
             # context_fields = self._decider_context.to_dict()
-            # inputs = self._decider_context.get_event_fields()
+            # inputs = self._decider_context.get_user_event_fields()
             # force expose for Holdout Groups
             # for event in choice.events:
             #     # decider event:
@@ -332,13 +346,16 @@ class Decider:
     ) -> None:
         """Log an event to indicate that a user has been exposed to an experimental treatment.
 
+        Meant to be used after calling `get_variant_without_expose()`
+        since `get_variant()` emits exposure event automatically.
+        
         :param experiment_name: Name of the experiment that was exposed.
         :param variant_name: Name of the variant that was exposed.
-        :param exposure_kwargs: Additional arguments that will be passed to logger under "inputs" key.
+        :param exposure_kwargs: Additional arguments that will be passed to events_logger under "inputs" key.
 
         """
         # context_fields = self._decider_context.to_dict()
-        # inputs = self._decider_context.get_event_fields()
+        # inputs = self._decider_context.get_user_event_fields()
         # inputs.update(exposure_kwargs or {})
 
         # todo: either implement `rust_decider.get_experiment(experiment_name)`
