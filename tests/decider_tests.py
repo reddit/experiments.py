@@ -78,7 +78,9 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.event_logger = mock.Mock(spec=DebugLogger)
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = mock.Mock()
-        self.mock_span.context.edgecontext.user.event_fields = mock.Mock(return_value=self.event_fields)
+        self.mock_span.context.edgecontext.user.event_fields = mock.Mock(
+            return_value=self.event_fields
+        )
         self.mock_span.context.edgecontext.authentication_token = self.authentication_token
         self.mock_span.context.edgecontext.geolocation.country_code = self.country_code
         self.mock_span.context.edgecontext.device.id = self.device_id
