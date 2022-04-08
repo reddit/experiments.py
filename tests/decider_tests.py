@@ -57,7 +57,7 @@ class DeciderClientFromConfigTests(unittest.TestCase):
 
 
 @mock.patch("reddit_decider.FileWatcher")
-class DeciderContextTests(unittest.TestCase):
+class DeciderContextFactoryTests(unittest.TestCase):
     user_id = "t2_1234"
     is_logged_in = True
     authentication_token = "token"
