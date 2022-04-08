@@ -66,6 +66,8 @@ class DeciderContextFactoryTests(unittest.TestCase):
     device_id = "abc"
     request_url = "www.reddit.com/"
     cookie_created_timestamp = 1234
+    locale_code = "us_en"
+    origin_service = "origin"
     event_fields = {
         "user_id": user_id,
         "logged_in": is_logged_in,
@@ -83,6 +85,8 @@ class DeciderContextFactoryTests(unittest.TestCase):
         )
         self.mock_span.context.edgecontext.authentication_token = self.authentication_token
         self.mock_span.context.edgecontext.geolocation.country_code = self.country_code
+        self.mock_span.context.edgecontext.locale.locale_code = self.locale_code
+        self.mock_span.context.edgecontext.origin_service.name = self.origin_service
         self.mock_span.context.edgecontext.device.id = self.device_id
         self.mock_span.context.request_url = self.request_url
 
@@ -104,6 +108,9 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(decider_ctx_dict["user_is_employee"], True)
         self.assertEqual(decider_ctx_dict["logged_in"], self.is_logged_in)
         self.assertEqual(decider_ctx_dict["device_id"], self.device_id)
+        self.assertEqual(decider_ctx_dict["request_url"], self.request_url)
+        self.assertEqual(decider_ctx_dict["locale"], self.locale_code)
+        self.assertEqual(decider_ctx_dict["origin_service"], self.origin_service)
         self.assertEqual(decider_ctx_dict["request_url"], self.request_url)
         self.assertEqual(decider_ctx_dict["authentication_token"], self.authentication_token)
         self.assertEqual(

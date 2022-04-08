@@ -30,6 +30,7 @@ class DeciderContext:
         self,
         user_id: str,
         country_code: Optional[str] = None,
+        locale: Optional[str] = None,
         user_is_employee: Optional[bool] = None,
         logged_in: Optional[bool] = None,
         device_id: Optional[str] = None,
@@ -37,10 +38,12 @@ class DeciderContext:
         authentication_token: Optional[str] = None,
         app_name: Optional[str] = None,
         build_number: Optional[str] = None,
+        origin_service: Optional[str] = None,
         cookie_created_timestamp: Optional[float] = None,
     ):
         self._user_id = user_id
         self._country_code = country_code
+        self._locale = locale
         self._user_is_employee = user_is_employee
         self._logged_in = logged_in
         self._device_id = device_id
@@ -48,6 +51,7 @@ class DeciderContext:
         self._authentication_token = authentication_token
         self._app_name = app_name
         self._build_number = build_number
+        self._origin_service = origin_service
         self._cookie_created_timestamp = cookie_created_timestamp
 
 
@@ -55,6 +59,7 @@ class DeciderContext:
         return {
             "user_id": self._user_id,
             "country_code": self._country_code,
+            "locale": self._locale,
             "user_is_employee": self._user_is_employee,
             "logged_in": self._logged_in,
             "device_id": self._device_id,
@@ -62,6 +67,7 @@ class DeciderContext:
             "authentication_token": self._authentication_token,
             "app_name": self._app_name,
             "build_number": self._build_number,
+            "origin_service": self._origin_service,
             "cookie_created_timestamp": self._cookie_created_timestamp,
         }
 
@@ -247,6 +253,8 @@ class DeciderContextFactory(ContextFactory):
                 user_id=user_event_fields.get("user_id"),
                 logged_in=user_event_fields.get("logged_in"),
                 country_code=ec.geolocation.country_code,
+                locale=ec.locale.locale_code,
+                origin_service=ec.origin_service.name,
                 user_is_employee=DeciderContextFactory.is_employee(ec),
                 device_id=ec.device.id,
                 request_url=request.request_url,
