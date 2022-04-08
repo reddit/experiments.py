@@ -12,9 +12,9 @@ from reddit_edgecontext import AuthenticationToken
 from reddit_edgecontext import User
 
 from reddit_decider import Decider
+from reddit_decider import decider_client_from_config
 from reddit_decider import DeciderContext
 from reddit_decider import DeciderContextFactory
-from reddit_decider import decider_client_from_config
 from reddit_decider import init_decider_parser
 
 
@@ -37,7 +37,8 @@ class DeciderClientFromConfigTests(unittest.TestCase):
 
     def test_timeout(self, file_watcher_mock):
         decider_ctx_factory = decider_client_from_config(
-            {"experiments.path": "/tmp/test", "experiments.timeout": "60 seconds"}, self.event_logger
+            {"experiments.path": "/tmp/test", "experiments.timeout": "60 seconds"},
+            self.event_logger,
         )
         self.assertIsInstance(decider_ctx_factory, DeciderContextFactory)
         file_watcher_mock.assert_called_once_with(
@@ -92,17 +93,24 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertIsInstance(decider_context, DeciderContext)
 
         decider_ctx_dict = decider_context.to_dict()
-        self.assertEqual(decider_ctx_dict['user_id'], self.user_id)
-        self.assertEqual(decider_ctx_dict['country_code'], self.country_code)
-        self.assertEqual(decider_ctx_dict['user_is_employee'], True)
-        self.assertEqual(decider_ctx_dict['logged_in'], self.is_logged_in)
-        self.assertEqual(decider_ctx_dict['device_id'], self.device_id)
-        self.assertEqual(decider_ctx_dict['request_url'], self.request_url)
-        self.assertEqual(decider_ctx_dict['authentication_token'], self.authentication_token)
-        self.assertEqual(decider_ctx_dict['app_name'], None)      # requires request_field_extractor param
-        self.assertEqual(decider_ctx_dict['build_number'], None)  # requires request_field_extractor param
-        self.assertEqual(decider_ctx_dict['loid'], self.loid_id)
-        self.assertEqual(decider_ctx_dict['cookie_created_timestamp'], self.mock_span.context.edgecontext.user.event_fields().get("cookie_created_timestamp"))
+        self.assertEqual(decider_ctx_dict["user_id"], self.user_id)
+        self.assertEqual(decider_ctx_dict["country_code"], self.country_code)
+        self.assertEqual(decider_ctx_dict["user_is_employee"], True)
+        self.assertEqual(decider_ctx_dict["logged_in"], self.is_logged_in)
+        self.assertEqual(decider_ctx_dict["device_id"], self.device_id)
+        self.assertEqual(decider_ctx_dict["request_url"], self.request_url)
+        self.assertEqual(decider_ctx_dict["authentication_token"], self.authentication_token)
+        self.assertEqual(
+            decider_ctx_dict["app_name"], None
+        )  # requires request_field_extractor param
+        self.assertEqual(
+            decider_ctx_dict["build_number"], None
+        )  # requires request_field_extractor param
+        self.assertEqual(decider_ctx_dict["loid"], self.loid_id)
+        self.assertEqual(
+            decider_ctx_dict["cookie_created_timestamp"],
+            self.mock_span.context.edgecontext.user.event_fields().get("cookie_created_timestamp"),
+        )
 
     # Todo: DeciderContext request_field_extractor tests
 
@@ -110,6 +118,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
 # Todo: test DeciderClient()
 # @mock.patch("reddit_decider.FileWatcher")
 # class DeciderClientTests(unittest.TestCase):
+
 
 class TestDeciderGetVariant(unittest.TestCase):
     def setUp(self):
@@ -146,37 +155,16 @@ class TestDeciderGetVariant(unittest.TestCase):
                 "owner": "test_owner",
                 "experiment": {
                     "variants": [
-                        {
-                            "range_start": 0.0,
-                            "range_end": 0.2,
-                            "name": "control_1"
-                        },
-                        {
-                            "range_start": 0.2,
-                            "range_end": 0.4,
-                            "name": "control_2"
-                        },
-                        {
-                            "range_start": 0.4,
-                            "range_end": 0.6,
-                            "name": "variant_2"
-                        },
-                        {
-                            "range_start": 0.6,
-                            "range_end": 0.8,
-                            "name": "variant_3"
-                        },
-                        {
-                            "range_start": 0.8,
-                            "range_end": 1.0,
-                            "name": "variant_4"
-                        }
+                        {"range_start": 0.0, "range_end": 0.2, "name": "active"},
+                        {"range_start": 0.2, "range_end": 0.4, "name": "control_1"},
+                        {"range_start": 0.4, "range_end": 0.6, "name": "control_2"},
+                        {"range_start": 0.6, "range_end": 0.8, "name": "variant_3"},
                     ],
                     "experiment_version": 2,
                     "shuffle_version": 0,
                     "bucket_val": "user_id",
-                    "log_bucketing": False
-                }
+                    "log_bucketing": False,
+                },
             }
         }
 
@@ -225,28 +213,12 @@ class TestDeciderGetVariant(unittest.TestCase):
                     "id": 1,
                     "name": "test",
                     "variants": [
-                        {
-                            "range_start": 0.0,
-                            "range_end": 0.2,
-                            "name": "active"
-                        },
-                        {
-                            "range_start": 0.2,
-                            "range_end": 0.4,
-                            "name": "control_1"
-                        },
-                        {
-                            "range_start": 0.4,
-                            "range_end": 0.6,
-                            "name": "control_2"
-                        },
-                        {
-                            "range_start": 0.6,
-                            "range_end": 0.8,
-                            "name": "variant_3"
-                        }
-                    ]
-                }
+                        {"range_start": 0.0, "range_end": 0.2, "name": "active"},
+                        {"range_start": 0.2, "range_end": 0.4, "name": "control_1"},
+                        {"range_start": 0.4, "range_end": 0.6, "name": "control_2"},
+                        {"range_start": 0.6, "range_end": 0.8, "name": "variant_3"},
+                    ],
+                },
             }
         }
         with self.create_temp_config_file(config) as f:
@@ -307,6 +279,7 @@ class TestDeciderGetVariant(unittest.TestCase):
     # Todo: test exposure_kwargs
 
     # Todo: test un-enabled experiment
+
 
 # Todo: test get_variant_without_expose()
 # class TestDeciderGetVariantWithoutExpose(unittest.TestCase):
