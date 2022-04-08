@@ -90,92 +90,6 @@ def init_decider_parser(file):
     return rust_decider.init("darkmode overrides targeting fractional_availability value", file.name)
 
 
-class DeciderContextFactory(ContextFactory):
-    """Decider client context factory.
-
-    This factory will attach a new
-    :py:class:`reddit_decider.Decider` to an attribute on the
-    :py:class:`~baseplate.RequestContext`.
-
-    :param path: Path to the experiment configuration file.
-    :param event_logger: The logger to use to log experiment eligibility
-        events. If not provided, a :py:class:`~baseplate.lib.events.DebugLogger`
-        will be created and used.
-    :param timeout: How long, in seconds, to block instantiation waiting
-        for the watched experiments file to become available (defaults to not
-        blocking).
-    :param backoff: retry backoff time for experiments file watcher. Defaults to
-        None, which is mapped to DEFAULT_FILEWATCHER_BACKOFF.
-    :param request_field_extractor: an optional function used to populate
-        "app_name" & "build_number" fields in DeciderContext()
-
-    """
-    def __init__(
-        self,
-        path: str,
-        event_logger: Optional[EventLogger] = None,
-        timeout: Optional[float] = None,
-        backoff: Optional[float] = None,
-        request_field_extractor: Callable[[BaseplateRequest], Dict[str, str]] = None
-    ):
-        self._filewatcher = FileWatcher(path=path, parser=init_decider_parser, timeout=timeout, backoff=backoff)
-        self._event_logger = event_logger
-        self._request_field_extractor = request_field_extractor
-
-    @classmethod
-    def is_employee(cls, edge_context: Any) -> bool:
-        return (
-            any([edge_context.user.has_role(role) for role in EMPLOYEE_ROLES])
-            if edge_context.user.is_logged_in
-            else False
-        )
-
-    def make_object_for_context(self, name: str, span: Span) -> "Decider":
-        try:
-            _ = self._filewatcher.get_data()
-        except WatchedFileNotAvailableError as exc:
-            logger.warning("Experiment config unavailable: %s", str(exc))
-        except TypeError as exc:
-            logger.warning("Could not load experiment config: %s", str(exc))
-
-        request = span.context
-        ec = request.edgecontext
-
-        if self._request_field_extractor:
-            extracted_fields = self._request_field_extractor(request)
-        else:
-            extracted_fields = {}
-
-        user_event_fields = ec.user.event_fields()
-        try:
-            decider_context = DeciderContext(
-                user_id=ec.user.id,
-                loid=ec.loid.id,
-                country_code=ec.geolocation.country_code,
-                user_is_employee=DeciderContextFactory.is_employee(ec),
-                logged_in=ec.user.is_logged_in,
-                device_id=ec.device.id,
-                request_url=request.request_url,
-                authentication_token=ec.authentication_token,
-                app_name=extracted_fields.get("app_name"),
-                build_number=extracted_fields.get("build_number"),
-                cookie_created_timestamp=user_event_fields.get("cookie_created_timestamp"),
-                user_event_fields=user_event_fields,
-            )
-        except Exception as exc:
-            logger.warning("Could not create full DeciderContext(): %s", str(exc))
-            logger.warning("defaulting to DeciderContext() with only user_id.")
-            decider_context = DeciderContext(user_id=ec.user.id)
-
-        return Decider(
-            decider_context=decider_context,
-            config_watcher=self._filewatcher,
-            server_span=span,
-            context_name=name,
-            event_logger=self._event_logger,
-        )
-
-
 class Decider:
     """Access to experiments with automatic refresh when changed.
 
@@ -348,7 +262,7 @@ class Decider:
 
         Meant to be used after calling `get_variant_without_expose()`
         since `get_variant()` emits exposure event automatically.
-        
+
         :param experiment_name: Name of the experiment that was exposed.
         :param variant_name: Name of the variant that was exposed.
         :param exposure_kwargs: Additional arguments that will be passed to events_logger under "inputs" key.
@@ -371,6 +285,92 @@ class Decider:
         #     inputs=inputs,
         #     **context_fields,
         # )
+
+
+class DeciderContextFactory(ContextFactory):
+    """Decider client context factory.
+
+    This factory will attach a new
+    :py:class:`reddit_decider.Decider` to an attribute on the
+    :py:class:`~baseplate.RequestContext`.
+
+    :param path: Path to the experiment configuration file.
+    :param event_logger: The logger to use to log experiment eligibility
+        events. If not provided, a :py:class:`~baseplate.lib.events.DebugLogger`
+        will be created and used.
+    :param timeout: How long, in seconds, to block instantiation waiting
+        for the watched experiments file to become available (defaults to not
+        blocking).
+    :param backoff: retry backoff time for experiments file watcher. Defaults to
+        None, which is mapped to DEFAULT_FILEWATCHER_BACKOFF.
+    :param request_field_extractor: an optional function used to populate
+        "app_name" & "build_number" fields in DeciderContext()
+
+    """
+    def __init__(
+        self,
+        path: str,
+        event_logger: Optional[EventLogger] = None,
+        timeout: Optional[float] = None,
+        backoff: Optional[float] = None,
+        request_field_extractor: Callable[[BaseplateRequest], Dict[str, str]] = None
+    ):
+        self._filewatcher = FileWatcher(path=path, parser=init_decider_parser, timeout=timeout, backoff=backoff)
+        self._event_logger = event_logger
+        self._request_field_extractor = request_field_extractor
+
+    @classmethod
+    def is_employee(cls, edge_context: Any) -> bool:
+        return (
+            any([edge_context.user.has_role(role) for role in EMPLOYEE_ROLES])
+            if edge_context.user.is_logged_in
+            else False
+        )
+
+    def make_object_for_context(self, name: str, span: Span) -> "Decider":
+        try:
+            _ = self._filewatcher.get_data()
+        except WatchedFileNotAvailableError as exc:
+            logger.warning("Experiment config unavailable: %s", str(exc))
+        except TypeError as exc:
+            logger.warning("Could not load experiment config: %s", str(exc))
+
+        request = span.context
+        ec = request.edgecontext
+
+        if self._request_field_extractor:
+            extracted_fields = self._request_field_extractor(request)
+        else:
+            extracted_fields = {}
+
+        user_event_fields = ec.user.event_fields()
+        try:
+            decider_context = DeciderContext(
+                user_id=ec.user.id,
+                loid=ec.loid.id,
+                country_code=ec.geolocation.country_code,
+                user_is_employee=DeciderContextFactory.is_employee(ec),
+                logged_in=ec.user.is_logged_in,
+                device_id=ec.device.id,
+                request_url=request.request_url,
+                authentication_token=ec.authentication_token,
+                app_name=extracted_fields.get("app_name"),
+                build_number=extracted_fields.get("build_number"),
+                cookie_created_timestamp=user_event_fields.get("cookie_created_timestamp"),
+                user_event_fields=user_event_fields,
+            )
+        except Exception as exc:
+            logger.warning("Could not create full DeciderContext(): %s", str(exc))
+            logger.warning("defaulting to DeciderContext() with only user_id.")
+            decider_context = DeciderContext(user_id=ec.user.id)
+
+        return Decider(
+            decider_context=decider_context,
+            config_watcher=self._filewatcher,
+            server_span=span,
+            context_name=name,
+            event_logger=self._event_logger,
+        )
 
 
 class DeciderClient(config.Parser):
