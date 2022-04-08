@@ -64,20 +64,24 @@ class DeciderContextFactoryTests(unittest.TestCase):
     authentication_token = "token"
     country_code = "US"
     device_id = "abc"
-    loid_id = "loid.id"
     request_url = "www.reddit.com/"
+    cookie_created_timestamp = 1234
+    event_fields = {
+        "user_id": user_id,
+        "logged_in": is_logged_in,
+        "cookie_created_timestamp": cookie_created_timestamp,
+    }
 
     def setUp(self):
         super().setUp()
+
         self.event_logger = mock.Mock(spec=DebugLogger)
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = mock.Mock()
-        self.mock_span.context.edgecontext.user.id = self.user_id
-        self.mock_span.context.edgecontext.user.is_logged_in = self.is_logged_in
+        self.mock_span.context.edgecontext.user.event_fields = mock.Mock(return_value=self.event_fields)
         self.mock_span.context.edgecontext.authentication_token = self.authentication_token
         self.mock_span.context.edgecontext.geolocation.country_code = self.country_code
         self.mock_span.context.edgecontext.device.id = self.device_id
-        self.mock_span.context.edgecontext.loid.id = self.loid_id
         self.mock_span.context.request_url = self.request_url
 
     def test_make_object_for_context_and_decider_context(self, file_watcher_mock):
@@ -106,7 +110,6 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(
             decider_ctx_dict["build_number"], None
         )  # requires request_field_extractor param
-        self.assertEqual(decider_ctx_dict["loid"], self.loid_id)
         self.assertEqual(
             decider_ctx_dict["cookie_created_timestamp"],
             self.mock_span.context.edgecontext.user.event_fields().get("cookie_created_timestamp"),
@@ -126,14 +129,7 @@ class TestDeciderGetVariant(unittest.TestCase):
         self.event_logger = mock.Mock(spec=DebugLogger)
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = None
-        self.mock_authentication_token = mock.Mock(spec=AuthenticationToken)
-        self.mock_authentication_token.subject = "t2_1234"
-        self.user = User(
-            authentication_token=self.mock_authentication_token,
-            loid="t2_1",
-            cookie_created_ms=10000,
-        )
-        self.minimal_decider_context = DeciderContext(user_id=self.user.id)
+        self.minimal_decider_context = DeciderContext(user_id="t2_1234")
 
     @contextlib.contextmanager
     def create_temp_config_file(self, contents):

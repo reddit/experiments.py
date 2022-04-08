@@ -37,9 +37,7 @@ class DeciderContext:
         authentication_token: Optional[str] = None,
         app_name: Optional[str] = None,
         build_number: Optional[str] = None,
-        loid: Optional[str] = None,
         cookie_created_timestamp: Optional[float] = None,
-        user_event_fields: Dict[str, Any] = None
     ):
         self._user_id = user_id
         self._country_code = country_code
@@ -50,12 +48,8 @@ class DeciderContext:
         self._authentication_token = authentication_token
         self._app_name = app_name
         self._build_number = build_number
-        self._loid = loid
         self._cookie_created_timestamp = cookie_created_timestamp
-        self._user_event_fields = user_event_fields
 
-    def get_user_event_fields(self):
-        return self._user_event_fields or {}
 
     def to_dict(self):
         return {
@@ -68,7 +62,6 @@ class DeciderContext:
             "authentication_token": self._authentication_token,
             "app_name": self._app_name,
             "build_number": self._build_number,
-            "loid": self._loid,
             "cookie_created_timestamp": self._cookie_created_timestamp,
         }
 
@@ -153,8 +146,8 @@ class Decider:
         else:
             pass
             # todo: implement expose (requires rust updates)
-            # inputs = self._decider_context.get_user_event_fields()
-            # inputs.update(exposure_kwargs or {})
+            # context_fields = self._decider_context.to_dict()
+            # inputs = context_fields.update(exposure_kwargs or {})
             # for event in choice.events:
             #     decider event:
             #     “experiment_id:experiment_name:experiment_version:variant_name:bucket_val:start_ts:stop_ts:owner:event_type"
@@ -169,7 +162,6 @@ class Decider:
             #         stop_ts=stop_ts,
             #         owner=owner
             #     )
-            #     context_fields = self._decider_context.to_dict()
             #
             #     # make work with these fields
             #     # https://github.snooguts.net/reddit/reddit-service-graphql/blob/3c5b239755b8ffb5770bfaa5ef5f5fd9e5e10635/graphql-py/graphql_api/events/utils.py#L218-L244
@@ -252,18 +244,16 @@ class DeciderContextFactory(ContextFactory):
         user_event_fields = ec.user.event_fields()
         try:
             decider_context = DeciderContext(
-                user_id=ec.user.id,
-                loid=ec.loid.id,
+                user_id=user_event_fields.get("user_id"),
+                logged_in=user_event_fields.get("logged_in"),
                 country_code=ec.geolocation.country_code,
                 user_is_employee=DeciderContextFactory.is_employee(ec),
-                logged_in=ec.user.is_logged_in,
                 device_id=ec.device.id,
                 request_url=request.request_url,
                 authentication_token=ec.authentication_token,
                 app_name=extracted_fields.get("app_name"),
                 build_number=extracted_fields.get("build_number"),
                 cookie_created_timestamp=user_event_fields.get("cookie_created_timestamp"),
-                user_event_fields=user_event_fields,
             )
         except Exception as exc:
             logger.warning("Could not create full DeciderContext(): %s", str(exc))
