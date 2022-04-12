@@ -55,7 +55,7 @@ class DeciderContext:
         self._cookie_created_timestamp = cookie_created_timestamp
 
 
-    def to_dict(self):
+    def to_dict(self) -> Dict:
         return {
             "user_id": self._user_id,
             "country_code": self._country_code,
@@ -74,6 +74,14 @@ class DeciderContext:
 
 def init_decider_parser(file):
     return rust_decider.init("darkmode overrides targeting fractional_availability value", file.name)
+
+def validate_decider(decider: Optional[Any]) -> None:
+    if decider is None:
+        logger.error(f"Rust decider did not initialize.")
+
+    if decider:
+        decider_err = decider.err()
+        logger.error(f"Rust decider has error: {decider_err}")
 
 
 class Decider:
@@ -104,8 +112,11 @@ class Decider:
             self._event_logger = DebugLogger()
 
     def _get_decider(self):
+        decider = None
         try:
-            return self._config_watcher.get_data()
+            decider = self._config_watcher.get_data()
+            validate_decider(decider)
+            return decider
         except WatchedFileNotAvailableError as exc:
             logger.warning("Experiment config unavailable: %s", str(exc))
         except TypeError as exc:
@@ -135,13 +146,13 @@ class Decider:
         :return: Variant name if a variant is assigned, None otherwise.
         """
         decider = self._get_decider()
-        if decider is None:
-            logger.warning("Rust decider did not initialize.")
-            return None
 
         # `choose()` is executed in Rust Decider lib
-        #  https://github.snooguts.net/reddit/decider
         ctx = rust_decider.make_ctx(self._decider_context.to_dict())
+        ctx_err = ctx.err()
+        if ctx_err is not None:
+            logger.warning(f"Encountered error creating Rust PyContext: {ctx_err}")
+
         choice = decider.choose(experiment_name, ctx)
         error = choice.err()
         variant = choice.decision()
@@ -231,24 +242,27 @@ class DeciderContextFactory(ContextFactory):
             else False
         )
 
-    def make_object_for_context(self, name: str, span: Span) -> "Decider":
+    def make_object_for_context(self, name: str, span: Span) -> Decider:
         try:
-            _ = self._filewatcher.get_data()
+            decider = self._filewatcher.get_data()
         except WatchedFileNotAvailableError as exc:
-            logger.warning("Experiment config unavailable: %s", str(exc))
+            logger.error("Experiment config file unavailable: %s", str(exc))
         except TypeError as exc:
-            logger.warning("Could not load experiment config: %s", str(exc))
+            logger.error("Could not load experiment config: %s", str(exc))
 
-        request = span.context
-        ec = request.edgecontext
+        validate_decider(decider)
 
-        if self._request_field_extractor:
-            extracted_fields = self._request_field_extractor(request)
-        else:
-            extracted_fields = {}
-
-        user_event_fields = ec.user.event_fields()
         try:
+            request = span.context
+            ec = request.edgecontext
+
+            if self._request_field_extractor:
+                extracted_fields = self._request_field_extractor(request)
+            else:
+                extracted_fields = {}
+
+            user_event_fields = ec.user.event_fields()
+
             decider_context = DeciderContext(
                 user_id=user_event_fields.get("user_id"),
                 logged_in=user_event_fields.get("logged_in"),
@@ -265,8 +279,8 @@ class DeciderContextFactory(ContextFactory):
             )
         except Exception as exc:
             logger.warning("Could not create full DeciderContext(): %s", str(exc))
-            logger.warning("defaulting to DeciderContext() with only user_id.")
-            decider_context = DeciderContext(user_id=ec.user.id)
+            logger.warning("defaulting to empty DeciderContext().")
+            decider_context = DeciderContext(user_id="")
 
         return Decider(
             decider_context=decider_context,
