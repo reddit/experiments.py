@@ -14,7 +14,7 @@ lint:
 	$(REORDER_PYTHON_IMPORTS) --diff-only $(PYTHON_SOURCE)
 	black --diff --check $(PYTHON_SOURCE)
 	flake8 $(SOURCE_ROOT)
-	mypy $(SOURCE_ROOT) --python-version $(python_version)
+	mypy $(SOURCE_ROOT) --python-version $(PYTHON_VERSION)
 
 .PHONY: test
 test:
