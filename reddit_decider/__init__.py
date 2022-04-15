@@ -77,7 +77,7 @@ def init_decider_parser(file):
 
 def validate_decider(decider: Optional[Any]) -> None:
     if decider is None:
-        logger.error(f"Rust decider did not initialize.")
+        logger.error(f"Rust decider is None--did not initialize.")
 
     if decider:
         decider_err = decider.err()
@@ -112,13 +112,12 @@ class Decider:
             self._event_logger = DebugLogger()
 
     def _get_decider(self):
-        decider = None
         try:
             decider = self._config_watcher.get_data()
             validate_decider(decider)
             return decider
         except WatchedFileNotAvailableError as exc:
-            logger.error("Experiment config unavailable: %s", str(exc))
+            logger.error("Experiment config file unavailable: %s", str(exc))
         except TypeError as exc:
             logger.error("Could not load experiment config: %s", str(exc))
         return None
