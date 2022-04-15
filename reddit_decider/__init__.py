@@ -118,9 +118,9 @@ class Decider:
             validate_decider(decider)
             return decider
         except WatchedFileNotAvailableError as exc:
-            logger.warning("Experiment config unavailable: %s", str(exc))
+            logger.error("Experiment config unavailable: %s", str(exc))
         except TypeError as exc:
-            logger.warning("Could not load experiment config: %s", str(exc))
+            logger.error("Could not load experiment config: %s", str(exc))
         return None
 
     def get_variant(
@@ -147,18 +147,17 @@ class Decider:
         """
         decider = self._get_decider()
 
-        # `choose()` is executed in Rust Decider lib
         ctx = rust_decider.make_ctx(self._decider_context.to_dict())
         ctx_err = ctx.err()
         if ctx_err is not None:
-            logger.warning(f"Encountered error creating Rust PyContext: {ctx_err}")
+            logger.warning(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
 
         choice = decider.choose(experiment_name, ctx)
         error = choice.err()
         variant = choice.decision()
 
         if error:
-            logger.warning(f"Encountered error in Rust Decider: {error}")
+            logger.warning(f"Encountered error in decider.choose(): {error}")
             return None
         else:
             pass

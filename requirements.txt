@@ -2,10 +2,10 @@
 alabaster==0.7.12
 baseplate==2.0.0a1
 black==21.4b2
-#decider-py==0.0.3 currently uploaded only to test.pypi.org/project/decider-py, uncomment when uploaded to non-test pypi.org
+reddit-decider==1.0.12
 flake8==3.9.1
 mypy==0.790
-pyramid==2.0 # required for `from baseplate.frameworks.pyramid import BaseplateRequest` which calls `import pyramid.events`
+pyramid==2.0   # required for `from baseplate.frameworks.pyramid import BaseplateRequest` which calls `import pyramid.events`
 pydocstyle==5.1.1
 pytest==6.2.1
 pytest-cov==2.10.1
