@@ -1,7 +1,7 @@
 SOURCE_ROOT := reddit_experiments/
-PYTHON_SOURCE = $(shell find $(SOURCE_ROOT) tests/ setup.py -name '*.py')
+PYTHON_SOURCE = $($(shell) find $(SOURCE_ROOT) tests/ setup.py -name '*.py')
 REORDER_PYTHON_IMPORTS := reorder-python-imports --py3-plus --separate-from-import --separate-relative
-
+PYTHON_VERSION ?= 3.9
 
 .PHONY: fmt
 fmt:
@@ -14,7 +14,7 @@ lint:
 	$(REORDER_PYTHON_IMPORTS) --diff-only $(PYTHON_SOURCE)
 	black --diff --check $(PYTHON_SOURCE)
 	flake8 $(SOURCE_ROOT)
-	mypy $(SOURCE_ROOT)
+	mypy $(SOURCE_ROOT) --python-version $(PYTHON_VERSION)
 
 .PHONY: test
 test:
