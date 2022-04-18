@@ -34,7 +34,6 @@ class DeciderContext:
         user_is_employee: Optional[bool] = None,
         logged_in: Optional[bool] = None,
         device_id: Optional[str] = None,
-        request_url: Optional[str] = None,
         authentication_token: Optional[str] = None,
         app_name: Optional[str] = None,
         build_number: Optional[str] = None,
@@ -47,7 +46,6 @@ class DeciderContext:
         self._user_is_employee = user_is_employee
         self._logged_in = logged_in
         self._device_id = device_id
-        self._request_url = request_url
         self._authentication_token = authentication_token
         self._app_name = app_name
         self._build_number = build_number
@@ -63,7 +61,6 @@ class DeciderContext:
             "user_is_employee": self._user_is_employee,
             "logged_in": self._logged_in,
             "device_id": self._device_id,
-            "request_url": self._request_url,
             "authentication_token": self._authentication_token,
             "app_name": self._app_name,
             "build_number": self._build_number,
@@ -269,7 +266,6 @@ class DeciderContextFactory(ContextFactory):
                 origin_service=ec.origin_service.name,
                 user_is_employee=DeciderContextFactory.is_employee(ec),
                 device_id=ec.device.id,
-                request_url=request.request_url,
                 authentication_token=ec.authentication_token,
                 app_name=extracted_fields.get("app_name"),
                 build_number=extracted_fields.get("build_number"),

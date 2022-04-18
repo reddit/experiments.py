@@ -64,7 +64,6 @@ class DeciderContextFactoryTests(unittest.TestCase):
     authentication_token = "token"
     country_code = "US"
     device_id = "abc"
-    request_url = "www.reddit.com/"
     cookie_created_timestamp = 1234
     locale_code = "us_en"
     origin_service = "origin"
@@ -88,7 +87,6 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.mock_span.context.edgecontext.locale.locale_code = self.locale_code
         self.mock_span.context.edgecontext.origin_service.name = self.origin_service
         self.mock_span.context.edgecontext.device.id = self.device_id
-        self.mock_span.context.request_url = self.request_url
 
     def test_make_object_for_context_and_decider_context(self, file_watcher_mock):
         decider_ctx_factory = decider_client_from_config(
@@ -108,10 +106,8 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(decider_ctx_dict["user_is_employee"], True)
         self.assertEqual(decider_ctx_dict["logged_in"], self.is_logged_in)
         self.assertEqual(decider_ctx_dict["device_id"], self.device_id)
-        self.assertEqual(decider_ctx_dict["request_url"], self.request_url)
         self.assertEqual(decider_ctx_dict["locale"], self.locale_code)
         self.assertEqual(decider_ctx_dict["origin_service"], self.origin_service)
-        self.assertEqual(decider_ctx_dict["request_url"], self.request_url)
         self.assertEqual(decider_ctx_dict["authentication_token"], self.authentication_token)
         self.assertEqual(
             decider_ctx_dict["app_name"], None
