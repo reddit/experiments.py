@@ -10,16 +10,16 @@ from typing import overload
 from typing import Sequence
 from typing import Set
 
+from baseplate import RequestContext
 from baseplate import Span
 from baseplate.clients import ContextFactory
-from baseplate.frameworks.pyramid import BaseplateRequest
 from baseplate.lib import config
 from baseplate.lib import warn_deprecated
 from baseplate.lib.events import DebugLogger
 from baseplate.lib.events import EventLogger
 from baseplate.lib.file_watcher import FileWatcher
 from baseplate.lib.file_watcher import WatchedFileNotAvailableError
-from reddit_edgecontext import User
+from reddit_edgecontext import User  # type: ignore
 
 from reddit_decider import DeciderContextFactory
 from reddit_experiments.providers import parse_experiment
@@ -405,7 +405,7 @@ def decider_client_from_config(
     app_config: config.RawConfig,
     event_logger: EventLogger,
     prefix: str = "experiments.",
-    request_field_extractor: Optional[Callable[[BaseplateRequest], Dict[str, str]]] = None,
+    request_field_extractor: Optional[Callable[[RequestContext], Dict[str, str]]] = None,
 ) -> DeciderContextFactory:
     """Configure and return an :py:class:`DeciderContextFactory` object.
 

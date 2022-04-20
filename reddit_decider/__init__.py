@@ -1,17 +1,18 @@
 import logging
 
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, IO, Optional
 
+from baseplate import RequestContext
 from baseplate import Span
 from baseplate.clients import ContextFactory
-from baseplate.frameworks.pyramid import BaseplateRequest
 from baseplate.lib import config
 from baseplate.lib.events import DebugLogger
 from baseplate.lib.events import EventLogger
 from baseplate.lib.file_watcher import FileWatcher
+from baseplate.lib.file_watcher import T
 from baseplate.lib.file_watcher import WatchedFileNotAvailableError
 
-import rust_decider
+import rust_decider # type: ignore
 
 
 logger = logging.getLogger(__name__)
@@ -69,7 +70,7 @@ class DeciderContext:
         }
 
 
-def init_decider_parser(file):
+def init_decider_parser(file: IO) -> Any:
     return rust_decider.init("darkmode overrides targeting fractional_availability value", file.name)
 
 def validate_decider(decider: Optional[Any]) -> None:
@@ -108,7 +109,7 @@ class Decider:
         else:
             self._event_logger = DebugLogger()
 
-    def _get_decider(self):
+    def _get_decider(self) -> Optional[T]:
         try:
             decider = self._config_watcher.get_data()
             validate_decider(decider)
@@ -142,6 +143,9 @@ class Decider:
         :return: Variant name if a variant is assigned, None otherwise.
         """
         decider = self._get_decider()
+        if not decider:
+            logger.warning("Encountered error in _get_decider()")
+            return None
 
         ctx = rust_decider.make_ctx(self._decider_context.to_dict())
         ctx_err = ctx.err()
@@ -223,7 +227,7 @@ class DeciderContextFactory(ContextFactory):
         event_logger: Optional[EventLogger] = None,
         timeout: Optional[float] = None,
         backoff: Optional[float] = None,
-        request_field_extractor: Optional[Callable[[BaseplateRequest], Dict[str, str]]] = None
+        request_field_extractor: Optional[Callable[[RequestContext], Dict[str, str]]] = None
     ):
         self._filewatcher = FileWatcher(path=path, parser=init_decider_parser, timeout=timeout, backoff=backoff)
         self._event_logger = event_logger
