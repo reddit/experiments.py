@@ -19,7 +19,7 @@ from baseplate.lib.events import DebugLogger
 from baseplate.lib.events import EventLogger
 from baseplate.lib.file_watcher import FileWatcher
 from baseplate.lib.file_watcher import WatchedFileNotAvailableError
-from reddit_edgecontext import User  # type: ignore
+from reddit_edgecontext import User
 
 from reddit_decider import DeciderContextFactory
 from reddit_experiments.providers import parse_experiment
