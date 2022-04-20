@@ -12,6 +12,9 @@ from baseplate.lib.file_watcher import FileWatcher
 from reddit_edgecontext import AuthenticationToken
 from reddit_edgecontext import User
 
+from reddit_decider import DeciderContextFactory
+from reddit_decider import init_decider_parser
+from reddit_experiments import decider_client_from_config
 from reddit_experiments import EventType
 from reddit_experiments import Experiments
 from reddit_experiments import experiments_client_from_config
@@ -894,3 +897,42 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
         self.assertTrue("test2" in self.experiments_factory._global_cache)
         self.assertFalse("test1" in self.experiments_factory._global_cache)
         self.assertEqual(self.experiments_factory._global_cache["test2"].owner, "test2")
+
+
+@mock.patch("reddit_decider.FileWatcher")
+class DeciderClientFromConfigTests(unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.event_logger = mock.Mock(spec=DebugLogger)
+        self.mock_span = mock.MagicMock(spec=ServerSpan)
+        self.mock_span.context = None
+
+    def test_make_clients(self, file_watcher_mock):
+        decider_ctx_factory = decider_client_from_config(
+            {"experiments.path": "/tmp/test"}, self.event_logger
+        )
+        self.assertIsInstance(decider_ctx_factory, DeciderContextFactory)
+        file_watcher_mock.assert_called_once_with(
+            path="/tmp/test", parser=init_decider_parser, timeout=None, backoff=None
+        )
+
+    def test_timeout(self, file_watcher_mock):
+        decider_ctx_factory = decider_client_from_config(
+            {"experiments.path": "/tmp/test", "experiments.timeout": "60 seconds"},
+            self.event_logger,
+        )
+        self.assertIsInstance(decider_ctx_factory, DeciderContextFactory)
+        file_watcher_mock.assert_called_once_with(
+            path="/tmp/test", parser=init_decider_parser, timeout=60.0, backoff=None
+        )
+
+    def test_prefix(self, file_watcher_mock):
+        decider_ctx_factory = decider_client_from_config(
+            {"r2_experiments.path": "/tmp/test", "r2_experiments.timeout": "60 seconds"},
+            self.event_logger,
+            prefix="r2_experiments.",
+        )
+        self.assertIsInstance(decider_ctx_factory, DeciderContextFactory)
+        file_watcher_mock.assert_called_once_with(
+            path="/tmp/test", parser=init_decider_parser, timeout=60.0, backoff=None
+        )
