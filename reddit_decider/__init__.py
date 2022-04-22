@@ -79,7 +79,8 @@ def validate_decider(decider: Optional[Any]) -> None:
 
     if decider:
         decider_err = decider.err()
-        logger.error(f"Rust decider has error: {decider_err}")
+        if decider_err:
+            logger.error(f"Rust decider has error: {decider_err}")
 
 
 class Decider:
@@ -242,6 +243,7 @@ class DeciderContextFactory(ContextFactory):
         )
 
     def make_object_for_context(self, name: str, span: Span) -> Decider:
+        decider = None
         try:
             decider = self._filewatcher.get_data()
         except WatchedFileNotAvailableError as exc:
