@@ -71,7 +71,7 @@ class DeciderContext:
 
 
 def init_decider_parser(file: IO) -> Any:
-    return rust_decider.init("darkmode overrides targeting fractional_availability value", file.name)
+    return rust_decider.init("darkmode overrides targeting holdout mutex_group fractional_availability value", file.name)
 
 def validate_decider(decider: Optional[Any]) -> None:
     if decider is None:
