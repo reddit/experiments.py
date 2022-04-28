@@ -16,7 +16,7 @@ setup(
     packages=find_packages(),
     python_requires=">=3.7",
     setup_requires=["setuptools_scm"],
-    install_requires=["baseplate>=2.0.0a1,<3.0", "reddit-edgecontext>=1.0.0a3,<2.0"],
+    install_requires=["baseplate>=2.0.0a1,<3.0", "reddit-edgecontext>=1.0.0a3,<2.0", "reddit-decider>=1.1.11"],
     package_data={"reddit_experiments": ["py.typed"]},
     zip_safe=True,
     classifiers=[
