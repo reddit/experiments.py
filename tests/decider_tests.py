@@ -12,11 +12,49 @@ from reddit_edgecontext import User
 from reddit_edgecontext import ValidatedAuthenticationToken
 
 from reddit_decider import Decider
+from reddit_decider import decider_client_from_config
 from reddit_decider import DeciderContext
 from reddit_decider import DeciderContextFactory
 from reddit_decider import init_decider_parser
-from reddit_experiments import decider_client_from_config
+from reddit_decider import decider_client_from_config
 
+@mock.patch("reddit_decider.FileWatcher")
+class DeciderClientFromConfigTests(unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.event_logger = mock.Mock(spec=DebugLogger)
+        self.mock_span = mock.MagicMock(spec=ServerSpan)
+        self.mock_span.context = None
+
+    def test_make_clients(self, file_watcher_mock):
+        decider_ctx_factory = decider_client_from_config(
+            {"experiments.path": "/tmp/test"}, self.event_logger
+        )
+        self.assertIsInstance(decider_ctx_factory, DeciderContextFactory)
+        file_watcher_mock.assert_called_once_with(
+            path="/tmp/test", parser=init_decider_parser, timeout=None, backoff=None
+        )
+
+    def test_timeout(self, file_watcher_mock):
+        decider_ctx_factory = decider_client_from_config(
+            {"experiments.path": "/tmp/test", "experiments.timeout": "60 seconds"},
+            self.event_logger,
+        )
+        self.assertIsInstance(decider_ctx_factory, DeciderContextFactory)
+        file_watcher_mock.assert_called_once_with(
+            path="/tmp/test", parser=init_decider_parser, timeout=60.0, backoff=None
+        )
+
+    def test_prefix(self, file_watcher_mock):
+        decider_ctx_factory = decider_client_from_config(
+            {"r2_experiments.path": "/tmp/test", "r2_experiments.timeout": "60 seconds"},
+            self.event_logger,
+            prefix="r2_experiments.",
+        )
+        self.assertIsInstance(decider_ctx_factory, DeciderContextFactory)
+        file_watcher_mock.assert_called_once_with(
+            path="/tmp/test", parser=init_decider_parser, timeout=60.0, backoff=None
+        )
 
 @mock.patch("reddit_decider.FileWatcher")
 class DeciderContextFactoryTests(unittest.TestCase):
