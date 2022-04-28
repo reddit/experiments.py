@@ -12,7 +12,7 @@ from baseplate.lib.file_watcher import FileWatcher
 from baseplate.lib.file_watcher import T
 from baseplate.lib.file_watcher import WatchedFileNotAvailableError
 
-import rust_decider # type: ignore
+import rust_decider
 
 
 logger = logging.getLogger(__name__)

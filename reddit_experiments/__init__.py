@@ -3,14 +3,12 @@ import logging
 import warnings
 
 from enum import Enum
-from typing import Callable
 from typing import Dict
 from typing import Optional
 from typing import overload
 from typing import Sequence
 from typing import Set
 
-from baseplate import RequestContext
 from baseplate import Span
 from baseplate.clients import ContextFactory
 from baseplate.lib import config
@@ -21,7 +19,6 @@ from baseplate.lib.file_watcher import FileWatcher
 from baseplate.lib.file_watcher import WatchedFileNotAvailableError
 from reddit_edgecontext import User
 
-from reddit_decider import DeciderContextFactory
 from reddit_experiments.providers import parse_experiment
 from reddit_experiments.providers.base import Experiment
 
