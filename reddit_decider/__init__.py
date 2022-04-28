@@ -165,8 +165,8 @@ class Decider:
             return None
         else:
             pass
+            variant = choice.decision()
             # todo: implement expose (requires rust updates)
-            # variant = choice.decision()
             # inputs = context_fields.update(exposure_kwargs or {})
             # for event in choice.events:
             #     decider event:
@@ -194,7 +194,7 @@ class Decider:
             #         **context_fields,
             #     )
 
-        return variant
+            return variant
 
     # todo:
     # def get_variant_without_expose(self, experiment_name: str) -> Optional[str]:
