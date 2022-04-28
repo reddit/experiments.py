@@ -35,6 +35,7 @@ class DeciderContext:
         user_is_employee: Optional[bool] = None,
         logged_in: Optional[bool] = None,
         device_id: Optional[str] = None,
+        canonical_url: Optional[str] = None,
         authentication_token: Optional[str] = None,
         app_name: Optional[str] = None,
         build_number: Optional[str] = None,
@@ -47,6 +48,7 @@ class DeciderContext:
         self._user_is_employee = user_is_employee
         self._logged_in = logged_in
         self._device_id = device_id
+        self._canonical_url = canonical_url
         self._authentication_token = authentication_token
         self._app_name = app_name
         self._build_number = build_number
@@ -62,6 +64,7 @@ class DeciderContext:
             "user_is_employee": self._user_is_employee,
             "logged_in": self._logged_in,
             "device_id": self._device_id,
+            "canonical_url": self._canonical_url,
             "authentication_token": self._authentication_token,
             "app_name": self._app_name,
             "build_number": self._build_number,
@@ -148,14 +151,14 @@ class Decider:
             logger.warning("Encountered error in _get_decider()")
             return None
 
-        ctx = rust_decider.make_ctx(self._decider_context.to_dict())
+        context_fields = self._decider_context.to_dict()
+        ctx = rust_decider.make_ctx(context_fields)
         ctx_err = ctx.err()
         if ctx_err is not None:
             logger.warning(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
 
         choice = decider.choose(experiment_name, ctx)
         error = choice.err()
-        variant = choice.decision()
 
         if error:
             logger.warning(f"Encountered error in decider.choose(): {error}")
@@ -163,7 +166,7 @@ class Decider:
         else:
             pass
             # todo: implement expose (requires rust updates)
-            # context_fields = self._decider_context.to_dict()
+            # variant = choice.decision()
             # inputs = context_fields.update(exposure_kwargs or {})
             # for event in choice.events:
             #     decider event:
