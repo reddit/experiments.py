@@ -30,7 +30,6 @@ class ExperimentConfig:
     id: int
     version: str
     name: str
-    variant: str
     bucket_val: str
     start_ts: int
     stop_ts: int
@@ -190,7 +189,6 @@ class Decider:
                     id=int(id),
                     name=name,
                     version=version,
-                    variant=event_variant,
                     bucket_val=bucket_val,
                     start_ts=start_ts,
                     stop_ts=stop_ts,

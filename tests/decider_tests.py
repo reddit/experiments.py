@@ -147,7 +147,7 @@ class TestDeciderGetVariant(unittest.TestCase):
             yield f
 
     def test_get_variant_expose_event_fields(self):
-        cfg = {
+        config = {
             "exp_1": {
                 "id": 1,
                 "name": "exp_1",
@@ -173,7 +173,7 @@ class TestDeciderGetVariant(unittest.TestCase):
             }
         }
 
-        with self.create_temp_config_file(cfg) as f:
+        with self.create_temp_config_file(config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
             dc = DeciderContext(
                 user_id=user_id,
@@ -212,11 +212,11 @@ class TestDeciderGetVariant(unittest.TestCase):
             self.assertEqual(event_fields["event_type"], EventType.EXPOSE)
             self.assertNotEqual(event_fields["span"], None)
 
-            config = cfg["exp_1"]
-            self.assertEqual(getattr(event_fields["experiment"], "id"), config["id"])
-            self.assertEqual(getattr(event_fields["experiment"], "name"), config["name"])
-            self.assertEqual(getattr(event_fields["experiment"], "owner"), config["owner"])
-            self.assertEqual(getattr(event_fields["experiment"], "version"), config["version"])
+            cfg = config["exp_1"]
+            self.assertEqual(getattr(event_fields["experiment"], "id"), cfg["id"])
+            self.assertEqual(getattr(event_fields["experiment"], "name"), cfg["name"])
+            self.assertEqual(getattr(event_fields["experiment"], "owner"), cfg["owner"])
+            self.assertEqual(getattr(event_fields["experiment"], "version"), cfg["version"])
 
     def test_none_returned_on_variant_call_with_bad_id(self):
         config = {
