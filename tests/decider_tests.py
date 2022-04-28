@@ -16,7 +16,7 @@ from reddit_decider import decider_client_from_config
 from reddit_decider import DeciderContext
 from reddit_decider import DeciderContextFactory
 from reddit_decider import init_decider_parser
-from reddit_experiments import decider_client_from_config
+from reddit_decider import decider_client_from_config
 
 @mock.patch("reddit_decider.FileWatcher")
 class DeciderClientFromConfigTests(unittest.TestCase):
