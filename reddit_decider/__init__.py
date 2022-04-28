@@ -11,6 +11,7 @@ from baseplate.lib.events import EventLogger
 from baseplate.lib.file_watcher import FileWatcher
 from baseplate.lib.file_watcher import T
 from baseplate.lib.file_watcher import WatchedFileNotAvailableError
+from reddit_edgecontext import ValidatedAuthenticationToken
 
 import rust_decider # type: ignore
 
@@ -36,7 +37,7 @@ class DeciderContext:
         logged_in: Optional[bool] = None,
         device_id: Optional[str] = None,
         canonical_url: Optional[str] = None,
-        authentication_token: Optional[str] = None,
+        auth_client_id: Optional[str] = None,
         app_name: Optional[str] = None,
         build_number: Optional[str] = None,
         origin_service: Optional[str] = None,
@@ -49,7 +50,7 @@ class DeciderContext:
         self._logged_in = logged_in
         self._device_id = device_id
         self._canonical_url = canonical_url
-        self._authentication_token = authentication_token
+        self._auth_client_id = auth_client_id
         self._app_name = app_name
         self._build_number = build_number
         self._origin_service = origin_service
@@ -65,7 +66,7 @@ class DeciderContext:
             "logged_in": self._logged_in,
             "device_id": self._device_id,
             "canonical_url": self._canonical_url,
-            "authentication_token": self._authentication_token,
+            "auth_client_id": self._auth_client_id,
             "app_name": self._app_name,
             "build_number": self._build_number,
             "origin_service": self._origin_service,
@@ -267,6 +268,12 @@ class DeciderContextFactory(ContextFactory):
 
             user_event_fields = ec.user.event_fields()
 
+            auth_client_id = ""
+            if isinstance(ec.authentication_token, ValidatedAuthenticationToken):
+                oc_id = ec.authentication_token.oauth_client_id
+                if oc_id:
+                    auth_client_id = oc_id
+
             decider_context = DeciderContext(
                 user_id=user_event_fields.get("user_id"),
                 logged_in=user_event_fields.get("logged_in"),
@@ -275,7 +282,7 @@ class DeciderContextFactory(ContextFactory):
                 origin_service=ec.origin_service.name,
                 user_is_employee=DeciderContextFactory.is_employee(ec),
                 device_id=ec.device.id,
-                authentication_token=ec.authentication_token,
+                auth_client_id=auth_client_id,
                 app_name=extracted_fields.get("app_name"),
                 build_number=extracted_fields.get("build_number"),
                 cookie_created_timestamp=user_event_fields.get("cookie_created_timestamp"),
