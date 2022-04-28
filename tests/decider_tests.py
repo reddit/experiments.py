@@ -15,8 +15,25 @@ from reddit_decider import Decider
 from reddit_decider import decider_client_from_config
 from reddit_decider import DeciderContext
 from reddit_decider import DeciderContextFactory
+from reddit_decider import EventType
 from reddit_decider import init_decider_parser
 from reddit_decider import decider_client_from_config
+
+user_id = "t2_1234"
+is_logged_in = True
+auth_client_id = "token"
+country_code = "US"
+device_id = "abc"
+cookie_created_timestamp = 1234
+locale_code = "us_en"
+origin_service = "origin"
+app_name = "ios"
+build_number = 1
+event_fields = {
+    "user_id": user_id,
+    "logged_in": is_logged_in,
+    "cookie_created_timestamp": cookie_created_timestamp,
+}
 
 @mock.patch("reddit_decider.FileWatcher")
 class DeciderClientFromConfigTests(unittest.TestCase):
@@ -58,20 +75,6 @@ class DeciderClientFromConfigTests(unittest.TestCase):
 
 @mock.patch("reddit_decider.FileWatcher")
 class DeciderContextFactoryTests(unittest.TestCase):
-    user_id = "t2_1234"
-    is_logged_in = True
-    auth_client_id = "token"
-    country_code = "US"
-    device_id = "abc"
-    cookie_created_timestamp = 1234
-    locale_code = "us_en"
-    origin_service = "origin"
-    event_fields = {
-        "user_id": user_id,
-        "logged_in": is_logged_in,
-        "cookie_created_timestamp": cookie_created_timestamp,
-    }
-
     def setUp(self):
         super().setUp()
 
@@ -79,14 +82,14 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = mock.Mock()
         self.mock_span.context.edgecontext.user.event_fields = mock.Mock(
-            return_value=self.event_fields
+            return_value=event_fields
         )
         self.mock_span.context.edgecontext.authentication_token = mock.Mock(spec=ValidatedAuthenticationToken)
-        self.mock_span.context.edgecontext.authentication_token.oauth_client_id = self.auth_client_id
-        self.mock_span.context.edgecontext.geolocation.country_code = self.country_code
-        self.mock_span.context.edgecontext.locale.locale_code = self.locale_code
-        self.mock_span.context.edgecontext.origin_service.name = self.origin_service
-        self.mock_span.context.edgecontext.device.id = self.device_id
+        self.mock_span.context.edgecontext.authentication_token.oauth_client_id = auth_client_id
+        self.mock_span.context.edgecontext.geolocation.country_code = country_code
+        self.mock_span.context.edgecontext.locale.locale_code = locale_code
+        self.mock_span.context.edgecontext.origin_service.name = origin_service
+        self.mock_span.context.edgecontext.device.id = device_id
 
     def test_make_object_for_context_and_decider_context(self, file_watcher_mock):
         decider_ctx_factory = decider_client_from_config(
@@ -101,14 +104,14 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertIsInstance(decider_context, DeciderContext)
 
         decider_ctx_dict = decider_context.to_dict()
-        self.assertEqual(decider_ctx_dict["user_id"], self.user_id)
-        self.assertEqual(decider_ctx_dict["country_code"], self.country_code)
+        self.assertEqual(decider_ctx_dict["user_id"], user_id)
+        self.assertEqual(decider_ctx_dict["country_code"], country_code)
         self.assertEqual(decider_ctx_dict["user_is_employee"], True)
-        self.assertEqual(decider_ctx_dict["logged_in"], self.is_logged_in)
-        self.assertEqual(decider_ctx_dict["device_id"], self.device_id)
-        self.assertEqual(decider_ctx_dict["locale"], self.locale_code)
-        self.assertEqual(decider_ctx_dict["origin_service"], self.origin_service)
-        self.assertEqual(decider_ctx_dict["auth_client_id"], self.auth_client_id)
+        self.assertEqual(decider_ctx_dict["logged_in"], is_logged_in)
+        self.assertEqual(decider_ctx_dict["device_id"], device_id)
+        self.assertEqual(decider_ctx_dict["locale"], locale_code)
+        self.assertEqual(decider_ctx_dict["origin_service"], origin_service)
+        self.assertEqual(decider_ctx_dict["auth_client_id"], auth_client_id)
         self.assertEqual(
             decider_ctx_dict["app_name"], None
         )  # requires request_field_extractor param
@@ -134,7 +137,7 @@ class TestDeciderGetVariant(unittest.TestCase):
         self.event_logger = mock.Mock(spec=DebugLogger)
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = None
-        self.minimal_decider_context = DeciderContext(user_id="t2_1234")
+        self.minimal_decider_context = DeciderContext(user_id=user_id)
 
     @contextlib.contextmanager
     def create_temp_config_file(self, contents):
@@ -172,8 +175,22 @@ class TestDeciderGetVariant(unittest.TestCase):
 
         with self.create_temp_config_file(config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+            dc = DeciderContext(
+                user_id=user_id,
+                logged_in=is_logged_in,
+                country_code=country_code,
+                locale=locale_code,
+                origin_service=origin_service,
+                user_is_employee=True,
+                device_id=device_id,
+                auth_client_id=auth_client_id,
+                app_name=app_name,
+                build_number=build_number,
+                cookie_created_timestamp=cookie_created_timestamp,
+            )
+
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -184,22 +201,22 @@ class TestDeciderGetVariant(unittest.TestCase):
             variant = decider.get_variant("exp_1")
             self.assertEqual(variant, "variant_4")
 
-            # Todo: enable expose call
-            # self.assertEqual(self.event_logger.log.call_count, 1)
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+            self.assertEqual(event_fields["variant"], variant)
+            self.assertEqual(event_fields["user_id"], user_id)
+            self.assertEqual(event_fields["logged_in"], is_logged_in)
+            self.assertEqual(event_fields["app_name"], app_name)
+            self.assertEqual(event_fields["cookie_created_timestamp"], cookie_created_timestamp)
+            self.assertEqual(event_fields["event_type"], EventType.EXPOSE)
+            self.assertNotEqual(event_fields["span"], None)
 
-            # event_fields = self.event_logger.log.call_args[1]
-            # self.assertEqual(event_fields["variant"], "variant_4")
-            # self.assertEqual(event_fields["user_id"], "t2_1234")
-            # self.assertEqual(event_fields["logged_in"], True)
-            # self.assertEqual(event_fields["app_name"], None)
-            # self.assertEqual(event_fields["cookie_created_timestamp"], 10000)
-            # self.assertEqual(event_fields["event_type"], "expose")
-            # self.assertNotEqual(event_fields["span"], None)
-
-            # self.assertEqual(getattr(event_fields["experiment"], "id"), config["id"])
-            # self.assertEqual(getattr(event_fields["experiment"], "name"), config["name"])
-            # self.assertEqual(getattr(event_fields["experiment"], "owner"), config["owner"])
-            # self.assertEqual(getattr(event_fields["experiment"], "version"), config["experiment"]["experiment_version"])
+            cfg = config["exp_1"]
+            self.assertEqual(getattr(event_fields["experiment"], "id"), cfg["id"])
+            self.assertEqual(getattr(event_fields["experiment"], "name"), cfg["name"])
+            self.assertEqual(getattr(event_fields["experiment"], "owner"), cfg["owner"])
+            self.assertEqual(getattr(event_fields["experiment"], "version"), cfg["version"])
 
     def test_none_returned_on_variant_call_with_bad_id(self):
         config = {

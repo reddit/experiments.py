@@ -1,5 +1,7 @@
 import logging
 
+from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Callable, Dict, IO, Optional
 
 from baseplate import RequestContext
@@ -19,8 +21,19 @@ import rust_decider
 logger = logging.getLogger(__name__)
 
 EMPLOYEE_ROLES = ("employee", "contractor")
-EVENT_TYPE = "expose"
 
+class EventType(Enum):
+    EXPOSE = "expose"
+
+@dataclass
+class ExperimentConfig:
+    id: int
+    version: str
+    name: str
+    bucket_val: str
+    start_ts: int
+    stop_ts: int
+    owner: str
 
 class DeciderContext:
     """DeciderContext() is used to contain all fields necessary for
@@ -165,35 +178,31 @@ class Decider:
             logger.warning(f"Encountered error in decider.choose(): {error}")
             return None
         else:
-            pass
             variant = choice.decision()
-            # todo: implement expose (requires rust updates)
-            # inputs = context_fields.update(exposure_kwargs or {})
-            # for event in choice.events:
-            #     decider event:
-            #     “experiment_id:experiment_name:experiment_version:variant_name:bucket_val:start_ts:stop_ts:owner:event_type"
-            #     id, name, version, variant, bucket_val, start_ts, stop_ts, owner, event_type = event.split(“:”)
-            #     experiment = ExperimentConfig(
-            #         id=id,
-            #         name=name,
-            #         version=version,
-            #         variant=variant,
-            #         bucket_val=bucket_val,
-            #         start_ts=start_ts,
-            #         stop_ts=stop_ts,
-            #         owner=owner
-            #     )
-            #
-            #     # make work with these fields
-            #     # https://github.snooguts.net/reddit/reddit-service-graphql/blob/3c5b239755b8ffb5770bfaa5ef5f5fd9e5e10635/graphql-py/graphql_api/events/utils.py#L218-L244
-            #     self._event_logger.log(
-            #         experiment=experiment,
-            #         variant=variant,
-            #         span=self._span,
-            #         event_type=EVENT_TYPE,
-            #         inputs=inputs,
-            #         **context_fields,
-            #     )
+
+            del context_fields["auth_client_id"]
+            context_fields.update(exposure_kwargs or {})
+
+            for event in choice.events():
+                event_type, id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
+                experiment = ExperimentConfig(
+                    id=int(id),
+                    name=name,
+                    version=version,
+                    bucket_val=bucket_val,
+                    start_ts=start_ts,
+                    stop_ts=stop_ts,
+                    owner=owner
+                )
+
+                self._event_logger.log(
+                    experiment=experiment,
+                    variant=event_variant,
+                    span=self._span,
+                    event_type=EventType.EXPOSE,
+                    inputs=context_fields,
+                    **context_fields,
+                )
 
             return variant
 
