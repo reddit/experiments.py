@@ -8,8 +8,8 @@ from unittest import mock
 from baseplate import ServerSpan
 from baseplate.lib.events import DebugLogger
 from baseplate.lib.file_watcher import FileWatcher
-from reddit_edgecontext import AuthenticationToken
 from reddit_edgecontext import User
+from reddit_edgecontext import ValidatedAuthenticationToken
 
 from reddit_decider import Decider
 from reddit_decider import DeciderContext
@@ -22,7 +22,7 @@ from reddit_experiments import decider_client_from_config
 class DeciderContextFactoryTests(unittest.TestCase):
     user_id = "t2_1234"
     is_logged_in = True
-    authentication_token = "token"
+    auth_client_id = "token"
     country_code = "US"
     device_id = "abc"
     cookie_created_timestamp = 1234
@@ -43,7 +43,8 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.mock_span.context.edgecontext.user.event_fields = mock.Mock(
             return_value=self.event_fields
         )
-        self.mock_span.context.edgecontext.authentication_token = self.authentication_token
+        self.mock_span.context.edgecontext.authentication_token = mock.Mock(spec=ValidatedAuthenticationToken)
+        self.mock_span.context.edgecontext.authentication_token.oauth_client_id = self.auth_client_id
         self.mock_span.context.edgecontext.geolocation.country_code = self.country_code
         self.mock_span.context.edgecontext.locale.locale_code = self.locale_code
         self.mock_span.context.edgecontext.origin_service.name = self.origin_service
@@ -69,7 +70,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(decider_ctx_dict["device_id"], self.device_id)
         self.assertEqual(decider_ctx_dict["locale"], self.locale_code)
         self.assertEqual(decider_ctx_dict["origin_service"], self.origin_service)
-        self.assertEqual(decider_ctx_dict["authentication_token"], self.authentication_token)
+        self.assertEqual(decider_ctx_dict["auth_client_id"], self.auth_client_id)
         self.assertEqual(
             decider_ctx_dict["app_name"], None
         )  # requires request_field_extractor param
