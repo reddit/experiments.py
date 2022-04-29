@@ -140,7 +140,7 @@ class Decider:
 
     def get_variant(
         self,
-        experiment_name: Optional[str] = None,
+        experiment_name: str,
         **exposure_kwargs: Optional[Dict[str, Any]]
     ) -> Optional[str]:
         """Return a bucketing variant, if any, with auto-exposure.
