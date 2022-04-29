@@ -441,3 +441,4 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             self.assertEqual(res, dict({"key": "value", "another_key": "another_value"}))
             res = decider.get_string("dc_1")
             self.assertEqual(res, None)
+    
