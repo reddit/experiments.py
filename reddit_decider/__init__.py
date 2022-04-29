@@ -230,7 +230,7 @@ class Decider:
             return
         error = res.err()
         if error:
-            logger.warning(f"Encountered error in decider.get_bool(): {error}")
+            logger.warning(f"Encountered error in decider.get_value(): {error}")
             return None
         else:
             return res.val()
