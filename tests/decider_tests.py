@@ -359,7 +359,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             res = decider.get_bool("dc_1")
             self.assertEqual(res, True)
             res = decider.get_float("dc_1")
-            self.assertEqual(res, None)
+            self.assertEqual(res, 0.0)
 
     def test_get_int(self):
         self.dc_base_config["dc_1"].update({"value_type": "Integer","value": 7,})
@@ -395,7 +395,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             res = decider.get_float("dc_1")
             self.assertEqual(res, 4.20)
             res = decider.get_int("dc_1")
-            self.assertEqual(res, None)
+            self.assertEqual(res, 0)
 
     def test_get_string(self):
         self.dc_base_config["dc_1"].update({"value_type": "Text","value": "helloworld!",})
@@ -413,7 +413,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             res = decider.get_string("dc_1")
             self.assertEqual(res, "helloworld!")
             res = decider.get_int("dc_1")
-            self.assertEqual(res, None)
+            self.assertEqual(res, 0)
 
     def test_get_map(self):
         self.dc_base_config["dc_1"].update(
@@ -433,4 +433,4 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             res = decider.get_map("dc_1")
             self.assertEqual(res, dict({"key": "value", "another_key": "another_value"}))
             res = decider.get_string("dc_1")
-            self.assertEqual(res, None)
+            self.assertEqual(res, "")
