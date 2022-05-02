@@ -35,6 +35,13 @@ event_fields = {
     "cookie_created_timestamp": cookie_created_timestamp,
 }
 
+@contextlib.contextmanager
+def create_temp_config_file(contents):
+    with tempfile.NamedTemporaryFile() as f:
+        f.write(json.dumps(contents).encode())
+        f.seek(0)
+        yield f
+
 @mock.patch("reddit_decider.FileWatcher")
 class DeciderClientFromConfigTests(unittest.TestCase):
     def setUp(self):
@@ -139,13 +146,6 @@ class TestDeciderGetVariant(unittest.TestCase):
         self.mock_span.context = None
         self.minimal_decider_context = DeciderContext(user_id=user_id)
 
-    @contextlib.contextmanager
-    def create_temp_config_file(self, contents):
-        with tempfile.NamedTemporaryFile() as f:
-            f.write(json.dumps(contents).encode())
-            f.seek(0)
-            yield f
-
     def test_get_variant_expose_event_fields(self):
         config = {
             "exp_1": {
@@ -173,7 +173,7 @@ class TestDeciderGetVariant(unittest.TestCase):
             }
         }
 
-        with self.create_temp_config_file(config) as f:
+        with create_temp_config_file(config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
             dc = DeciderContext(
                 user_id=user_id,
@@ -240,7 +240,7 @@ class TestDeciderGetVariant(unittest.TestCase):
                 },
             }
         }
-        with self.create_temp_config_file(config) as f:
+        with create_temp_config_file(config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
             decider = Decider(
                 decider_context=self.minimal_decider_context,
@@ -266,7 +266,7 @@ class TestDeciderGetVariant(unittest.TestCase):
                 "stop_ts": 0,
             }
         }
-        with self.create_temp_config_file(config) as f:
+        with create_temp_config_file(config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
             decider = Decider(
                 decider_context=self.minimal_decider_context,
@@ -281,7 +281,7 @@ class TestDeciderGetVariant(unittest.TestCase):
             self.assertEqual(variant, None)
 
     def test_none_returned_on_get_variant_call_with_experiment_not_found(self):
-        with self.create_temp_config_file({}) as f:
+        with create_temp_config_file({}) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
             decider = Decider(
                 decider_context=self.minimal_decider_context,
@@ -343,17 +343,10 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             cookie_created_timestamp=cookie_created_timestamp,
         )
 
-    @contextlib.contextmanager
-    def create_temp_config_file(self, contents):
-        with tempfile.NamedTemporaryFile() as f:
-            f.write(json.dumps(contents).encode())
-            f.seek(0)
-            yield f
-
     def test_get_bool(self):
         self.dc_base_config["dc_1"].update({"value_type": "Boolean","value": True,})
 
-        with self.create_temp_config_file(self.dc_base_config) as f:
+        with create_temp_config_file(self.dc_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
             decider = Decider(
                 decider_context=self.dc,
@@ -371,7 +364,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
     def test_get_int(self):
         self.dc_base_config["dc_1"].update({"value_type": "Integer","value": 7,})
 
-        with self.create_temp_config_file(self.dc_base_config) as f:
+        with create_temp_config_file(self.dc_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
             decider = Decider(
                 decider_context=self.dc,
@@ -384,12 +377,12 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             res = decider.get_int("dc_1")
             self.assertEqual(res, 7)
             res = decider.get_float("dc_1")
-            self.assertEqual(res, 7.0) 
+            self.assertEqual(res, 7.0)
 
     def test_get_float(self):
         self.dc_base_config["dc_1"].update({"value_type": "Float","value": 4.20,})
 
-        with self.create_temp_config_file(self.dc_base_config) as f:
+        with create_temp_config_file(self.dc_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
             decider = Decider(
                 decider_context=self.dc,
@@ -407,7 +400,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
     def test_get_string(self):
         self.dc_base_config["dc_1"].update({"value_type": "Text","value": "helloworld!",})
 
-        with self.create_temp_config_file(self.dc_base_config) as f:
+        with create_temp_config_file(self.dc_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
             decider = Decider(
                 decider_context=self.dc,
@@ -427,7 +420,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             {"value_type": "Map","value": {"key": "value", "another_key": "another_value"},}
         )
 
-        with self.create_temp_config_file(self.dc_base_config) as f:
+        with create_temp_config_file(self.dc_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
             decider = Decider(
                 decider_context=self.dc,
