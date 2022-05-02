@@ -305,3 +305,139 @@ class TestDeciderGetVariant(unittest.TestCase):
 
 # Todo: test expose()
 # class TestDeciderExpose(unittest.TestCase):
+
+
+class TestDeciderGetDynamicConfig(unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.event_logger = mock.Mock(spec=DebugLogger)
+        self.mock_span = mock.MagicMock(spec=ServerSpan)
+        self.mock_span.context = None
+        self.minimal_decider_context = DeciderContext(user_id=user_id)
+        self.dc_base_config = {
+            "dc_1": {
+                "id": 1,
+                "name": "dc_1",
+                "enabled": True,
+                "version": "2",
+                "type": "dynamic_config",
+                "start_ts": 37173982,
+                "stop_ts": 2147483648,
+                "owner": "test_owner",
+                "experiment": {
+                    "experiment_version": 1,
+                },
+            }
+        }
+        self.dc = DeciderContext(
+            user_id=user_id,
+            logged_in=is_logged_in,
+            country_code=country_code,
+            locale=locale_code,
+            origin_service=origin_service,
+            user_is_employee=True,
+            device_id=device_id,
+            auth_client_id=auth_client_id,
+            app_name=app_name,
+            build_number=build_number,
+            cookie_created_timestamp=cookie_created_timestamp,
+        )
+
+    @contextlib.contextmanager
+    def create_temp_config_file(self, contents):
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(json.dumps(contents).encode())
+            f.seek(0)
+            yield f
+
+    def test_get_bool(self):
+        self.dc_base_config["dc_1"].update({"value_type": "Boolean","value": True,})
+
+        with self.create_temp_config_file(self.dc_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            res = decider.get_bool("dc_1")
+            self.assertEqual(res, True)
+            res = decider.get_float("dc_1")
+            self.assertEqual(res, None)
+
+    def test_get_int(self):
+        self.dc_base_config["dc_1"].update({"value_type": "Integer","value": 7,})
+
+        with self.create_temp_config_file(self.dc_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            res = decider.get_int("dc_1")
+            self.assertEqual(res, 7)
+            res = decider.get_float("dc_1")
+            self.assertEqual(res, 7.0) 
+
+    def test_get_float(self):
+        self.dc_base_config["dc_1"].update({"value_type": "Float","value": 4.20,})
+
+        with self.create_temp_config_file(self.dc_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            res = decider.get_float("dc_1")
+            self.assertEqual(res, 4.20)
+            res = decider.get_int("dc_1")
+            self.assertEqual(res, None)
+
+    def test_get_string(self):
+        self.dc_base_config["dc_1"].update({"value_type": "Text","value": "helloworld!",})
+
+        with self.create_temp_config_file(self.dc_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            res = decider.get_string("dc_1")
+            self.assertEqual(res, "helloworld!")
+            res = decider.get_int("dc_1")
+            self.assertEqual(res, None)
+
+    def test_get_map(self):
+        self.dc_base_config["dc_1"].update(
+            {"value_type": "Map","value": {"key": "value", "another_key": "another_value"},}
+        )
+
+        with self.create_temp_config_file(self.dc_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            res = decider.get_map("dc_1")
+            self.assertEqual(res, dict({"key": "value", "another_key": "another_value"}))
+            res = decider.get_string("dc_1")
+            self.assertEqual(res, None)
