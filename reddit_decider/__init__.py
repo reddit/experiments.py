@@ -218,6 +218,7 @@ class Decider:
         self,
         dynamic_config_name: str,
         decider_func: Callable[[str, DeciderContext], any],
+        default: any,
     ) -> Optional[any]:
         context_fields = self._decider_context.to_dict()
         ctx = rust_decider.make_ctx(context_fields)
@@ -227,48 +228,48 @@ class Decider:
 
         res = decider_func(dynamic_config_name, ctx)
         if res is None:
-            return
+            return default
         error = res.err()
         if error:
             logger.warning(f"Encountered error in decider.get_value(): {error}")
-            return None
+            return default
         else:
             return res.val()
 
-    def get_bool(self, dynamic_config_name: str) -> Optional[bool]:
+    def get_bool(self, dynamic_config_name: str, default: bool = False) -> bool:
         decider = self._get_decider()
         if not decider:
             logger.warning("Encountered error in _get_decider()")
-            return None
-        return self._get_dynamic_config_value(dynamic_config_name, decider.get_bool)
+            return default
+        return self._get_dynamic_config_value(dynamic_config_name, decider.get_bool, default)
 
-    def get_int(self, dynamic_config_name: str) -> Optional[int]:
+    def get_int(self, dynamic_config_name: str, default: int = 0) -> int:
         decider = self._get_decider()
         if not decider:
             logger.warning("Encountered error in _get_decider()")
-            return None
-        return self._get_dynamic_config_value(dynamic_config_name, decider.get_int)
+            return default
+        return self._get_dynamic_config_value(dynamic_config_name, decider.get_int, default)
 
-    def get_float(self, dynamic_config_name: str) -> Optional[float]:
+    def get_float(self, dynamic_config_name: str, default: float = 0.0) -> float:
         decider = self._get_decider()
         if not decider:
             logger.warning("Encountered error in _get_decider()")
-            return None
-        return self._get_dynamic_config_value(dynamic_config_name, decider.get_float)
+            return default
+        return self._get_dynamic_config_value(dynamic_config_name, decider.get_float, default)
 
-    def get_string(self, dynamic_config_name: str) -> Optional[str]:
+    def get_string(self, dynamic_config_name: str, default: str = "") -> str:
         decider = self._get_decider()
         if not decider:
             logger.warning("Encountered error in _get_decider()")
-            return None
-        return self._get_dynamic_config_value(dynamic_config_name, decider.get_string)
+            return default
+        return self._get_dynamic_config_value(dynamic_config_name, decider.get_string, default)
 
-    def get_map(self, dynamic_config_name: str) -> Optional[dict]:
+    def get_map(self, dynamic_config_name: str, default: dict = None) -> Optional[dict]:
         decider = self._get_decider()
         if not decider:
             logger.warning("Encountered error in _get_decider()")
-            return None
-        return self._get_dynamic_config_value(dynamic_config_name, decider.get_map)
+            return default
+        return self._get_dynamic_config_value(dynamic_config_name, decider.get_map, default)
 
 
 class DeciderContextFactory(ContextFactory):
