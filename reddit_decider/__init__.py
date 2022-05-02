@@ -49,12 +49,10 @@ class DeciderContext:
         user_is_employee: Optional[bool] = None,
         logged_in: Optional[bool] = None,
         device_id: Optional[str] = None,
-        canonical_url: Optional[str] = None,
         auth_client_id: Optional[str] = None,
-        app_name: Optional[str] = None,
-        build_number: Optional[str] = None,
         origin_service: Optional[str] = None,
         cookie_created_timestamp: Optional[float] = None,
+        extracted_fields: Optional[dict] = None
     ):
         self._user_id = user_id
         self._country_code = country_code
@@ -62,13 +60,10 @@ class DeciderContext:
         self._user_is_employee = user_is_employee
         self._logged_in = logged_in
         self._device_id = device_id
-        self._canonical_url = canonical_url
         self._auth_client_id = auth_client_id
-        self._app_name = app_name
-        self._build_number = build_number
         self._origin_service = origin_service
         self._cookie_created_timestamp = cookie_created_timestamp
-
+        self._extracted_fields = extracted_fields
 
     def to_dict(self) -> Dict:
         return {
@@ -78,12 +73,10 @@ class DeciderContext:
             "user_is_employee": self._user_is_employee,
             "logged_in": self._logged_in,
             "device_id": self._device_id,
-            "canonical_url": self._canonical_url,
             "auth_client_id": self._auth_client_id,
-            "app_name": self._app_name,
-            "build_number": self._build_number,
             "origin_service": self._origin_service,
             "cookie_created_timestamp": self._cookie_created_timestamp,
+            **(self._extracted_fields or {}),
         }
 
 
@@ -288,8 +281,8 @@ class DeciderContextFactory(ContextFactory):
         blocking).
     :param backoff: retry backoff time for experiments file watcher. Defaults to
         None, which is mapped to DEFAULT_FILEWATCHER_BACKOFF.
-    :param request_field_extractor: an optional function used to populate
-        "app_name" & "build_number" fields in DeciderContext()
+    :param request_field_extractor: an optional function used to populate fields such as
+        "app_name" & "build_number" in DeciderContext() via `extracted_fields` arg
 
     """
     def __init__(
@@ -349,9 +342,8 @@ class DeciderContextFactory(ContextFactory):
                 user_is_employee=DeciderContextFactory.is_employee(ec),
                 device_id=ec.device.id,
                 auth_client_id=auth_client_id,
-                app_name=extracted_fields.get("app_name"),
-                build_number=extracted_fields.get("build_number"),
                 cookie_created_timestamp=user_event_fields.get("cookie_created_timestamp"),
+                extracted_fields=extracted_fields,
             )
         except Exception as exc:
             logger.warning("Could not create full DeciderContext(): %s", str(exc))
@@ -388,8 +380,8 @@ def decider_client_from_config(
     ``backoff`` (optional)
         The base amount of time for exponential backoff when trying to find the
         experiments config file. Defaults to no backoff between tries.
-    ``request_field_extractor`` (optional) used to populate
-        "app_name" & "build_number" fields in DeciderContext()
+    ``request_field_extractor`` (optional) used to populate fields such as
+        "app_name" & "build_number" in DeciderContext() via `extracted_fields` arg
 
     :param raw_config: The application configuration which should have
         settings for the experiments client.

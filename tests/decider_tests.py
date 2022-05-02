@@ -5,6 +5,7 @@ import unittest
 
 from unittest import mock
 
+from baseplate import RequestContext
 from baseplate import ServerSpan
 from baseplate.lib.events import DebugLogger
 from baseplate.lib.file_watcher import FileWatcher
@@ -29,6 +30,7 @@ locale_code = "us_en"
 origin_service = "origin"
 app_name = "ios"
 build_number = 1
+canonical_url = "www.test.com"
 event_fields = {
     "user_id": user_id,
     "logged_in": is_logged_in,
@@ -41,6 +43,13 @@ def create_temp_config_file(contents):
         f.write(json.dumps(contents).encode())
         f.seek(0)
         yield f
+
+def decider_field_extractor(request: RequestContext):
+    return {
+        "app_name": app_name,
+        "build_number": build_number,
+        "canonical_url": canonical_url
+    }
 
 @mock.patch("reddit_decider.FileWatcher")
 class DeciderClientFromConfigTests(unittest.TestCase):
@@ -103,6 +112,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
             {"experiments.path": "/tmp/test", "experiments.timeout": "60 seconds"},
             self.event_logger,
             prefix="experiments.",
+            request_field_extractor=decider_field_extractor,
         )
         decider = decider_ctx_factory.make_object_for_context(name="test", span=self.mock_span)
         self.assertIsInstance(decider, Decider)
@@ -120,18 +130,18 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(decider_ctx_dict["origin_service"], origin_service)
         self.assertEqual(decider_ctx_dict["auth_client_id"], auth_client_id)
         self.assertEqual(
-            decider_ctx_dict["app_name"], None
-        )  # requires request_field_extractor param
-        self.assertEqual(
-            decider_ctx_dict["build_number"], None
-        )  # requires request_field_extractor param
-        self.assertEqual(
             decider_ctx_dict["cookie_created_timestamp"],
             self.mock_span.context.edgecontext.user.event_fields().get("cookie_created_timestamp"),
         )
-
-    # Todo: DeciderContext request_field_extractor tests
-
+        self.assertEqual(
+            decider_ctx_dict["app_name"], app_name
+        )
+        self.assertEqual(
+            decider_ctx_dict["build_number"], build_number
+        )
+        self.assertEqual(
+            decider_ctx_dict["canonical_url"], canonical_url
+        )
 
 # Todo: test DeciderClient()
 # @mock.patch("reddit_decider.FileWatcher")
@@ -184,9 +194,8 @@ class TestDeciderGetVariant(unittest.TestCase):
                 user_is_employee=True,
                 device_id=device_id,
                 auth_client_id=auth_client_id,
-                app_name=app_name,
-                build_number=build_number,
                 cookie_created_timestamp=cookie_created_timestamp,
+                extracted_fields=decider_field_extractor(request=None),
             )
 
             decider = Decider(
