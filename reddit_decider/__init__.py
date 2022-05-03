@@ -193,8 +193,8 @@ class Decider:
                     variant=event_variant,
                     span=self._span,
                     event_type=EventType.EXPOSE,
-                    inputs=context_fields,
-                    **context_fields,
+                    inputs=context_fields.copy(),
+                    **context_fields.copy(),
                 )
 
             return variant
