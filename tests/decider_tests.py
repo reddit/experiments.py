@@ -347,8 +347,6 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             user_is_employee=True,
             device_id=device_id,
             auth_client_id=auth_client_id,
-            app_name=app_name,
-            build_number=build_number,
             cookie_created_timestamp=cookie_created_timestamp,
         )
 
