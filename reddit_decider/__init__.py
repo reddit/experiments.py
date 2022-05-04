@@ -313,8 +313,12 @@ class Decider:
             **context_fields.copy(),
         )
 
-    def get_variant_for_identifier(self, experiment_name: str, identifier: str,
-                **exposure_kwargs: Optional[Dict[str, Any]]) -> Optional[str]:
+    def get_variant_for_identifier(
+        self,
+        experiment_name: str,
+        identifier: str,
+        **exposure_kwargs: Optional[Dict[str, Any]]
+    ) -> Optional[str]:
         """Return a bucketing variant for `identifier`, if any, with auto-exposure.
 
         The `identifier` param will be set on `DeciderClient` under:
