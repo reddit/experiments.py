@@ -85,7 +85,7 @@ def init_decider_parser(file: IO) -> Any:
 
 def validate_decider(decider: Optional[Any]) -> None:
     if decider is None:
-        logger.error(f"Rust decider is None--did not initialize.")
+        logger.error("Rust decider is None--did not initialize.")
 
     if decider:
         decider_err = decider.err()
@@ -169,34 +169,34 @@ class Decider:
         if error:
             logger.warning(f"Encountered error in decider.choose(): {error}")
             return None
-        else:
-            variant = choice.decision()
 
-            del context_fields["auth_client_id"]
-            context_fields.update(exposure_kwargs or {})
+        variant = choice.decision()
 
-            for event in choice.events():
-                event_type, id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
-                experiment = ExperimentConfig(
-                    id=int(id),
-                    name=name,
-                    version=version,
-                    bucket_val=bucket_val,
-                    start_ts=start_ts,
-                    stop_ts=stop_ts,
-                    owner=owner
-                )
+        del context_fields["auth_client_id"]
+        context_fields.update(exposure_kwargs or {})
 
-                self._event_logger.log(
-                    experiment=experiment,
-                    variant=event_variant,
-                    span=self._span,
-                    event_type=EventType.EXPOSE,
-                    inputs=context_fields.copy(),
-                    **context_fields.copy(),
-                )
+        for event in choice.events():
+            _event_type, exp_id, name, version, event_variant, _bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
+            experiment = ExperimentConfig(
+                id=int(exp_id),
+                name=name,
+                version=version,
+                bucket_val=bucket_val,
+                start_ts=start_ts,
+                stop_ts=stop_ts,
+                owner=owner
+            )
 
-            return variant
+            self._event_logger.log(
+                experiment=experiment,
+                variant=event_variant,
+                span=self._span,
+                event_type=EventType.EXPOSE,
+                inputs=context_fields.copy(),
+                **context_fields.copy(),
+            )
+
+        return variant
 
     def get_variant_without_expose(self, experiment_name: str) -> Optional[str]:
         """Return a bucketing variant, if any, without emitting exposure event.
@@ -230,39 +230,39 @@ class Decider:
         if error:
             logger.warning(f"Encountered error in decider.choose(): {error}")
             return None
-        else:
-            variant = choice.decision()
 
-            del context_fields["auth_client_id"]
+        variant = choice.decision()
 
-            # expose Holdout if the experiment is part of one
-            for event in choice.events():
-                event_type, id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
-                # event_type enum:
-                #   0: regular bucketing
-                #   1: override
-                #   2: holdout
-                if event_type == "2":
-                    experiment = ExperimentConfig(
-                        id=int(id),
-                        name=name,
-                        version=version,
-                        bucket_val=bucket_val,
-                        start_ts=start_ts,
-                        stop_ts=stop_ts,
-                        owner=owner
-                    )
+        del context_fields["auth_client_id"]
 
-                    self._event_logger.log(
-                        experiment=experiment,
-                        variant=event_variant,
-                        span=self._span,
-                        event_type=EventType.EXPOSE,
-                        inputs=context_fields.copy(),
-                        **context_fields.copy(),
-                    )
+        # expose Holdout if the experiment is part of one
+        for event in choice.events():
+            event_type, exp_id, name, version, event_variant, _bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
+            # event_type enum:
+            #   0: regular bucketing
+            #   1: override
+            #   2: holdout
+            if event_type == "2":
+                experiment = ExperimentConfig(
+                    id=int(exp_id),
+                    name=name,
+                    version=version,
+                    bucket_val=bucket_val,
+                    start_ts=start_ts,
+                    stop_ts=stop_ts,
+                    owner=owner
+                )
 
-            return variant
+                self._event_logger.log(
+                    experiment=experiment,
+                    variant=event_variant,
+                    span=self._span,
+                    event_type=EventType.EXPOSE,
+                    inputs=context_fields.copy(),
+                    **context_fields.copy(),
+                )
+
+        return variant
 
     def expose(
         self, experiment_name: str, variant_name: str, **exposure_kwargs: Optional[Dict[str, Any]]
@@ -282,7 +282,7 @@ class Decider:
         decider = self._get_decider()
         if decider is None:
             logger.warning("Encountered error in _get_decider()")
-            return None
+            return
 
         experiment = decider.get_experiment(experiment_name)
         error = experiment.err()
@@ -364,16 +364,107 @@ class Decider:
         if error:
             logger.warning(f"Encountered error in decider.choose(): {error}")
             return None
-        else:
-            variant = choice.decision()
 
-            del context_fields["auth_client_id"]
-            context_fields.update(exposure_kwargs or {})
+        variant = choice.decision()
 
-            for event in choice.events():
-                event_type, id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
+        del context_fields["auth_client_id"]
+        context_fields.update(exposure_kwargs or {})
+
+        for event in choice.events():
+            _event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
+            experiment = ExperimentConfig(
+                id=int(exp_id),
+                name=name,
+                version=version,
+                bucket_val=bucket_val,
+                start_ts=start_ts,
+                stop_ts=stop_ts,
+                owner=owner
+            )
+
+            # expose the `bucket_val` used in the experiment's config, not `identifier_context_fields`
+            event_context_fields = { **context_fields, **{bucket_val: bucketing_value}}
+
+            self._event_logger.log(
+                experiment=experiment,
+                variant=event_variant,
+                span=self._span,
+                event_type=EventType.EXPOSE,
+                inputs=event_context_fields.copy(),
+                **event_context_fields.copy(),
+            )
+
+        return variant
+
+
+    def get_variant_for_identifier_without_expose(
+        self,
+        experiment_name: str,
+        identifier: str,
+    ) -> Optional[str]:
+        """Return a bucketing variant for `identifier`, if any, without emitting exposure event.
+
+        The `identifier` param will be set on `DeciderClient` under:
+            `user_id`, `device_id`, & `canonical_url`,
+        so that regardless of what `bucketing_val` is set to in an experiment's config
+        (one of those 3), the passed in `identifier` param will be used in the
+        hashing string when bucketing.
+
+        The `expose()` function is available to be manually called afterward to emit
+        exposure event.
+
+        However, experiments in Holdout Groups will still send an exposure for
+        the holdout parent experiment, since it is not possible to
+        manually expose the holdout later (because after exiting this function,
+        it's impossible to know if a returned `None` or `"control_1"` string
+        came from the holdout group or its child experiment).
+
+        :param experiment_name: Name of the experiment you want a variant for.
+
+        :param identifier: an arbitary string used to bucket the experiment by
+            being set on DeciderContext's 3 possible `bucket_val`'s
+            (`user_id`, `device_id`, & `canonical_url`).
+
+        :return: Variant name if a variant is assigned, None otherwise.
+        """
+        decider = self._get_decider()
+        if decider is None:
+            logger.warning("Encountered error in _get_decider()")
+            return None
+
+        context_fields = self._decider_context.to_dict()
+        identifier_context_fields = { **context_fields, **{
+            "user_id": identifier,
+            "device_id": identifier,
+            "canonical_url": identifier
+        }}
+
+        ctx = rust_decider.make_ctx(identifier_context_fields)
+        ctx_err = ctx.err()
+        if ctx_err is not None:
+            logger.warning(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+
+        choice = decider.choose(experiment_name, ctx)
+        error = choice.err()
+
+        if error:
+            logger.warning(f"Encountered error in decider.choose(): {error}")
+            return None
+
+        variant = choice.decision()
+
+        del context_fields["auth_client_id"]
+
+        # expose Holdout if the experiment is part of one
+        for event in choice.events():
+            event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
+            # event_type enum:
+            #   0: regular bucketing
+            #   1: override
+            #   2: holdout
+            if event_type == "2":
                 experiment = ExperimentConfig(
-                    id=int(id),
+                    id=int(exp_id),
                     name=name,
                     version=version,
                     bucket_val=bucket_val,
@@ -394,7 +485,7 @@ class Decider:
                     **event_context_fields.copy(),
                 )
 
-            return variant
+        return variant
 
     def _get_dynamic_config_value(
         self,
@@ -415,8 +506,8 @@ class Decider:
         if error:
             logger.warning(f"Encountered error {decider_func.__name__}: {error}")
             return default
-        else:
-            return res.val()
+
+        return res.val()
 
     def get_bool(self, feature_name: str, default: bool = False) -> bool:
         decider = self._get_decider()

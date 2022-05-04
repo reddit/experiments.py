@@ -9,7 +9,6 @@ from baseplate import RequestContext
 from baseplate import ServerSpan
 from baseplate.lib.events import DebugLogger
 from baseplate.lib.file_watcher import FileWatcher
-from reddit_edgecontext import User
 from reddit_edgecontext import ValidatedAuthenticationToken
 
 from reddit_decider import Decider
@@ -18,23 +17,22 @@ from reddit_decider import DeciderContext
 from reddit_decider import DeciderContextFactory
 from reddit_decider import EventType
 from reddit_decider import init_decider_parser
-from reddit_decider import decider_client_from_config
 
-user_id = "t2_1234"
-is_logged_in = True
-auth_client_id = "token"
-country_code = "US"
-device_id = "abc"
-cookie_created_timestamp = 1234
-locale_code = "us_en"
-origin_service = "origin"
-app_name = "ios"
-build_number = 1
-canonical_url = "www.test.com"
-event_fields = {
-    "user_id": user_id,
-    "logged_in": is_logged_in,
-    "cookie_created_timestamp": cookie_created_timestamp,
+USER_ID = "t2_1234"
+IS_LOGGED_IN = True
+AUTH_CLIENT_ID = "token"
+COUNTRY_CODE = "US"
+DEVICE_ID = "abc"
+COOKIE_CREATED_TIMESTAMP = 1234
+LOCALE_CODE = "us_en"
+ORIGIN_SERVICE = "origin"
+APP_NAME = "ios"
+BUILD_NUMBER = 1
+CANONICAL_URL = "www.test.com"
+EVENT_FIELDS = {
+    "user_id": USER_ID,
+    "logged_in": IS_LOGGED_IN,
+    "cookie_created_timestamp": COOKIE_CREATED_TIMESTAMP,
 }
 
 @contextlib.contextmanager
@@ -44,11 +42,11 @@ def create_temp_config_file(contents):
         f.seek(0)
         yield f
 
-def decider_field_extractor(request: RequestContext):
+def decider_field_extractor(_request: RequestContext):
     return {
-        "app_name": app_name,
-        "build_number": build_number,
-        "canonical_url": canonical_url
+        "app_name": APP_NAME,
+        "build_number": BUILD_NUMBER,
+        "canonical_url": CANONICAL_URL
     }
 
 @mock.patch("reddit_decider.FileWatcher")
@@ -98,16 +96,16 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = mock.Mock()
         self.mock_span.context.edgecontext.user.event_fields = mock.Mock(
-            return_value=event_fields
+            return_value=EVENT_FIELDS
         )
         self.mock_span.context.edgecontext.authentication_token = mock.Mock(spec=ValidatedAuthenticationToken)
-        self.mock_span.context.edgecontext.authentication_token.oauth_client_id = auth_client_id
-        self.mock_span.context.edgecontext.geolocation.country_code = country_code
-        self.mock_span.context.edgecontext.locale.locale_code = locale_code
-        self.mock_span.context.edgecontext.origin_service.name = origin_service
-        self.mock_span.context.edgecontext.device.id = device_id
+        self.mock_span.context.edgecontext.authentication_token.oauth_client_id = AUTH_CLIENT_ID
+        self.mock_span.context.edgecontext.geolocation.country_code = COUNTRY_CODE
+        self.mock_span.context.edgecontext.locale.locale_code = LOCALE_CODE
+        self.mock_span.context.edgecontext.origin_service.name = ORIGIN_SERVICE
+        self.mock_span.context.edgecontext.device.id = DEVICE_ID
 
-    def test_make_object_for_context_and_decider_context(self, file_watcher_mock):
+    def test_make_object_for_context_and_decider_context(self, _filewatcher):
         decider_ctx_factory = decider_client_from_config(
             {"experiments.path": "/tmp/test", "experiments.timeout": "60 seconds"},
             self.event_logger,
@@ -121,26 +119,26 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertIsInstance(decider_context, DeciderContext)
 
         decider_ctx_dict = decider_context.to_dict()
-        self.assertEqual(decider_ctx_dict["user_id"], user_id)
-        self.assertEqual(decider_ctx_dict["country_code"], country_code)
+        self.assertEqual(decider_ctx_dict["user_id"], USER_ID)
+        self.assertEqual(decider_ctx_dict["country_code"], COUNTRY_CODE)
         self.assertEqual(decider_ctx_dict["user_is_employee"], True)
-        self.assertEqual(decider_ctx_dict["logged_in"], is_logged_in)
-        self.assertEqual(decider_ctx_dict["device_id"], device_id)
-        self.assertEqual(decider_ctx_dict["locale"], locale_code)
-        self.assertEqual(decider_ctx_dict["origin_service"], origin_service)
-        self.assertEqual(decider_ctx_dict["auth_client_id"], auth_client_id)
+        self.assertEqual(decider_ctx_dict["logged_in"], IS_LOGGED_IN)
+        self.assertEqual(decider_ctx_dict["device_id"], DEVICE_ID)
+        self.assertEqual(decider_ctx_dict["locale"], LOCALE_CODE)
+        self.assertEqual(decider_ctx_dict["origin_service"], ORIGIN_SERVICE)
+        self.assertEqual(decider_ctx_dict["auth_client_id"], AUTH_CLIENT_ID)
         self.assertEqual(
             decider_ctx_dict["cookie_created_timestamp"],
             self.mock_span.context.edgecontext.user.event_fields().get("cookie_created_timestamp"),
         )
         self.assertEqual(
-            decider_ctx_dict["app_name"], app_name
+            decider_ctx_dict["app_name"], APP_NAME
         )
         self.assertEqual(
-            decider_ctx_dict["build_number"], build_number
+            decider_ctx_dict["build_number"], BUILD_NUMBER
         )
         self.assertEqual(
-            decider_ctx_dict["canonical_url"], canonical_url
+            decider_ctx_dict["canonical_url"], CANONICAL_URL
         )
 
 # Todo: test DeciderClient()
@@ -154,7 +152,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.event_logger = mock.Mock(spec=DebugLogger)
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = None
-        self.minimal_decider_context = DeciderContext(user_id=user_id)
+        self.minimal_decider_context = DeciderContext(user_id=USER_ID)
         self.exp_base_config = {
             "exp_1": {
                 "id": 1,
@@ -181,25 +179,61 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 },
             }
         }
+
+        self.parent_hg_config = {
+            "hg": {
+                "enabled": True,
+                "version": "5",
+                "type": "range_variant",
+                "emit_event": True,
+                "experiment": {
+                    "variants": [
+                        {
+                            "name": "holdout",
+                            "size": 1.0,
+                            "range_end": 1.0,
+                            "range_start": 0.0
+                        },
+                        {
+                            "name": "control_1",
+                            "size": 0.0,
+                            "range_end": 0.0,
+                            "range_start": 0.0
+                        }
+                    ],
+                    "experiment_version": 5,
+                    "shuffle_version": 0,
+                    "bucket_val": "user_id",
+                    "log_bucketing": False,
+                },
+                "start_ts": 0,
+                "stop_ts": 9668199193,
+                "id": 2,
+                "name": "hg",
+                "owner": "test",
+                "value": "range_variant"
+            }
+        }
+
         self.dc = DeciderContext(
-            user_id=user_id,
-            logged_in=is_logged_in,
-            country_code=country_code,
-            locale=locale_code,
-            origin_service=origin_service,
+            user_id=USER_ID,
+            logged_in=IS_LOGGED_IN,
+            country_code=COUNTRY_CODE,
+            locale=LOCALE_CODE,
+            origin_service=ORIGIN_SERVICE,
             user_is_employee=True,
-            device_id=device_id,
-            auth_client_id=auth_client_id,
-            cookie_created_timestamp=cookie_created_timestamp,
-            extracted_fields=decider_field_extractor(request=None),
+            device_id=DEVICE_ID,
+            auth_client_id=AUTH_CLIENT_ID,
+            cookie_created_timestamp=COOKIE_CREATED_TIMESTAMP,
+            extracted_fields=decider_field_extractor(_request=None),
         )
 
     def assert_exposure_event_fields(self, experiment_name: str, variant: str, event_fields: dict, bucket_val: str = "user_id", identifier: str = None):
         self.assertEqual(event_fields["variant"], variant)
-        self.assertEqual(event_fields["user_id"], identifier or user_id)
-        self.assertEqual(event_fields["logged_in"], is_logged_in)
-        self.assertEqual(event_fields["app_name"], app_name)
-        self.assertEqual(event_fields["cookie_created_timestamp"], cookie_created_timestamp)
+        self.assertEqual(event_fields["user_id"], identifier or USER_ID)
+        self.assertEqual(event_fields["logged_in"], IS_LOGGED_IN)
+        self.assertEqual(event_fields["app_name"], APP_NAME)
+        self.assertEqual(event_fields["cookie_created_timestamp"], COOKIE_CREATED_TIMESTAMP)
         self.assertEqual(event_fields["event_type"], EventType.EXPOSE)
         self.assertNotEqual(event_fields["span"], None)
 
@@ -328,42 +362,8 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(self.event_logger.log.call_count, 0)
 
     def test_get_variant_without_expose_for_holdout_exposure(self):
-        parent_hg_config = {
-            "hg": {
-                "enabled": True,
-                "version": "5",
-                "type": "range_variant",
-                "emit_event": True,
-                "experiment": {
-                    "variants": [
-                        {
-                            "name": "holdout",
-                            "size": 1.0,
-                            "range_end": 1.0,
-                            "range_start": 0.0
-                        },
-                        {
-                            "name": "control_1",
-                            "size": 0.0,
-                            "range_end": 0.0,
-                            "range_start": 0.0
-                        }
-                    ],
-                    "experiment_version": 5,
-                    "shuffle_version": 0,
-                    "bucket_val": "user_id",
-                    "log_bucketing": False,
-                },
-                "start_ts": 0,
-                "stop_ts": 9668199193,
-                "id": 2,
-                "name": "hg",
-                "owner": "test",
-                "value": "range_variant"
-            }
-        }
         self.exp_base_config["exp_1"].update({"parent_hg_name": "hg"})
-        self.exp_base_config.update(parent_hg_config)
+        self.exp_base_config.update(self.parent_hg_config)
 
         with create_temp_config_file(self.exp_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
@@ -378,7 +378,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_without_expose(experiment_name="exp_1")
-            # exp_1 is part of Holdout, so None is returned
+            # user is part of Holdout (100% bucketing), so `None` is returned
             self.assertEqual(variant, None)
 
             # exposure assertions
@@ -389,7 +389,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assert_exposure_event_fields(experiment_name="hg", variant='holdout', event_fields=event_fields)
 
     def test_get_variant_for_identifier_user_id(self):
-        identifier = "t2_foo"
+        identifier = USER_ID
         bucket_val = "user_id"
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
@@ -406,7 +406,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier)
-            self.assertEqual(variant, "variant_3")
+            self.assertEqual(variant, "variant_4")
 
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
@@ -417,7 +417,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(event_fields["user_id"], identifier)
 
     def test_get_variant_for_identifier_canonical_url(self):
-        identifier = "www.foo.com"
+        identifier = CANONICAL_URL
         bucket_val = "canonical_url"
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
@@ -445,7 +445,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(event_fields["canonical_url"], identifier)
 
     def test_get_variant_for_identifier_device_id(self):
-        identifier = "d-id"
+        identifier = DEVICE_ID
         bucket_val = "device_id"
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
@@ -462,7 +462,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier)
-            self.assertEqual(variant, "control_2")
+            self.assertEqual(variant, "variant_3")
 
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
@@ -493,16 +493,101 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             event_fields = self.event_logger.log.call_args[1]
             self.assert_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields)
 
+    def test_get_variant_for_identifier_without_expose_user_id(self):
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=USER_ID)
+            self.assertEqual(variant, "variant_4")
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
+    def test_get_variant_for_identifier_without_expose_user_id_for_holdout_exposure(self):
+        self.exp_base_config["exp_1"].update({"parent_hg_name": "hg"})
+        self.exp_base_config.update(self.parent_hg_config)
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=USER_ID)
+            # user is part of Holdout (100% bucketing), so `None` is returned
+            self.assertEqual(variant, None)
+
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+
+            # `variant == None` for holdout but event will fire with `variant == 'holdout'` for analysis
+            self.assert_exposure_event_fields(experiment_name="hg", variant='holdout', event_fields=event_fields)
+
+    def test_get_variant_for_identifier_without_expose_canonical_url(self):
+        identifier = "www.foo.com"
+        bucket_val = "canonical_url"
+        self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=identifier)
+            self.assertEqual(variant, "variant_3")
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
+    def test_get_variant_for_identifier_without_expose_device_id(self):
+        identifier = "d-id"
+        bucket_val = "device_id"
+        self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=identifier)
+            self.assertEqual(variant, "control_2")
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
     # Todo: test exposure_kwargs
 
     # Todo: test un-enabled experiment
-
-
-# Todo: test get_variant_without_expose()
-# class TestDeciderGetVariantWithoutExpose(unittest.TestCase):
-
-# Todo: test expose()
-# class TestDeciderExpose(unittest.TestCase):
 
 
 class TestDeciderGetDynamicConfig(unittest.TestCase):
@@ -511,7 +596,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         self.event_logger = mock.Mock(spec=DebugLogger)
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = None
-        self.minimal_decider_context = DeciderContext(user_id=user_id)
+        self.minimal_decider_context = DeciderContext(user_id=USER_ID)
         self.dc_base_config = {
             "dc_1": {
                 "id": 1,
@@ -528,15 +613,15 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             }
         }
         self.dc = DeciderContext(
-            user_id=user_id,
-            logged_in=is_logged_in,
-            country_code=country_code,
-            locale=locale_code,
-            origin_service=origin_service,
+            user_id=USER_ID,
+            logged_in=IS_LOGGED_IN,
+            country_code=COUNTRY_CODE,
+            locale=LOCALE_CODE,
+            origin_service=ORIGIN_SERVICE,
             user_is_employee=True,
-            device_id=device_id,
-            auth_client_id=auth_client_id,
-            cookie_created_timestamp=cookie_created_timestamp,
+            device_id=DEVICE_ID,
+            auth_client_id=AUTH_CLIENT_ID,
+            cookie_created_timestamp=COOKIE_CREATED_TIMESTAMP,
         )
 
     def test_get_bool(self):
