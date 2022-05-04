@@ -20,7 +20,7 @@ import rust_decider
 
 logger = logging.getLogger(__name__)
 
-EMPLOYEE_ROLES = ("employee", "contractor")
+EMPLOYEE_ROLES = ["employee", "contractor"]
 
 class EventType(Enum):
     EXPOSE = "expose"
@@ -487,12 +487,8 @@ class DeciderContextFactory(ContextFactory):
         self._request_field_extractor = request_field_extractor
 
     @classmethod
-    def is_employee(cls, edge_context: Any) -> bool:
-        return (
-            any([edge_context.user.has_role(role) for role in EMPLOYEE_ROLES])
-            if edge_context.user.is_logged_in
-            else False
-        )
+    def is_employee(cls, request_context: Any) -> bool:
+        return any(role in request_context.user_roles for role in EMPLOYEE_ROLES)
 
     def make_object_for_context(self, name: str, span: Span) -> Decider:
         decider = None
@@ -528,7 +524,7 @@ class DeciderContextFactory(ContextFactory):
                 country_code=ec.geolocation.country_code,
                 locale=ec.locale.locale_code,
                 origin_service=ec.origin_service.name,
-                user_is_employee=DeciderContextFactory.is_employee(ec),
+                user_is_employee=DeciderContextFactory.is_employee(request),
                 device_id=ec.device.id,
                 auth_client_id=auth_client_id,
                 cookie_created_timestamp=user_event_fields.get("cookie_created_timestamp"),
