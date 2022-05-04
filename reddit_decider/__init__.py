@@ -320,15 +320,11 @@ class Decider:
         The `identifier` param will be set on `DeciderClient` under:
             `user_id`, `device_id`, & `canonical_url`,
         so that regardless of what `bucketing_val` is set to in an experiment's config
-        (one of those 3), the passed in `identifier` param will be used
-        in the hashing used to bucekt.
+        (one of those 3), the passed in `identifier` param will be used in the
+        hashing string when bucketing.
 
-        Since calling `get_variant()` will fire an exposure event, it
+        Since calling `get_variant_for_identifier()` will fire an exposure event, it
         is best to call it when you are sure the user will be exposed to the experiment.
-        If you absolutely must check the status of an experiment
-        before the user will be exposed to the experiment,
-        use `get_variant_without_expose()` to disable exposure events
-        and call `expose()` manually later.
 
         :param experiment_name: Name of the experiment you want a variant for.
 
@@ -347,7 +343,11 @@ class Decider:
             return None
 
         context_fields = self._decider_context.to_dict()
-        identifier_context_fields = { **context_fields, **{"user_id": identifier, "device_id": identifier, "canonical_url": identifier}}
+        identifier_context_fields = { **context_fields, **{
+            "user_id": identifier,
+            "device_id": identifier,
+            "canonical_url": identifier
+        }}
 
         ctx = rust_decider.make_ctx(identifier_context_fields)
         ctx_err = ctx.err()
@@ -378,17 +378,16 @@ class Decider:
                     owner=owner
                 )
 
-                # expose the `bucket_val` used in the experiment's config,
-                # not `identifier_context_fields`
-                final_context_fields = { **context_fields, **{bucket_val: bucketing_value}}
-                print(json.dumps(final_context_fields, indent=4))
+                # expose the `bucket_val` used in the experiment's config, not `identifier_context_fields`
+                event_context_fields = { **context_fields, **{bucket_val: bucketing_value}}
+
                 self._event_logger.log(
                     experiment=experiment,
                     variant=event_variant,
                     span=self._span,
                     event_type=EventType.EXPOSE,
-                    inputs=final_context_fields.copy(),
-                    **final_context_fields.copy(),
+                    inputs=event_context_fields.copy(),
+                    **event_context_fields.copy(),
                 )
 
             return variant

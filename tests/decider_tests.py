@@ -194,9 +194,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             extracted_fields=decider_field_extractor(request=None),
         )
 
-    def assert_exposure_event_fields(self, experiment_name: str, variant: str, event_fields: dict):
+    def assert_exposure_event_fields(self, experiment_name: str, variant: str, event_fields: dict, identifier: str = None):
         self.assertEqual(event_fields["variant"], variant)
-        self.assertEqual(event_fields["user_id"], user_id)
+        self.assertEqual(event_fields["user_id"], identifier or user_id)
         self.assertEqual(event_fields["logged_in"], is_logged_in)
         self.assertEqual(event_fields["app_name"], app_name)
         self.assertEqual(event_fields["cookie_created_timestamp"], cookie_created_timestamp)
@@ -387,7 +387,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # `variant == None` for holdout but event will fire with `variant == 'holdout'` for analysis
             self.assert_exposure_event_fields(experiment_name="hg", variant='holdout', event_fields=event_fields)
 
-    def test_get_variant_for_identifier_canonical_url(self):
+    def test_get_variant_for_identifier_user_id(self):
         identifier = "t2_foo"
         bucket_val = "user_id"
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
@@ -410,10 +410,10 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
-            self.assert_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields)
+            self.assert_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields, identifier=identifier)
 
             # `identifier` passed to correct event field of experiment's `bucket_val` config
-            self.assertEqual(event_fields["canonical_url"], identifier)
+            self.assertEqual(event_fields["user_id"], identifier)
             self.assertEqual(getattr(event_fields["experiment"], "bucket_val"), bucket_val)
 
     def test_get_variant_for_identifier_canonical_url(self):
@@ -468,7 +468,6 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
-            print(event_fields)
             self.assert_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields)
 
             # `identifier` passed to correct event field of experiment's `bucket_val` config
