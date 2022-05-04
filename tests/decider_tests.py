@@ -540,7 +540,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assert_exposure_event_fields(experiment_name="hg", variant='holdout', event_fields=event_fields)
 
     def test_get_variant_for_identifier_without_expose_canonical_url(self):
-        identifier = "www.foo.com"
+        identifier = CANONICAL_URL
         bucket_val = "canonical_url"
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
@@ -563,7 +563,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(self.event_logger.log.call_count, 0)
 
     def test_get_variant_for_identifier_without_expose_device_id(self):
-        identifier = "d-id"
+        identifier = DEVICE_ID
         bucket_val = "device_id"
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
@@ -580,7 +580,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=identifier)
-            self.assertEqual(variant, "control_2")
+            self.assertEqual(variant, "variant_3")
 
             # no exposures should be triggered
             self.assertEqual(self.event_logger.log.call_count, 0)
