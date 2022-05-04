@@ -131,15 +131,32 @@ class DeciderContextFactoryTests(unittest.TestCase):
             decider_ctx_dict["cookie_created_timestamp"],
             self.mock_span.context.edgecontext.user.event_fields().get("cookie_created_timestamp"),
         )
+        self.assertEqual(decider_ctx_dict["app_name"], APP_NAME)
+        self.assertEqual(decider_ctx_dict["build_number"], BUILD_NUMBER)
+        self.assertEqual(decider_ctx_dict["canonical_url"], CANONICAL_URL)
+
+        decider_event_dict = decider_context.to_event_dict()
+        self.assertEqual(decider_event_dict["user_id"], USER_ID)
+        self.assertEqual(decider_event_dict["country_code"], COUNTRY_CODE)
+        self.assertEqual(decider_event_dict["geo_country_code"], COUNTRY_CODE)
+        self.assertEqual(decider_event_dict["user_is_employee"], True)
+        self.assertEqual(decider_event_dict["logged_in"], IS_LOGGED_IN)
+        self.assertEqual(decider_event_dict["user_logged_in"], IS_LOGGED_IN)
+        self.assertEqual(decider_event_dict["device_id"], DEVICE_ID)
+        self.assertEqual(decider_event_dict["platform_device_id"], DEVICE_ID)
+        self.assertEqual(decider_event_dict["locale"], LOCALE_CODE)
+        self.assertEqual(decider_event_dict["app_relevant_locale"], LOCALE_CODE)
+        self.assertEqual(decider_event_dict["origin_service"], ORIGIN_SERVICE)
+        self.assertEqual(decider_event_dict.get("auth_client_id"), None)
         self.assertEqual(
-            decider_ctx_dict["app_name"], APP_NAME
+            decider_event_dict["cookie_created_timestamp"],
+            self.mock_span.context.edgecontext.user.event_fields().get("cookie_created_timestamp"),
         )
-        self.assertEqual(
-            decider_ctx_dict["build_number"], BUILD_NUMBER
-        )
-        self.assertEqual(
-            decider_ctx_dict["canonical_url"], CANONICAL_URL
-        )
+        self.assertEqual(decider_event_dict["app_name"], APP_NAME)
+        self.assertEqual(decider_event_dict["build_number"], BUILD_NUMBER)
+        self.assertEqual(decider_event_dict["app_build_number"], BUILD_NUMBER)
+        self.assertEqual(decider_event_dict["canonical_url"], CANONICAL_URL)
+        self.assertEqual(decider_event_dict["request_canonical_url"], CANONICAL_URL)
 
 # Todo: test DeciderClient()
 # @mock.patch("reddit_decider.FileWatcher")
