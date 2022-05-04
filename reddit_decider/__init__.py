@@ -154,7 +154,7 @@ class Decider:
         :return: Variant name if a variant is assigned, None otherwise.
         """
         decider = self._get_decider()
-        if not decider:
+        if decider is None:
             logger.warning("Encountered error in _get_decider()")
             return None
 
@@ -199,8 +199,71 @@ class Decider:
 
             return variant
 
-    # todo:
-    # def get_variant_without_expose(self, experiment_name: str) -> Optional[str]:
+    def get_variant_without_expose(self, experiment_name: str) -> Optional[str]:
+        """Return a bucketing variant, if any, without emitting exposure event.
+
+        The `expose()` function is available to be manually called afterward.
+
+        However, experiments in Holdouts will still send an exposure for
+        the holdout parent experiment, since it is not possible to
+        manually expose the holdout later (because it's not possible to know
+        if the returned `variant` string came from the holdout or its child experiment
+        after exiting this function--`control_1` could come from either).
+
+        :param experiment_name: Name of the experiment you want to run.
+
+        :return: Variant name if a variant is assigned, None otherwise.
+        """
+        decider = self._get_decider()
+        if decider is None:
+            logger.warning("Encountered error in _get_decider()")
+            return None
+
+        context_fields = self._decider_context.to_dict()
+        ctx = rust_decider.make_ctx(context_fields)
+        ctx_err = ctx.err()
+        if ctx_err is not None:
+            logger.warning(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+
+        choice = decider.choose(experiment_name, ctx)
+        error = choice.err()
+
+        if error:
+            logger.warning(f"Encountered error in decider.choose(): {error}")
+            return None
+        else:
+            variant = choice.decision()
+
+            del context_fields["auth_client_id"]
+
+            # expose Holdout if experiment is part of one
+            for event in choice.events():
+                event_type, id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
+                # event_type enum:
+                # 0: regular bucketing
+                # 1: override
+                # 2: holdout
+                if event_type == "2":
+                    experiment = ExperimentConfig(
+                        id=int(id),
+                        name=name,
+                        version=version,
+                        bucket_val=bucket_val,
+                        start_ts=start_ts,
+                        stop_ts=stop_ts,
+                        owner=owner
+                    )
+
+                    self._event_logger.log(
+                        experiment=experiment,
+                        variant=event_variant,
+                        span=self._span,
+                        event_type=EventType.EXPOSE,
+                        inputs=context_fields.copy(),
+                        **context_fields.copy(),
+                    )
+
+            return variant
 
     # todo:
     # def expose(
