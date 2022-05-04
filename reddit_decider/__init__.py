@@ -148,7 +148,7 @@ class Decider:
         :param experiment_name: Name of the experiment you want a variant for.
 
         :param exposure_kwargs:  Additional arguments that will be passed
-            to events_logger under "inputs" key.
+            to events_logger (keys must be part of v2 event schema).
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
@@ -264,10 +264,54 @@ class Decider:
 
             return variant
 
-    # todo:
-    # def expose(
-    #     self, experiment_name: str, variant_name: str, **exposure_kwargs: Optional[Dict[str, Any]]
-    # ) -> None:
+    def expose(
+        self, experiment_name: str, variant_name: str, **exposure_kwargs: Optional[Dict[str, Any]]
+    ) -> None:
+        """Log an event to indicate that a user has been exposed to an experimental treatment.
+
+        Meant to be used after calling `get_variant_without_expose()`
+        since `get_variant()` emits exposure event automatically.
+
+        :param experiment_name: Name of the experiment that was exposed.
+
+        :param variant_name: Name of the variant that was exposed.
+
+        :param exposure_kwargs: Additional arguments that will be passed
+            to events_logger (keys must be part of v2 event schema).
+        """
+        decider = self._get_decider()
+        if decider is None:
+            logger.warning("Encountered error in _get_decider()")
+            return None
+
+        experiment = decider.get_experiment(experiment_name)
+        error = experiment.err()
+        if error:
+            logger.warning(f"Encountered error in decider.get_experiment(): {error}")
+            return
+
+        context_fields = self._decider_context.to_dict()
+        context_fields.update(exposure_kwargs or {})
+        exp_dict = experiment.val()
+
+        experiment = ExperimentConfig(
+            id=int(exp_dict.get("id", 0)),
+            name=exp_dict.get("name"),
+            version=str(exp_dict.get("version")),
+            bucket_val=exp_dict.get("variant_set", {}).get("bucket_val"),
+            start_ts=exp_dict.get("variant_set", {}).get("start_ts"),
+            stop_ts=exp_dict.get("variant_set", {}).get("stop_ts"),
+            owner=exp_dict.get("owner")
+        )
+
+        self._event_logger.log(
+            experiment=experiment,
+            variant=variant_name,
+            span=self._span,
+            event_type=EventType.EXPOSE,
+            inputs=context_fields.copy(),
+            **context_fields.copy(),
+        )
 
     def _get_dynamic_config_value(
         self,

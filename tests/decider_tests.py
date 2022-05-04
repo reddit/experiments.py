@@ -148,7 +148,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
 # class DeciderClientTests(unittest.TestCase):
 
 
-class TestDeciderGetVariant(unittest.TestCase):
+class TestDeciderGetVariantAndExpose(unittest.TestCase):
     def setUp(self):
         super().setUp()
         self.event_logger = mock.Mock(spec=DebugLogger)
@@ -390,6 +390,39 @@ class TestDeciderGetVariant(unittest.TestCase):
             self.assertNotEqual(event_fields["span"], None)
 
             cfg = self.exp_base_config["hg"]
+            self.assertEqual(getattr(event_fields["experiment"], "id"), cfg["id"])
+            self.assertEqual(getattr(event_fields["experiment"], "name"), cfg["name"])
+            self.assertEqual(getattr(event_fields["experiment"], "owner"), cfg["owner"])
+            self.assertEqual(getattr(event_fields["experiment"], "version"), cfg["version"])
+
+    def test_expose(self):
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            var = "variant_4"
+            decider.expose("exp_1", var)
+
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+            self.assertEqual(event_fields["variant"], var)
+            self.assertEqual(event_fields["user_id"], user_id)
+            self.assertEqual(event_fields["logged_in"], is_logged_in)
+            self.assertEqual(event_fields["app_name"], app_name)
+            self.assertEqual(event_fields["cookie_created_timestamp"], cookie_created_timestamp)
+            self.assertEqual(event_fields["event_type"], EventType.EXPOSE)
+            self.assertNotEqual(event_fields["span"], None)
+
+            cfg = self.exp_base_config["exp_1"]
             self.assertEqual(getattr(event_fields["experiment"], "id"), cfg["id"])
             self.assertEqual(getattr(event_fields["experiment"], "name"), cfg["name"])
             self.assertEqual(getattr(event_fields["experiment"], "owner"), cfg["owner"])
