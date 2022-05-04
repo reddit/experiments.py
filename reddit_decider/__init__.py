@@ -148,7 +148,7 @@ class Decider:
         :param experiment_name: Name of the experiment you want a variant for.
 
         :param exposure_kwargs:  Additional arguments that will be passed
-            to events_logger under "inputs" key.
+            to events_logger (keys must be part of v2 event schema).
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
@@ -276,7 +276,8 @@ class Decider:
 
         :param variant_name: Name of the variant that was exposed.
 
-        :param exposure_kwargs: Additional arguments that will be passed to events_logger.
+        :param exposure_kwargs: Additional arguments that will be passed
+            to events_logger (keys must be part of v2 event schema).
         """
         decider = self._get_decider()
         if decider is None:
