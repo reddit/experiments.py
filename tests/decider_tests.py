@@ -194,7 +194,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             extracted_fields=decider_field_extractor(request=None),
         )
 
-    def assert_exposure_event_fields(self, experiment_name: str, variant: str, event_fields: dict, identifier: str = None):
+    def assert_exposure_event_fields(self, experiment_name: str, variant: str, event_fields: dict, bucket_val: str = "user_id", identifier: str = None):
         self.assertEqual(event_fields["variant"], variant)
         self.assertEqual(event_fields["user_id"], identifier or user_id)
         self.assertEqual(event_fields["logged_in"], is_logged_in)
@@ -208,6 +208,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.assertEqual(getattr(event_fields["experiment"], "name"), cfg["name"])
         self.assertEqual(getattr(event_fields["experiment"], "owner"), cfg["owner"])
         self.assertEqual(getattr(event_fields["experiment"], "version"), cfg["version"])
+        self.assertEqual(getattr(event_fields["experiment"], "bucket_val"), bucket_val)
 
     def test_get_variant(self):
         with create_temp_config_file(self.exp_base_config) as f:
@@ -414,7 +415,6 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["user_id"], identifier)
-            self.assertEqual(getattr(event_fields["experiment"], "bucket_val"), bucket_val)
 
     def test_get_variant_for_identifier_canonical_url(self):
         identifier = "www.foo.com"
@@ -439,11 +439,10 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
-            self.assert_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields)
+            self.assert_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields, bucket_val=bucket_val)
 
             # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["canonical_url"], identifier)
-            self.assertEqual(getattr(event_fields["experiment"], "bucket_val"), bucket_val)
 
     def test_get_variant_for_identifier_device_id(self):
         identifier = "d-id"
@@ -468,11 +467,10 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
-            self.assert_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields)
+            self.assert_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields, bucket_val=bucket_val)
 
             # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["device_id"], identifier)
-            self.assertEqual(getattr(event_fields["experiment"], "bucket_val"), bucket_val)
 
     def test_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:
@@ -487,25 +485,13 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            var = "variant_4"
-            decider.expose("exp_1", var)
+            variant = "variant_4"
+            decider.expose("exp_1", variant)
 
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
-            self.assertEqual(event_fields["variant"], var)
-            self.assertEqual(event_fields["user_id"], user_id)
-            self.assertEqual(event_fields["logged_in"], is_logged_in)
-            self.assertEqual(event_fields["app_name"], app_name)
-            self.assertEqual(event_fields["cookie_created_timestamp"], cookie_created_timestamp)
-            self.assertEqual(event_fields["event_type"], EventType.EXPOSE)
-            self.assertNotEqual(event_fields["span"], None)
-
-            cfg = self.exp_base_config["exp_1"]
-            self.assertEqual(getattr(event_fields["experiment"], "id"), cfg["id"])
-            self.assertEqual(getattr(event_fields["experiment"], "name"), cfg["name"])
-            self.assertEqual(getattr(event_fields["experiment"], "owner"), cfg["owner"])
-            self.assertEqual(getattr(event_fields["experiment"], "version"), cfg["version"])
+            self.assert_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields)
 
     # Todo: test exposure_kwargs
 
