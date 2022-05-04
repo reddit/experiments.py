@@ -138,15 +138,14 @@ class Decider:
     ) -> Optional[str]:
         """Return a bucketing variant, if any, with auto-exposure.
 
-        Since calling get_variant() will fire an exposure event, it
-        is best to call this when you are making the decision that
-        will expose the experiment to the user.
+        Since calling `get_variant()` will fire an exposure event, it
+        is best to call it when you are sure the user will be exposed to the experiment.
         If you absolutely must check the status of an experiment
-        before you are sure that the experiment will be exposed to the user,
-        you can use `get_variant_without_expose()` to disable exposure events
+        before the user will be exposed to the experiment,
+        use `get_variant_without_expose()` to disable exposure events
         and call `expose()` manually later.
 
-        :param experiment_name: Name of the experiment you want to run.
+        :param experiment_name: Name of the experiment you want a variant for.
 
         :param exposure_kwargs:  Additional arguments that will be passed
             to events_logger under "inputs" key.
@@ -204,13 +203,13 @@ class Decider:
 
         The `expose()` function is available to be manually called afterward.
 
-        However, experiments in Holdouts will still send an exposure for
+        However, experiments in Holdout Groups will still send an exposure for
         the holdout parent experiment, since it is not possible to
-        manually expose the holdout later (because it's not possible to know
-        if the returned `variant` string came from the holdout or its child experiment
-        after exiting this function--`control_1` could come from either).
+        manually expose the holdout later (because after exiting this function,
+        it's impossible to know if a returned `None` or `"control_1"` string
+        came from the holdout group or its child experiment).
 
-        :param experiment_name: Name of the experiment you want to run.
+        :param experiment_name: Name of the experiment you want a variant for.
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
@@ -236,13 +235,13 @@ class Decider:
 
             del context_fields["auth_client_id"]
 
-            # expose Holdout if experiment is part of one
+            # expose Holdout if the experiment is part of one
             for event in choice.events():
                 event_type, id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
                 # event_type enum:
-                # 0: regular bucketing
-                # 1: override
-                # 2: holdout
+                #   0: regular bucketing
+                #   1: override
+                #   2: holdout
                 if event_type == "2":
                     experiment = ExperimentConfig(
                         id=int(id),

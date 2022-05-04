@@ -181,25 +181,25 @@ class TestDeciderGetVariant(unittest.TestCase):
                 },
             }
         }
+        self.dc = DeciderContext(
+            user_id=user_id,
+            logged_in=is_logged_in,
+            country_code=country_code,
+            locale=locale_code,
+            origin_service=origin_service,
+            user_is_employee=True,
+            device_id=device_id,
+            auth_client_id=auth_client_id,
+            cookie_created_timestamp=cookie_created_timestamp,
+            extracted_fields=decider_field_extractor(request=None),
+        )
 
     def test_get_variant_expose_event_fields(self):
         with create_temp_config_file(self.exp_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            dc = DeciderContext(
-                user_id=user_id,
-                logged_in=is_logged_in,
-                country_code=country_code,
-                locale=locale_code,
-                origin_service=origin_service,
-                user_is_employee=True,
-                device_id=device_id,
-                auth_client_id=auth_client_id,
-                cookie_created_timestamp=cookie_created_timestamp,
-                extracted_fields=decider_field_extractor(request=None),
-            )
 
             decider = Decider(
-                decider_context=dc,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -307,21 +307,9 @@ class TestDeciderGetVariant(unittest.TestCase):
     def test_get_variant_without_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            dc = DeciderContext(
-                user_id=user_id,
-                logged_in=is_logged_in,
-                country_code=country_code,
-                locale=locale_code,
-                origin_service=origin_service,
-                user_is_employee=True,
-                device_id=device_id,
-                auth_client_id=auth_client_id,
-                cookie_created_timestamp=cookie_created_timestamp,
-                extracted_fields=decider_field_extractor(request=None),
-            )
 
             decider = Decider(
-                decider_context=dc,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -375,21 +363,9 @@ class TestDeciderGetVariant(unittest.TestCase):
 
         with create_temp_config_file(self.exp_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            dc = DeciderContext(
-                user_id=user_id,
-                logged_in=is_logged_in,
-                country_code=country_code,
-                locale=locale_code,
-                origin_service=origin_service,
-                user_is_employee=True,
-                device_id=device_id,
-                auth_client_id=auth_client_id,
-                cookie_created_timestamp=cookie_created_timestamp,
-                extracted_fields=decider_field_extractor(request=None),
-            )
 
             decider = Decider(
-                decider_context=dc,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
