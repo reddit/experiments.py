@@ -79,6 +79,34 @@ class DeciderContext:
             **(self._extracted_fields or {}),
         }
 
+    def to_event_dict(self) -> Dict:
+        # prepend required v2 event schema prefixes
+        modified_extracted_fields = (self._extracted_fields or {}).copy()
+
+        build_number = modified_extracted_fields.get("build_number")
+        if build_number:
+            modified_extracted_fields["app_build_number"] = build_number
+
+        canonical_url = modified_extracted_fields.get("canonical_url")
+        if canonical_url:
+            modified_extracted_fields["request_canonical_url"] = canonical_url
+
+        return {
+            "user_id": self._user_id,
+            "country_code": self._country_code,
+            "geo_country_code": self._country_code,
+            "locale": self._locale,
+            "app_relevant_locale": self._locale,
+            "user_is_employee": self._user_is_employee,
+            "logged_in": self._logged_in,
+            "user_logged_in": self._logged_in,
+            "device_id": self._device_id,
+            "platform_device_id": self._device_id,
+            "origin_service": self._origin_service,
+            "cookie_created_timestamp": self._cookie_created_timestamp,
+            **modified_extracted_fields,
+        }
+
 
 def init_decider_parser(file: IO) -> Any:
     return rust_decider.init("darkmode overrides targeting holdout mutex_group fractional_availability value", file.name)
@@ -172,8 +200,8 @@ class Decider:
 
         variant = choice.decision()
 
-        del context_fields["auth_client_id"]
-        context_fields.update(exposure_kwargs or {})
+        event_context_fields = self._decider_context.to_event_dict()
+        event_context_fields.update(exposure_kwargs or {})
 
         for event in choice.events():
             _event_type, exp_id, name, version, event_variant, _bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
@@ -192,8 +220,8 @@ class Decider:
                 variant=event_variant,
                 span=self._span,
                 event_type=EventType.EXPOSE,
-                inputs=context_fields.copy(),
-                **context_fields.copy(),
+                inputs=event_context_fields.copy(),
+                **event_context_fields.copy(),
             )
 
         return variant
@@ -233,7 +261,7 @@ class Decider:
 
         variant = choice.decision()
 
-        del context_fields["auth_client_id"]
+        event_context_fields = self._decider_context.to_event_dict()
 
         # expose Holdout if the experiment is part of one
         for event in choice.events():
@@ -258,8 +286,8 @@ class Decider:
                     variant=event_variant,
                     span=self._span,
                     event_type=EventType.EXPOSE,
-                    inputs=context_fields.copy(),
-                    **context_fields.copy(),
+                    inputs=event_context_fields.copy(),
+                    **event_context_fields.copy(),
                 )
 
         return variant
@@ -290,8 +318,8 @@ class Decider:
             logger.warning(f"Encountered error in decider.get_experiment(): {error}")
             return
 
-        context_fields = self._decider_context.to_dict()
-        context_fields.update(exposure_kwargs or {})
+        event_context_fields = self._decider_context.to_event_dict()
+        event_context_fields.update(exposure_kwargs or {})
         exp_dict = experiment.val()
 
         experiment = ExperimentConfig(
@@ -309,8 +337,8 @@ class Decider:
             variant=variant_name,
             span=self._span,
             event_type=EventType.EXPOSE,
-            inputs=context_fields.copy(),
-            **context_fields.copy(),
+            inputs=event_context_fields.copy(),
+            **event_context_fields.copy(),
         )
 
     def get_variant_for_identifier(
@@ -346,8 +374,7 @@ class Decider:
             logger.warning("Encountered error in _get_decider()")
             return None
 
-        context_fields = self._decider_context.to_dict()
-        identifier_context_fields = { **context_fields, **{
+        identifier_context_fields = { **self._decider_context.to_dict(), **{
             "user_id": identifier,
             "device_id": identifier,
             "canonical_url": identifier
@@ -367,8 +394,8 @@ class Decider:
 
         variant = choice.decision()
 
-        del context_fields["auth_client_id"]
-        context_fields.update(exposure_kwargs or {})
+        event_context_fields = self._decider_context.to_event_dict()
+        event_context_fields.update(exposure_kwargs or {})
 
         for event in choice.events():
             _event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
@@ -383,15 +410,15 @@ class Decider:
             )
 
             # expose the `bucket_val` used in the experiment's config, not `identifier_context_fields`
-            event_context_fields = { **context_fields, **{bucket_val: bucketing_value}}
+            event_ctx_fields = { **event_context_fields, **{bucket_val: bucketing_value}}
 
             self._event_logger.log(
                 experiment=experiment,
                 variant=event_variant,
                 span=self._span,
                 event_type=EventType.EXPOSE,
-                inputs=event_context_fields.copy(),
-                **event_context_fields.copy(),
+                inputs=event_ctx_fields.copy(),
+                **event_ctx_fields.copy(),
             )
 
         return variant
@@ -432,8 +459,7 @@ class Decider:
             logger.warning("Encountered error in _get_decider()")
             return None
 
-        context_fields = self._decider_context.to_dict()
-        identifier_context_fields = { **context_fields, **{
+        identifier_context_fields = { **self._decider_context.to_dict(), **{
             "user_id": identifier,
             "device_id": identifier,
             "canonical_url": identifier
@@ -453,7 +479,7 @@ class Decider:
 
         variant = choice.decision()
 
-        del context_fields["auth_client_id"]
+        event_context_fields = self._decider_context.to_event_dict()
 
         # expose Holdout if the experiment is part of one
         for event in choice.events():
@@ -474,15 +500,15 @@ class Decider:
                 )
 
                 # expose the `bucket_val` used in the experiment's config, not `identifier_context_fields`
-                event_context_fields = { **context_fields, **{bucket_val: bucketing_value}}
+                event_ctx_fields = { **event_context_fields, **{bucket_val: bucketing_value}}
 
                 self._event_logger.log(
                     experiment=experiment,
                     variant=event_variant,
                     span=self._span,
                     event_type=EventType.EXPOSE,
-                    inputs=event_context_fields.copy(),
-                    **event_context_fields.copy(),
+                    inputs=event_ctx_fields.copy(),
+                    **event_ctx_fields.copy(),
                 )
 
         return variant
