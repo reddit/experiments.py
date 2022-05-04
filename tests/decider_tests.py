@@ -155,15 +155,14 @@ class TestDeciderGetVariant(unittest.TestCase):
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = None
         self.minimal_decider_context = DeciderContext(user_id=user_id)
-
-    def test_get_variant_expose_event_fields(self):
-        config = {
+        self.exp_base_config = {
             "exp_1": {
                 "id": 1,
                 "name": "exp_1",
                 "enabled": True,
                 "version": "2",
                 "type": "range_variant",
+                "emit_event": True,
                 "start_ts": 37173982,
                 "stop_ts": 2147483648,
                 "owner": "test_owner",
@@ -182,24 +181,25 @@ class TestDeciderGetVariant(unittest.TestCase):
                 },
             }
         }
+        self.dc = DeciderContext(
+            user_id=user_id,
+            logged_in=is_logged_in,
+            country_code=country_code,
+            locale=locale_code,
+            origin_service=origin_service,
+            user_is_employee=True,
+            device_id=device_id,
+            auth_client_id=auth_client_id,
+            cookie_created_timestamp=cookie_created_timestamp,
+            extracted_fields=decider_field_extractor(request=None),
+        )
 
-        with create_temp_config_file(config) as f:
+    def test_get_variant_expose_event_fields(self):
+        with create_temp_config_file(self.exp_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            dc = DeciderContext(
-                user_id=user_id,
-                logged_in=is_logged_in,
-                country_code=country_code,
-                locale=locale_code,
-                origin_service=origin_service,
-                user_is_employee=True,
-                device_id=device_id,
-                auth_client_id=auth_client_id,
-                cookie_created_timestamp=cookie_created_timestamp,
-                extracted_fields=decider_field_extractor(request=None),
-            )
 
             decider = Decider(
-                decider_context=dc,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -221,7 +221,7 @@ class TestDeciderGetVariant(unittest.TestCase):
             self.assertEqual(event_fields["event_type"], EventType.EXPOSE)
             self.assertNotEqual(event_fields["span"], None)
 
-            cfg = config["exp_1"]
+            cfg = self.exp_base_config["exp_1"]
             self.assertEqual(getattr(event_fields["experiment"], "id"), cfg["id"])
             self.assertEqual(getattr(event_fields["experiment"], "name"), cfg["name"])
             self.assertEqual(getattr(event_fields["experiment"], "owner"), cfg["owner"])
@@ -303,6 +303,97 @@ class TestDeciderGetVariant(unittest.TestCase):
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant("anything")
             self.assertEqual(variant, None)
+
+    def test_get_variant_without_expose(self):
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant_without_expose("exp_1")
+            self.assertEqual(variant, "variant_4")
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
+    def test_get_variant_without_expose_for_holdout_exposure(self):
+        parent_hg_config = {
+            "hg": {
+                "enabled": True,
+                "version": "5",
+                "type": "range_variant",
+                "emit_event": True,
+                "experiment": {
+                    "variants": [
+                        {
+                            "name": "holdout",
+                            "size": 1.0,
+                            "range_end": 1.0,
+                            "range_start": 0.0
+                        },
+                        {
+                            "name": "control_1",
+                            "size": 0.0,
+                            "range_end": 0.0,
+                            "range_start": 0.0
+                        }
+                    ],
+                    "experiment_version": 5,
+                    "shuffle_version": 0,
+                    "bucket_val": "user_id",
+                    "log_bucketing": False,
+                },
+                "start_ts": 0,
+                "stop_ts": 9668199193,
+                "id": 2,
+                "name": "hg",
+                "owner": "test",
+                "value": "range_variant"
+            }
+        }
+        self.exp_base_config["exp_1"].update({"parent_hg_name": "hg"})
+        self.exp_base_config.update(parent_hg_config)
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant_without_expose("exp_1")
+            # exp_1 is part of Holdout, so None is returned
+            self.assertEqual(variant, None)
+
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+
+            self.assertEqual(event_fields["variant"], "holdout")
+            self.assertEqual(event_fields["user_id"], user_id)
+            self.assertEqual(event_fields["logged_in"], is_logged_in)
+            self.assertEqual(event_fields["app_name"], app_name)
+            self.assertEqual(event_fields["cookie_created_timestamp"], cookie_created_timestamp)
+            self.assertEqual(event_fields["event_type"], EventType.EXPOSE)
+            self.assertNotEqual(event_fields["span"], None)
+
+            cfg = self.exp_base_config["hg"]
+            self.assertEqual(getattr(event_fields["experiment"], "id"), cfg["id"])
+            self.assertEqual(getattr(event_fields["experiment"], "name"), cfg["name"])
+            self.assertEqual(getattr(event_fields["experiment"], "owner"), cfg["owner"])
+            self.assertEqual(getattr(event_fields["experiment"], "version"), cfg["version"])
 
     # Todo: test exposure_kwargs
 
