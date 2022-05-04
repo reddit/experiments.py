@@ -313,6 +313,86 @@ class Decider:
             **context_fields.copy(),
         )
 
+    def get_variant_for_identifier(self, experiment_name: str, identifier: str,
+                **exposure_kwargs: Optional[Dict[str, Any]]) -> Optional[str]:
+        """Return a bucketing variant for `identifier`, if any, with auto-exposure.
+
+        The `identifier` param will be set on `DeciderClient` under:
+            `user_id`, `device_id`, & `canonical_url`,
+        so that regardless of what `bucketing_val` is set to in an experiment's config
+        (one of those 3), the passed in `identifier` param will be used
+        in the hashing used to bucekt.
+
+        Since calling `get_variant()` will fire an exposure event, it
+        is best to call it when you are sure the user will be exposed to the experiment.
+        If you absolutely must check the status of an experiment
+        before the user will be exposed to the experiment,
+        use `get_variant_without_expose()` to disable exposure events
+        and call `expose()` manually later.
+
+        :param experiment_name: Name of the experiment you want a variant for.
+
+        :param identifier: an arbitary string used to bucket the experiment by
+            being set on DeciderContext's 3 possible `bucket_val`'s
+            (`user_id`, `device_id`, & `canonical_url`).
+
+        :param exposure_kwargs:  Additional arguments that will be passed
+            to events_logger under "inputs" key.
+
+        :return: Variant name if a variant is assigned, None otherwise.
+        """
+        decider = self._get_decider()
+        if decider is None:
+            logger.warning("Encountered error in _get_decider()")
+            return None
+
+        context_fields = self._decider_context.to_dict()
+        identifier_context_fields = { **context_fields, **{"user_id": identifier, "device_id": identifier, "canonical_url": identifier}}
+
+        ctx = rust_decider.make_ctx(identifier_context_fields)
+        ctx_err = ctx.err()
+        if ctx_err is not None:
+            logger.warning(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+
+        choice = decider.choose(experiment_name, ctx)
+        error = choice.err()
+
+        if error:
+            logger.warning(f"Encountered error in decider.choose(): {error}")
+            return None
+        else:
+            variant = choice.decision()
+
+            del context_fields["auth_client_id"]
+            context_fields.update(exposure_kwargs or {})
+
+            for event in choice.events():
+                event_type, id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
+                experiment = ExperimentConfig(
+                    id=int(id),
+                    name=name,
+                    version=version,
+                    bucket_val=bucket_val,
+                    start_ts=start_ts,
+                    stop_ts=stop_ts,
+                    owner=owner
+                )
+
+                # expose the `bucket_val` used in the experiment's config,
+                # not `identifier_context_fields`
+                final_context_fields = { **context_fields, **{bucket_val: bucketing_value}}
+                print(json.dumps(final_context_fields, indent=4))
+                self._event_logger.log(
+                    experiment=experiment,
+                    variant=event_variant,
+                    span=self._span,
+                    event_type=EventType.EXPOSE,
+                    inputs=final_context_fields.copy(),
+                    **final_context_fields.copy(),
+                )
+
+            return variant
+
     def _get_dynamic_config_value(
         self,
         feature_name: str,
