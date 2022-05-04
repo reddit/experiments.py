@@ -97,6 +97,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.event_logger = mock.Mock(spec=DebugLogger)
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = mock.Mock()
+        self.mock_span.context.user_roles = ['employee']
         self.mock_span.context.edgecontext.user.event_fields = mock.Mock(
             return_value=event_fields
         )
