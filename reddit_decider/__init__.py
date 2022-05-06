@@ -624,7 +624,7 @@ class DeciderContextFactory(ContextFactory):
 
         try:
             request = span.context
-            ec = request.edgecontext
+            ec = request.edge_context
 
             if self._request_field_extractor:
                 extracted_fields = self._request_field_extractor(request)

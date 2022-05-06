@@ -95,15 +95,15 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.event_logger = mock.Mock(spec=DebugLogger)
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = mock.Mock()
-        self.mock_span.context.edgecontext.user.event_fields = mock.Mock(
+        self.mock_span.context.edge_context.user.event_fields = mock.Mock(
             return_value=EVENT_FIELDS
         )
-        self.mock_span.context.edgecontext.authentication_token = mock.Mock(spec=ValidatedAuthenticationToken)
-        self.mock_span.context.edgecontext.authentication_token.oauth_client_id = AUTH_CLIENT_ID
-        self.mock_span.context.edgecontext.geolocation.country_code = COUNTRY_CODE
-        self.mock_span.context.edgecontext.locale.locale_code = LOCALE_CODE
-        self.mock_span.context.edgecontext.origin_service.name = ORIGIN_SERVICE
-        self.mock_span.context.edgecontext.device.id = DEVICE_ID
+        self.mock_span.context.edge_context.authentication_token = mock.Mock(spec=ValidatedAuthenticationToken)
+        self.mock_span.context.edge_context.authentication_token.oauth_client_id = AUTH_CLIENT_ID
+        self.mock_span.context.edge_context.geolocation.country_code = COUNTRY_CODE
+        self.mock_span.context.edge_context.locale.locale_code = LOCALE_CODE
+        self.mock_span.context.edge_context.origin_service.name = ORIGIN_SERVICE
+        self.mock_span.context.edge_context.device.id = DEVICE_ID
 
     def test_make_object_for_context_and_decider_context(self, _filewatcher):
         decider_ctx_factory = decider_client_from_config(
@@ -129,7 +129,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(decider_ctx_dict["auth_client_id"], AUTH_CLIENT_ID)
         self.assertEqual(
             decider_ctx_dict["cookie_created_timestamp"],
-            self.mock_span.context.edgecontext.user.event_fields().get("cookie_created_timestamp"),
+            self.mock_span.context.edge_context.user.event_fields().get("cookie_created_timestamp"),
         )
         self.assertEqual(decider_ctx_dict["app_name"], APP_NAME)
         self.assertEqual(decider_ctx_dict["build_number"], BUILD_NUMBER)
@@ -150,7 +150,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(decider_event_dict.get("auth_client_id"), None)
         self.assertEqual(
             decider_event_dict["cookie_created_timestamp"],
-            self.mock_span.context.edgecontext.user.event_fields().get("cookie_created_timestamp"),
+            self.mock_span.context.edge_context.user.event_fields().get("cookie_created_timestamp"),
         )
         self.assertEqual(decider_event_dict["app_name"], APP_NAME)
         self.assertEqual(decider_event_dict["build_number"], BUILD_NUMBER)
