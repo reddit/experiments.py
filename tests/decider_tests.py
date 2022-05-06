@@ -157,7 +157,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
         )
         self.assertEqual(
             decider_event_dict["user"]["cookie_created_timestamp"],
-            self.mock_span.context.edgecontext.user.event_fields().get("cookie_created_timestamp"),
+            self.mock_span.context.edge_context.user.event_fields().get("cookie_created_timestamp"),
         )
         self.assertEqual(decider_event_dict["app_name"], APP_NAME)
         self.assertEqual(decider_event_dict["app"]["name"], APP_NAME)
