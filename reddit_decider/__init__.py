@@ -80,33 +80,51 @@ class DeciderContext:
         }
 
     def to_event_dict(self) -> Dict:
-        # prepend required v2 event schema prefixes
-        modified_extracted_fields = (self._extracted_fields or {}).copy()
+        user_fields = {
+            "id": self._user_id,
+            "logged_in": self._logged_in,
+            "cookie_created_timestamp": self._cookie_created_timestamp,
+            "is_employee": self._user_is_employee
+        }
 
-        build_number = modified_extracted_fields.get("build_number")
-        if build_number:
-            modified_extracted_fields["app_build_number"] = build_number
+        ef = self._extracted_fields or {}
 
-        canonical_url = modified_extracted_fields.get("canonical_url")
-        if canonical_url:
-            modified_extracted_fields["request_canonical_url"] = canonical_url
+        app_fields = {}
+        if ef.get("app_name"):
+            app_fields["name"] = ef["app_name"]
+        if ef.get("build_number"):
+            app_fields["build_number"] = ef["build_number"]
+        if self._locale:
+            app_fields["relevant_locale"] = self._locale
+
+        geo_fields = {}
+        if self._country_code:
+            geo_fields["country_code"] = self._country_code
+
+        request_fields = {}
+        if ef.get("canonical_url"):
+            request_fields["canonical_url"] = ef["canonical_url"]
+
+        platform_fields = {}
+        if self._device_id:
+            platform_fields["device_id"] = self._device_id
 
         return {
             "user_id": self._user_id,
             "country_code": self._country_code,
-            "geo_country_code": self._country_code,
             "locale": self._locale,
-            "app_relevant_locale": self._locale,
             "user_is_employee": self._user_is_employee,
             "logged_in": self._logged_in,
-            "user_logged_in": self._logged_in,
             "device_id": self._device_id,
-            "platform_device_id": self._device_id,
             "origin_service": self._origin_service,
             "cookie_created_timestamp": self._cookie_created_timestamp,
-            **modified_extracted_fields,
+            "user": user_fields,
+            "app": app_fields,
+            "geo": geo_fields,
+            "request": request_fields,
+            "platform": platform_fields,
+            **ef,
         }
-
 
 def init_decider_parser(file: IO) -> Any:
     return rust_decider.init("darkmode overrides targeting holdout mutex_group fractional_availability value", file.name)
