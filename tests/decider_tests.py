@@ -132,8 +132,11 @@ class DeciderContextFactoryTests(unittest.TestCase):
             self.mock_span.context.edge_context.user.event_fields().get("cookie_created_timestamp"),
         )
         self.assertEqual(decider_ctx_dict["app_name"], APP_NAME)
+        self.assertEqual(decider_ctx_dict["other_fields"]["app_name"], APP_NAME)
         self.assertEqual(decider_ctx_dict["build_number"], BUILD_NUMBER)
+        self.assertEqual(decider_ctx_dict["other_fields"]["build_number"], BUILD_NUMBER)
         self.assertEqual(decider_ctx_dict["canonical_url"], CANONICAL_URL)
+        self.assertEqual(decider_ctx_dict["other_fields"]["canonical_url"], CANONICAL_URL)
 
         decider_event_dict = decider_context.to_event_dict()
         self.assertEqual(decider_event_dict["user_id"], USER_ID)
