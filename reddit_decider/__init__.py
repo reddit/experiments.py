@@ -66,6 +66,8 @@ class DeciderContext:
         self._extracted_fields = extracted_fields
 
     def to_dict(self) -> Dict:
+        ef = (self._extracted_fields or {}).copy()
+
         return {
             "user_id": self._user_id,
             "country_code": self._country_code,
@@ -76,7 +78,8 @@ class DeciderContext:
             "auth_client_id": self._auth_client_id,
             "origin_service": self._origin_service,
             "cookie_created_timestamp": self._cookie_created_timestamp,
-            **(self._extracted_fields or {}),
+            "other_fields": ef,
+            **ef,
         }
 
     def to_event_dict(self) -> Dict:
@@ -87,7 +90,7 @@ class DeciderContext:
             "is_employee": self._user_is_employee
         }
 
-        ef = self._extracted_fields or {}
+        ef = (self._extracted_fields or {}).copy()
 
         app_fields = {}
         if ef.get("app_name"):
