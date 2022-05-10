@@ -658,6 +658,19 @@ class DeciderContextFactory(ContextFactory):
             else:
                 extracted_fields = {}
 
+
+            parsed_extracted_fields = extracted_fields.copy()
+            for k, v in extracted_fields.items():
+                # remove invalid keys
+                if k is None or not isinstance(k, str):
+                    logger.info(f"{k} key in request_field_extractor() dict is not of type str and is removed.")
+                    del parsed_extracted_fields[k]
+                    continue
+                # remove invalid values
+                if not isinstance(v, (int, float, str, bool)) and v is not None:
+                    logger.info(f"{k}: {v} value in request_field_extractor() dict is not of oneOf type: [None, int, float, str, bool] and is removed.")
+                    del parsed_extracted_fields[k]
+
             user_event_fields = ec.user.event_fields()
 
             auth_client_id = ""
@@ -676,7 +689,7 @@ class DeciderContextFactory(ContextFactory):
                 device_id=ec.device.id,
                 auth_client_id=auth_client_id,
                 cookie_created_timestamp=user_event_fields.get("cookie_created_timestamp"),
-                extracted_fields=extracted_fields,
+                extracted_fields=parsed_extracted_fields,
             )
         except Exception as exc:
             logger.warning("Could not create full DeciderContext(): %s", str(exc))
