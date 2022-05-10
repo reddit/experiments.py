@@ -170,7 +170,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(decider_event_dict["request"]["canonical_url"], CANONICAL_URL)
 
     def test_make_object_for_context_and_decider_context_with_missing_app_name(self, _filewatcher):
-        def decider_field_extractor_missing_app_name(_request: RequestContext):
+        def broken_decider_field_extractor(_request: RequestContext):
             return {
                 "app_name": {},
                 "build_number": BUILD_NUMBER,
@@ -182,7 +182,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
             {"experiments.path": "/tmp/test", "experiments.timeout": "60 seconds"},
             self.event_logger,
             prefix="experiments.",
-            request_field_extractor=decider_field_extractor_missing_app_name,
+            request_field_extractor=broken_decider_field_extractor,
         )
 
         with self.assertLogs() as captured:
