@@ -25,6 +25,9 @@ simple_type_class_list = frozenset(
     ["single_variant", "multi_variant", "feature_rollout", "range_variant"]
 )
 
+new_exp_type_list = frozenset(
+    ["dynamic_config"]
+)
 
 def parse_experiment(config: Dict[str, str]) -> Experiment:
     """Parse an experiment config dict and return an appropriate Experiment class.
@@ -130,12 +133,13 @@ def parse_experiment(config: Dict[str, str]) -> Experiment:
             variant_type=experiment_type,
         )
 
-    logger.warning(
-        "Found an experiment <%s:%s> with an unknown experiment type <%s> "
-        "that is owned by <%s>. Please clean up.",
-        experiment_id,
-        name,
-        experiment_type,
-        owner,
-    )
+    if experiment_type not in new_exp_type_list:
+        logger.warning(
+            "Found an experiment <%s:%s> with an unknown experiment type <%s> "
+            "that is owned by <%s>. Please clean up.",
+            experiment_id,
+            name,
+            experiment_type,
+            owner,
+        )
     return ForcedVariantExperiment(None)
