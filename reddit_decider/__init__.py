@@ -652,13 +652,16 @@ class DeciderContextFactory(ContextFactory):
         try:
             request = span.context
             ec = request.edge_context
+        except Exception as exc:
+            logger.info(f"Unable to access `request.edge_context` in `make_object_for_context()`. details: {exc}")
 
+        try:
             if self._request_field_extractor:
                 extracted_fields = self._request_field_extractor(request)
             else:
                 extracted_fields = {}
 
-
+            # prune any invalid keys/values in `extracted_fields` dict
             parsed_extracted_fields = extracted_fields.copy()
             for k, v in extracted_fields.items():
                 # remove invalid keys
@@ -670,25 +673,70 @@ class DeciderContextFactory(ContextFactory):
                 if not isinstance(v, (int, float, str, bool)) and v is not None:
                     logger.info(f"{k}: {v} value in request_field_extractor() dict is not of oneOf type: [None, int, float, str, bool] and is removed.")
                     del parsed_extracted_fields[k]
+        except Exception as exc:
+            logger.info(f"Unable to extract fields from `request_field_extractor()` in `make_object_for_context()`. details: {exc}")
 
+        user_id = None
+        logged_in = None
+        cookie_created_timestamp = None
+        try:
             user_event_fields = ec.user.event_fields()
+            user_id = user_event_fields.get("user_id")
+            logged_in = user_event_fields.get("logged_in")
+            cookie_created_timestamp = user_event_fields.get("cookie_created_timestamp")
+        except Exception as exc:
+            logger.info(f"Error while accessing `user.event_fields()` in `make_object_for_context()`. details: {exc}")
 
-            auth_client_id = ""
+        auth_client_id = None
+        try:
             if isinstance(ec.authentication_token, ValidatedAuthenticationToken):
                 oc_id = ec.authentication_token.oauth_client_id
                 if oc_id:
                     auth_client_id = oc_id
+        except Exception as exc:
+            logger.info(f"Unable to access `ec.authentication_token.oauth_client_id` in `make_object_for_context()`. details: {exc}")
 
+        country_code = None
+        try:
+            country_code = ec.geolocation.country_code
+        except Exception as exc:
+            logger.info(f"Unable to access `ec.geolocation.country_code` in `make_object_for_context()`. details: {exc}")
+
+        locale = None
+        try:
+            locale = ec.locale.locale_code
+        except Exception as exc:
+            logger.info(f"Unable to access `ec.locale.locale_code` in `make_object_for_context()`. details: {exc}")
+
+        origin_service = None
+        try:
+            origin_service = ec.origin_service.name
+        except Exception as exc:
+            logger.info(f"Unable to access `ec.origin_service.name` in `make_object_for_context()`. details: {exc}")
+
+        is_employee = None
+        try:
+            is_employee = DeciderContextFactory.is_employee(ec)
+        except Exception as exc:
+            logger.info(f"Error in `DeciderContextFactory.is_employee(ec)` in `make_object_for_context()`. details: {exc}")
+
+        device_id = None
+        try:
+            device_id = ec.device.id
+        except Exception as exc:
+            logger.info(f"Unable to access `ec.device.id` in `make_object_for_context()`. details: {exc}")
+
+        try:
             decider_context = DeciderContext(
-                user_id=user_event_fields.get("user_id"),
-                logged_in=user_event_fields.get("logged_in"),
-                country_code=ec.geolocation.country_code,
-                locale=ec.locale.locale_code,
-                origin_service=ec.origin_service.name,
-                user_is_employee=DeciderContextFactory.is_employee(ec),
-                device_id=ec.device.id,
+                user_id=user_id,
+                logged_in=logged_in,
+                country_code=country_code,
+                locale=locale,
+                origin_service=origin_service,
+                user_is_employee=is_employee,
+                device_id=device_id,
                 auth_client_id=auth_client_id,
-                cookie_created_timestamp=user_event_fields.get("cookie_created_timestamp"),
+                cookie_created_timestamp=cookie_created_timestamp,
                 extracted_fields=parsed_extracted_fields,
             )
         except Exception as exc:
