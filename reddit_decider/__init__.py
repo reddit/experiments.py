@@ -203,20 +203,21 @@ class Decider:
         """
         decider = self._get_decider()
         if decider is None:
-            logger.warning("Encountered error in _get_decider()")
+            logger.error("Encountered error in _get_decider()")
             return None
 
         context_fields = self._decider_context.to_dict()
         ctx = rust_decider.make_ctx(context_fields)
         ctx_err = ctx.err()
         if ctx_err is not None:
-            logger.warning(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+            return None
 
         choice = decider.choose(experiment_name, ctx)
         error = choice.err()
 
         if error:
-            logger.warning(f"Encountered error in decider.choose(): {error}")
+            logger.info(f"Encountered error in decider.choose(): {error}")
             return None
 
         variant = choice.decision()
@@ -264,20 +265,21 @@ class Decider:
         """
         decider = self._get_decider()
         if decider is None:
-            logger.warning("Encountered error in _get_decider()")
+            logger.error("Encountered error in _get_decider()")
             return None
 
         context_fields = self._decider_context.to_dict()
         ctx = rust_decider.make_ctx(context_fields)
         ctx_err = ctx.err()
         if ctx_err is not None:
-            logger.warning(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+            return None
 
         choice = decider.choose(experiment_name, ctx)
         error = choice.err()
 
         if error:
-            logger.warning(f"Encountered error in decider.choose(): {error}")
+            logger.info(f"Encountered error in decider.choose(): {error}")
             return None
 
         variant = choice.decision()
@@ -330,7 +332,7 @@ class Decider:
         """
         decider = self._get_decider()
         if decider is None:
-            logger.warning("Encountered error in _get_decider()")
+            logger.error("Encountered error in _get_decider()")
             return
 
         experiment = decider.get_experiment(experiment_name)
@@ -392,7 +394,7 @@ class Decider:
         """
         decider = self._get_decider()
         if decider is None:
-            logger.warning("Encountered error in _get_decider()")
+            logger.error("Encountered error in _get_decider()")
             return None
 
         identifier_context_fields = { **self._decider_context.to_dict(), **{
@@ -404,13 +406,14 @@ class Decider:
         ctx = rust_decider.make_ctx(identifier_context_fields)
         ctx_err = ctx.err()
         if ctx_err is not None:
-            logger.warning(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+            return None
 
         choice = decider.choose(experiment_name, ctx)
         error = choice.err()
 
         if error:
-            logger.warning(f"Encountered error in decider.choose(): {error}")
+            logger.info(f"Encountered error in decider.choose(): {error}")
             return None
 
         variant = choice.decision()
@@ -477,7 +480,7 @@ class Decider:
         """
         decider = self._get_decider()
         if decider is None:
-            logger.warning("Encountered error in _get_decider()")
+            logger.error("Encountered error in _get_decider()")
             return None
 
         identifier_context_fields = { **self._decider_context.to_dict(), **{
@@ -489,13 +492,14 @@ class Decider:
         ctx = rust_decider.make_ctx(identifier_context_fields)
         ctx_err = ctx.err()
         if ctx_err is not None:
-            logger.warning(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+            return None
 
         choice = decider.choose(experiment_name, ctx)
         error = choice.err()
 
         if error:
-            logger.warning(f"Encountered error in decider.choose(): {error}")
+            logger.info(f"Encountered error in decider.choose(): {error}")
             return None
 
         variant = choice.decision()
@@ -544,7 +548,9 @@ class Decider:
         ctx = rust_decider.make_ctx(context_fields)
         ctx_err = ctx.err()
         if ctx_err is not None:
-            logger.warning(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+            return None
+
 
         res = decider_func(feature_name, ctx)
         if res is None:
@@ -559,35 +565,35 @@ class Decider:
     def get_bool(self, feature_name: str, default: bool = False) -> bool:
         decider = self._get_decider()
         if not decider:
-            logger.warning("Encountered error in _get_decider()")
+            logger.error("Encountered error in _get_decider()")
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_bool, default)
 
     def get_int(self, feature_name: str, default: int = 0) -> int:
         decider = self._get_decider()
         if not decider:
-            logger.warning("Encountered error in _get_decider()")
+            logger.error("Encountered error in _get_decider()")
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_int, default)
 
     def get_float(self, feature_name: str, default: float = 0.0) -> float:
         decider = self._get_decider()
         if not decider:
-            logger.warning("Encountered error in _get_decider()")
+            logger.error("Encountered error in _get_decider()")
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_float, default)
 
     def get_string(self, feature_name: str, default: str = "") -> str:
         decider = self._get_decider()
         if not decider:
-            logger.warning("Encountered error in _get_decider()")
+            logger.error("Encountered error in _get_decider()")
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_string, default)
 
     def get_map(self, feature_name: str, default: dict = None) -> Optional[dict]:
         decider = self._get_decider()
         if not decider:
-            logger.warning("Encountered error in _get_decider()")
+            logger.error("Encountered error in _get_decider()")
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_map, default)
 
@@ -674,7 +680,7 @@ class DeciderContextFactory(ContextFactory):
             )
         except Exception as exc:
             logger.warning("Could not create full DeciderContext(): %s", str(exc))
-            logger.warning("defaulting to empty DeciderContext().")
+            logger.warning("defaulting to empty DeciderContext(user_id="").")
             decider_context = DeciderContext(user_id="")
 
         return Decider(
