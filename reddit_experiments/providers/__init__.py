@@ -29,6 +29,7 @@ new_exp_type_list = frozenset(
     ["dynamic_config"]
 )
 
+
 def parse_experiment(config: Dict[str, str]) -> Experiment:
     """Parse an experiment config dict and return an appropriate Experiment class.
 
