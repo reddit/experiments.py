@@ -105,7 +105,6 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.mock_span.context.edge_context.origin_service.name = ORIGIN_SERVICE
         self.mock_span.context.edge_context.device.id = DEVICE_ID
 
-
     def test_make_object_for_context_and_decider_context(self, _filewatcher):
         decider_ctx_factory = decider_client_from_config(
             {"experiments.path": "/tmp/test", "experiments.timeout": "60 seconds"},
@@ -188,7 +187,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
 
         with self.assertLogs() as captured:
             decider = decider_ctx_factory.make_object_for_context(name="test", span=self.mock_span)
-            print(captured.records)
+
             assert(True == any('None key in request_field_extractor() dict is not of type str and is removed.' in x.getMessage() for x in captured.records))
             assert(True == any('True key in request_field_extractor() dict is not of type str and is removed.' in x.getMessage() for x in captured.records))
             assert(True == any('app_name: {} value in request_field_extractor() dict is not of oneOf type: [None, int, float, str, bool] and is removed.' in x.getMessage() for x in captured.records))
