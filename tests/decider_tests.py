@@ -169,7 +169,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(decider_event_dict["canonical_url"], CANONICAL_URL)
         self.assertEqual(decider_event_dict["request"]["canonical_url"], CANONICAL_URL)
 
-    def test_make_object_for_context_and_decider_context_with_missing_app_name(self, _filewatcher):
+    def test_make_object_for_context_and_decider_context_with_broken_decider_field_extractor(self, _filewatcher):
         def broken_decider_field_extractor(_request: RequestContext):
             return {
                 "app_name": {},
