@@ -636,9 +636,57 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # no exposures should be triggered
             self.assertEqual(self.event_logger.log.call_count, 0)
 
-    # Todo: test exposure_kwargs
+    def test_get_variant_with_exposure_kwargs(self):
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
-    # Todo: test un-enabled experiment
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            exp_kwargs = {
+                "foo": "test_1",
+                "bar": "test_2"
+            }
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant(experiment_name="exp_1", **exp_kwargs)
+            self.assertEqual(variant, "variant_4")
+
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+            self.assert_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields)
+
+            # additional kwargs logged
+            self.assertEqual(event_fields["foo"], exp_kwargs["foo"])
+            self.assertEqual(event_fields["bar"], exp_kwargs["bar"])
+
+            self.assertEqual(event_fields["inputs"]["foo"], exp_kwargs["foo"])
+            self.assertEqual(event_fields["inputs"]["bar"], exp_kwargs["bar"])
+
+    def test_get_variant_with_disabled_exp(self):
+        self.exp_base_config["exp_1"].update({"enabled": False})
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant(experiment_name="exp_1")
+            self.assertEqual(variant, None)
+
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 0)
 
 
 class TestDeciderGetDynamicConfig(unittest.TestCase):
