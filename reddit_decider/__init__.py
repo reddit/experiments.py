@@ -650,6 +650,7 @@ class DeciderContextFactory(ContextFactory):
         validate_decider(decider)
 
         if span is None:
+            logger.debug("`span` is `None` in reddit_decider `make_object_for_context()`.")
             return Decider(
                 decider_context=DeciderContext(user_id=""),
                 config_watcher=self._filewatcher,
