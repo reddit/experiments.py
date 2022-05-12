@@ -649,12 +649,22 @@ class DeciderContextFactory(ContextFactory):
 
         validate_decider(decider)
 
+        if span is None:
+            return Decider(
+                decider_context=DeciderContext(user_id=""),
+                config_watcher=self._filewatcher,
+                server_span=span,
+                context_name=name,
+                event_logger=self._event_logger,
+            )
+
         try:
             request = span.context
             ec = request.edge_context
         except Exception as exc:
             logger.info(f"Unable to access `request.edge_context` in `make_object_for_context()`. details: {exc}")
 
+        parsed_extracted_fields = {}
         try:
             if self._request_field_extractor:
                 extracted_fields = self._request_field_extractor(request)
@@ -752,6 +762,44 @@ class DeciderContextFactory(ContextFactory):
             event_logger=self._event_logger,
         )
 
+
+class DeciderClient(config.Parser):
+    """Configure a decider client.
+
+    This is meant to be used with
+    :py:meth:`baseplate.Baseplate.configure_context`.
+
+    See :py:func:`decider_client_from_config` for available configuration settings.
+
+    :param event_logger: The EventLogger instance to be used to log bucketing events.
+
+    :param prefix: the prefix used to filter config keys (defaults to "experiments.").
+
+    :param request_field_extractor: (optional) function used to populate fields such as
+        "app_name" & "build_number" in DeciderContext() via `extracted_fields` arg
+    """
+
+    def __init__(
+        self,
+        event_logger: EventLogger,
+        prefix: str = "experiments.",
+        request_field_extractor: Optional[Callable[[RequestContext], Dict[str, str]]] = None
+    ):
+        self._prefix = prefix
+        self._event_logger = event_logger
+        self._request_field_extractor = request_field_extractor
+
+    def parse(self, _key_path: str, raw_config: config.RawConfig) -> DeciderContextFactory:
+        # `_key_path` is ignored for prefix because most services will not change `app_config`
+        # to use "decider" key, so using `prefix` from `__init__`
+        return decider_client_from_config(
+            app_config=raw_config,
+            event_logger=self._event_logger,
+            prefix=self._prefix,
+            request_field_extractor=self._request_field_extractor
+        )
+
+
 def decider_client_from_config(
     app_config: config.RawConfig,
     event_logger: EventLogger,
@@ -774,7 +822,7 @@ def decider_client_from_config(
     ``backoff`` (optional)
         The base amount of time for exponential backoff when trying to find the
         experiments config file. Defaults to no backoff between tries.
-    ``request_field_extractor`` (optional) used to populate fields such as
+    ``request_field_extractor`` (optional) function used to populate fields such as
         "app_name" & "build_number" in DeciderContext() via `extracted_fields` arg
 
     :param raw_config: The application configuration which should have
