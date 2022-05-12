@@ -169,6 +169,19 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(decider_event_dict["canonical_url"], CANONICAL_URL)
         self.assertEqual(decider_event_dict["request"]["canonical_url"], CANONICAL_URL)
 
+    def test_make_object_for_context_and_decider_context_without_span(self, _filewatcher):
+        decider_ctx_factory = decider_client_from_config(
+            {"experiments.path": "/tmp/test", "experiments.timeout": "60 seconds"},
+            self.event_logger,
+            prefix="experiments.",
+            request_field_extractor=decider_field_extractor,
+        )
+        decider = decider_ctx_factory.make_object_for_context(name="test", span=None)
+        self.assertIsInstance(decider, Decider)
+
+        decider_ctx_dict = decider._decider_context.to_dict()
+        self.assertEqual(decider_ctx_dict["user_id"], "")
+
     def test_make_object_for_context_and_decider_context_with_broken_decider_field_extractor(self, _filewatcher):
         def broken_decider_field_extractor(_request: RequestContext):
             return {
