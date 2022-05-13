@@ -95,6 +95,8 @@ class DeciderContext:
         app_fields = {}
         if ef.get("app_name"):
             app_fields["name"] = ef["app_name"]
+        if ef.get("app_version"):
+            app_fields["version"] = ef["app_version"]
         if ef.get("build_number"):
             app_fields["build_number"] = ef["build_number"]
         if self._locale:
