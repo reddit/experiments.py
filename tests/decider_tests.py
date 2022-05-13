@@ -27,6 +27,7 @@ COOKIE_CREATED_TIMESTAMP = 1234
 LOCALE_CODE = "us_en"
 ORIGIN_SERVICE = "origin"
 APP_NAME = "ios"
+APP_VERSION = "0.0.0.0"
 BUILD_NUMBER = 1
 CANONICAL_URL = "www.test.com"
 EVENT_FIELDS = {
@@ -45,6 +46,7 @@ def create_temp_config_file(contents):
 def decider_field_extractor(_request: RequestContext):
     return {
         "app_name": APP_NAME,
+        "app_version": APP_VERSION,
         "build_number": BUILD_NUMBER,
         "canonical_url": CANONICAL_URL
     }
@@ -133,6 +135,8 @@ class DeciderContextFactoryTests(unittest.TestCase):
         )
         self.assertEqual(decider_ctx_dict["app_name"], APP_NAME)
         self.assertEqual(decider_ctx_dict["other_fields"]["app_name"], APP_NAME)
+        self.assertEqual(decider_ctx_dict["app_version"], APP_VERSION)
+        self.assertEqual(decider_ctx_dict["other_fields"]["app_version"], APP_VERSION)
         self.assertEqual(decider_ctx_dict["build_number"], BUILD_NUMBER)
         self.assertEqual(decider_ctx_dict["other_fields"]["build_number"], BUILD_NUMBER)
         self.assertEqual(decider_ctx_dict["canonical_url"], CANONICAL_URL)
@@ -164,6 +168,8 @@ class DeciderContextFactoryTests(unittest.TestCase):
         )
         self.assertEqual(decider_event_dict["app_name"], APP_NAME)
         self.assertEqual(decider_event_dict["app"]["name"], APP_NAME)
+        self.assertEqual(decider_event_dict["app_version"], APP_VERSION)
+        self.assertEqual(decider_event_dict["app"]["version"], APP_VERSION)
         self.assertEqual(decider_event_dict["build_number"], BUILD_NUMBER)
         self.assertEqual(decider_event_dict["app"]["build_number"], BUILD_NUMBER)
         self.assertEqual(decider_event_dict["canonical_url"], CANONICAL_URL)
