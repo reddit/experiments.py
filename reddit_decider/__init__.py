@@ -228,7 +228,12 @@ class Decider:
         event_context_fields.update(exposure_kwargs or {})
 
         for event in choice.events():
-            _event_type, exp_id, name, version, event_variant, _bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
+            try:
+                _event_type, exp_id, name, version, event_variant, _bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
+            except ValueError:
+                logger.warning(f'Encountered error in event.split("::::") in get_variant(). event: {event}')
+                return variant
+
             experiment = ExperimentConfig(
                 id=int(exp_id),
                 name=name,
@@ -290,7 +295,12 @@ class Decider:
 
         # expose Holdout if the experiment is part of one
         for event in choice.events():
-            event_type, exp_id, name, version, event_variant, _bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
+            try:
+                event_type, exp_id, name, version, event_variant, _bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
+            except ValueError:
+                logger.warning(f'Encountered error in event.split("::::") in get_variant_without_expose(). event: {event}')
+                return variant
+
             # event_type enum:
             #   0: regular bucketing
             #   1: override
@@ -424,7 +434,12 @@ class Decider:
         event_context_fields.update(exposure_kwargs or {})
 
         for event in choice.events():
-            _event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
+            try:
+                _event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
+            except ValueError:
+                logger.warning(f'Encountered error in event.split("::::") in get_variant_for_identifier(). event: {event}')
+                return variant
+
             experiment = ExperimentConfig(
                 id=int(exp_id),
                 name=name,
@@ -510,7 +525,12 @@ class Decider:
 
         # expose Holdout if the experiment is part of one
         for event in choice.events():
-            event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split(":")
+            try:
+                event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
+            except ValueError:
+                logger.warning(f'Encountered error in event.split("::::") in get_variant_for_identifier_without_expose(). event: {event}')
+                return variant
+
             # event_type enum:
             #   0: regular bucketing
             #   1: override
