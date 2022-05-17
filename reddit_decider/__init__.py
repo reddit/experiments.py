@@ -2,7 +2,7 @@ import logging
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, IO, Optional
+from typing import Any, Callable, Dict, IO, Literal, Optional
 
 from baseplate import RequestContext
 from baseplate import Span
@@ -379,9 +379,8 @@ class Decider:
     def get_variant_for_identifier(
         self,
         experiment_name: str,
-        user_id: str = "",
-        device_id: str = None,
-        canonical_url: str = None,
+        identifier: str,
+        identifier_type: Literal["user_id", "device_id", "canonical_url"],
         **exposure_kwargs: Optional[Dict[str, Any]]
     ) -> Optional[str]:
         """Return a bucketing variant for identifier, if any, with auto-exposure.
@@ -391,31 +390,27 @@ class Decider:
 
         :param experiment_name: Name of the experiment you want a variant for.
 
-        :param user_id: sets user_id on DeciderContext for bucketing.
+        :param identifier: an arbitary string used to bucket the experiment by
+            being set on `DeciderContext`'s `identifier_type` field.
 
-        :param device_id: sets device_id on DeciderContext for bucketing.
-
-        :param canonical_url: sets canonical_url on DeciderContext for bucketing.
+        :param identifier_type: (one of ["user_id", "device_id", "canonical_url"])
+            Sets `{identifier_type: identifier}` on DeciderContext and
+            should match an experiment's `bucket_val` to get a variant.
 
         :param exposure_kwargs:  Additional arguments that will be passed
             to events_logger under "inputs" key.
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
-        if user_id is None and device_id is None and canonical_url is None:
-            logger.info("No identifiers passed into get_variant_for_identifier()")
-            return None
-
         decider = self._get_decider()
         if decider is None:
             logger.error("Encountered error in _get_decider()")
             return None
 
-        identifier_context_fields = { **self._decider_context.to_dict(), **{
-            "user_id": user_id,
-            "device_id": device_id,
-            "canonical_url": canonical_url
-        }}
+        identifier_context_fields = {
+            **self._decider_context.to_dict(),
+            **{identifier_type: identifier}
+        }
 
         ctx = rust_decider.make_ctx(identifier_context_fields)
         ctx_err = ctx.err()
@@ -470,9 +465,8 @@ class Decider:
     def get_variant_for_identifier_without_expose(
         self,
         experiment_name: str,
-        user_id: str = "",
-        device_id: str = None,
-        canonical_url: str = None,
+        identifier: str,
+        identifier_type: Literal["user_id", "device_id", "canonical_url"]
     ) -> Optional[str]:
         """Return a bucketing variant for `identifier`, if any, without emitting exposure event.
 
@@ -487,28 +481,24 @@ class Decider:
 
         :param experiment_name: Name of the experiment you want a variant for.
 
-        :param user_id: sets user_id on DeciderContext for bucketing.
+        :param identifier: an arbitary string used to bucket the experiment by
+            being set on `DeciderContext`'s `identifier_type` field.
 
-        :param device_id: sets device_id on DeciderContext for bucketing.
-
-        :param canonical_url: sets canonical_url on DeciderContext for bucketing.
+        :param identifier_type: (one of ["user_id", "device_id", "canonical_url"])
+            Sets `{identifier_type: identifier}` on DeciderContext and
+            should match an experiment's `bucket_val` to get a variant.
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
-        if user_id is None and device_id is None and canonical_url is None:
-            logger.info("No identifiers passed into get_variant_for_identifier()")
-            return None
-
         decider = self._get_decider()
         if decider is None:
             logger.error("Encountered error in _get_decider()")
             return None
 
-        identifier_context_fields = { **self._decider_context.to_dict(), **{
-            "user_id": user_id,
-            "device_id": device_id,
-            "canonical_url": canonical_url
-        }}
+        identifier_context_fields = {
+            **self._decider_context.to_dict(),
+            **{identifier_type: identifier}
+        }
 
         ctx = rust_decider.make_ctx(identifier_context_fields)
         ctx_err = ctx.err()
