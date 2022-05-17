@@ -475,7 +475,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier)
+            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type="user_id")
             self.assertEqual(variant, "variant_4")
 
             # exposure assertions
@@ -503,7 +503,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier)
+            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url")
             self.assertEqual(variant, "variant_3")
 
             # exposure assertions
@@ -531,7 +531,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier)
+            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type="device_id")
             self.assertEqual(variant, "variant_3")
 
             # exposure assertions
@@ -541,6 +541,30 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["device_id"], identifier)
+
+    def test_get_variant_for_identifier_wrong_bucket_val(self):
+        identifier = USER_ID
+        bucket_val = "device_id"
+        self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.minimal_decider_context,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            # `identifier_type="canonical_url"`, which doesn't match `bucket_val` of `device_id`
+            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url")
+            # `None` is returned since `identifier_type` doesn't match `bucket_val` in experiment-config json
+            self.assertEqual(variant, None)
+            # exposure isn't emitted either
+            self.assertEqual(self.event_logger.log.call_count, 0)
 
     def test_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:
@@ -568,7 +592,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.dc,
+                decider_context=self.minimal_decider_context,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -576,7 +600,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=USER_ID)
+            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=USER_ID, identifier_type="user_id")
             self.assertEqual(variant, "variant_4")
 
             # no exposures should be triggered
@@ -598,7 +622,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=USER_ID)
+            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=USER_ID, identifier_type="user_id")
             # user is part of Holdout (100% bucketing), so `None` is returned
             self.assertEqual(variant, None)
 
@@ -609,6 +633,33 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # `variant == None` for holdout but event will fire with `variant == 'holdout'` for analysis
             self.assert_exposure_event_fields(experiment_name="hg", variant='holdout', event_fields=event_fields)
 
+    def test_get_variant_for_identifier_without_expose_for_holdout_exposure_wrong_bucket_val(self):
+        identifier = DEVICE_ID
+        bucket_val = "device_id"
+        self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
+
+        self.exp_base_config["exp_1"].update({"parent_hg_name": "hg"})
+        self.parent_hg_config["hg"]["experiment"].update({"bucket_val": bucket_val})
+        self.exp_base_config.update(self.parent_hg_config)
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.minimal_decider_context,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            # `identifier_type="canonical_url"`, which doesn't match `bucket_val` of `device_id`
+            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url")
+            # `None` is returned since `identifier_type` doesn't match `bucket_val` in experiment-config json
+            self.assertEqual(variant, None)
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
     def test_get_variant_for_identifier_without_expose_canonical_url(self):
         identifier = CANONICAL_URL
         bucket_val = "canonical_url"
@@ -618,7 +669,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.dc,
+                decider_context=self.minimal_decider_context,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -626,7 +677,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=identifier)
+            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url")
             self.assertEqual(variant, "variant_3")
 
             # no exposures should be triggered
@@ -641,7 +692,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.dc,
+                decider_context=self.minimal_decider_context,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -649,7 +700,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=identifier)
+            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=identifier, identifier_type="device_id")
             self.assertEqual(variant, "variant_3")
 
             # no exposures should be triggered
