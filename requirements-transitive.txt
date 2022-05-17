@@ -42,7 +42,7 @@ sphinxcontrib-serializinghtml==1.1.4
 thrift==0.13.0
 toml==0.10.2
 typed-ast==1.4.3
-typing-extensions==4.2.0
+typing-extensions==3.7.4.3
 urllib3==1.26.2
 zope.event==4.5.0
 zope.interface==5.2.0

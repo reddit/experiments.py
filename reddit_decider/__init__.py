@@ -2,7 +2,8 @@ import logging
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, IO, Literal, Optional
+from typing import Any, Callable, Dict, IO, Optional
+from typing_extensions import Literal
 
 from baseplate import RequestContext
 from baseplate import Span
