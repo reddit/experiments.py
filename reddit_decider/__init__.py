@@ -197,6 +197,20 @@ class Decider:
         ctx[identifier_type] = identifier
         return ctx
 
+    def _format_decision(self, decision_dict: Dict[str, str]):
+        out = {}
+        # cast id to int
+        for k, v in decision_dict.items():
+            if k == "id":
+                try:
+                    out[k] = int(v)
+                except ValueError:
+                    out[k] = v
+            else:
+                out[k] = v
+
+        return out
+
     def get_variant(
         self,
         experiment_name: str,
@@ -570,7 +584,7 @@ class Decider:
         """Return a list of experiment dicts in this format:
                 [
                     {
-                        "id": "1",
+                        "id": 1,
                         "name": "variant_1",
                         "version": "1",
                         "experimentName": "exp_1"
@@ -619,7 +633,7 @@ class Decider:
             decision_dict = choice.decision_dict()
 
             if decision_dict:
-                parsed_choices.append(decision_dict)
+                parsed_choices.append(self._format_decision(decision_dict))
 
             # expose Holdout if the experiment is part of one
             for event in choice.events():
@@ -722,7 +736,7 @@ class Decider:
             decision_dict = choice.decision_dict()
 
             if decision_dict:
-                parsed_choices.append(decision_dict)
+                parsed_choices.append(self._format_decision(decision_dict))
 
             # expose Holdout if the experiment is part of one
             for event in choice.events():
