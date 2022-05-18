@@ -50,7 +50,7 @@ def decider_field_extractor(_request: RequestContext):
         "app_name": APP_NAME,
         "app_version": APP_VERSION,
         "build_number": BUILD_NUMBER,
-        "canonical_url": CANONICAL_URL
+        "canonical_url": CANONICAL_URL,
     }
 
 
@@ -101,10 +101,10 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.event_logger = mock.Mock(spec=DebugLogger)
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = mock.Mock()
-        self.mock_span.context.edge_context.user.event_fields = mock.Mock(
-            return_value=EVENT_FIELDS
+        self.mock_span.context.edge_context.user.event_fields = mock.Mock(return_value=EVENT_FIELDS)
+        self.mock_span.context.edge_context.authentication_token = mock.Mock(
+            spec=ValidatedAuthenticationToken
         )
-        self.mock_span.context.edge_context.authentication_token = mock.Mock(spec=ValidatedAuthenticationToken)
         self.mock_span.context.edge_context.authentication_token.oauth_client_id = AUTH_CLIENT_ID
         self.mock_span.context.edge_context.geolocation.country_code = COUNTRY_CODE
         self.mock_span.context.edge_context.locale.locale_code = LOCALE_CODE
@@ -192,7 +192,9 @@ class DeciderContextFactoryTests(unittest.TestCase):
         decider_ctx_dict = decider._decider_context.to_dict()
         self.assertEqual(decider_ctx_dict["user_id"], None)
 
-    def test_make_object_for_context_and_decider_context_with_broken_decider_field_extractor(self, _filewatcher):
+    def test_make_object_for_context_and_decider_context_with_broken_decider_field_extractor(
+        self, _filewatcher
+    ):
         def broken_decider_field_extractor(_request: RequestContext):
             return {
                 "app_name": {},
@@ -201,6 +203,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
                 True: "bool",
                 None: "xyz",
             }
+
         decider_ctx_factory = decider_client_from_config(
             {"experiments.path": "/tmp/test", "experiments.timeout": "60 seconds"},
             self.event_logger,
@@ -211,9 +214,22 @@ class DeciderContextFactoryTests(unittest.TestCase):
         with self.assertLogs() as captured:
             decider_ctx_factory.make_object_for_context(name="test", span=self.mock_span)
 
-            assert(any("None key in request_field_extractor() dict is not of type str and is removed." in x.getMessage() for x in captured.records))
-            assert(any("True key in request_field_extractor() dict is not of type str and is removed." in x.getMessage() for x in captured.records))
-            assert(any("app_name: {} value in request_field_extractor() dict is not of oneOf type: [None, int, float, str, bool] and is removed." in x.getMessage() for x in captured.records))
+            assert any(
+                "None key in request_field_extractor() dict is not of type str and is removed."
+                in x.getMessage()
+                for x in captured.records
+            )
+            assert any(
+                "True key in request_field_extractor() dict is not of type str and is removed."
+                in x.getMessage()
+                for x in captured.records
+            )
+            assert any(
+                "app_name: {} value in request_field_extractor() dict is not of oneOf type: [None, int, float, str, bool] and is removed."
+                in x.getMessage()
+                for x in captured.records
+            )
+
 
 # Todo: test DeciderClient()
 # @mock.patch("reddit_decider.FileWatcher")
@@ -262,18 +278,8 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "emit_event": True,
                 "experiment": {
                     "variants": [
-                        {
-                            "name": "holdout",
-                            "size": 1.0,
-                            "range_end": 1.0,
-                            "range_start": 0.0
-                        },
-                        {
-                            "name": "control_1",
-                            "size": 0.0,
-                            "range_end": 0.0,
-                            "range_start": 0.0
-                        }
+                        {"name": "holdout", "size": 1.0, "range_end": 1.0, "range_start": 0.0},
+                        {"name": "control_1", "size": 0.0, "range_end": 0.0, "range_start": 0.0},
                     ],
                     "experiment_version": 5,
                     "shuffle_version": 0,
@@ -285,7 +291,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "id": 2,
                 "name": "hg",
                 "owner": "test",
-                "value": "range_variant"
+                "value": "range_variant",
             }
         }
 
@@ -298,27 +304,17 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "emit_event": True,
                 "experiment": {
                     "variants": [
-                        {
-                            "name": "e1treat",
-                            "size": 1.0,
-                            "range_end": 1.0,
-                            "range_start": 0.0
-                        },
-                        {
-                            "name": "control_1",
-                            "size": 0.0,
-                            "range_end": 0.0,
-                            "range_start": 0.0
-                        }
+                        {"name": "e1treat", "size": 1.0, "range_end": 1.0, "range_start": 0.0},
+                        {"name": "control_1", "size": 0.0, "range_end": 0.0, "range_start": 0.0},
                     ],
                     "experiment_version": 4,
                     "shuffle_version": 0,
-                    "bucket_val": "user_id"
+                    "bucket_val": "user_id",
                 },
                 "start_ts": 0,
                 "stop_ts": 9668199193,
                 "id": 6,
-                "name": "e1"
+                "name": "e1",
             },
             "e2": {
                 "enabled": True,
@@ -328,28 +324,18 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "emit_event": True,
                 "experiment": {
                     "variants": [
-                        {
-                            "name": "e2treat",
-                            "size": 1.0,
-                            "range_end": 1.0,
-                            "range_start": 0.0
-                        },
-                        {
-                            "name": "control_1",
-                            "size": 0.0,
-                            "range_end": 0.0,
-                            "range_start": 0.0
-                        }
+                        {"name": "e2treat", "size": 1.0, "range_end": 1.0, "range_start": 0.0},
+                        {"name": "control_1", "size": 0.0, "range_end": 0.0, "range_start": 0.0},
                     ],
                     "experiment_version": 5,
                     "shuffle_version": 0,
-                    "bucket_val": "user_id"
+                    "bucket_val": "user_id",
                 },
                 "start_ts": 0,
                 "stop_ts": 9668199193,
                 "id": 7,
-                "name": "e2"
-            }
+                "name": "e2",
+            },
         }
 
         self.dc = DeciderContext(
@@ -365,7 +351,14 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             extracted_fields=decider_field_extractor(_request=None),
         )
 
-    def assert_exposure_event_fields(self, experiment_name: str, variant: str, event_fields: dict, bucket_val: str = "user_id", identifier: str = USER_ID):
+    def assert_exposure_event_fields(
+        self,
+        experiment_name: str,
+        variant: str,
+        event_fields: dict,
+        bucket_val: str = "user_id",
+        identifier: str = USER_ID,
+    ):
         self.assertEqual(event_fields["variant"], variant)
         self.assertEqual(event_fields[bucket_val], identifier)
         self.assertEqual(event_fields["logged_in"], IS_LOGGED_IN)
@@ -384,7 +377,14 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.assertEqual(getattr(event_fields["experiment"], "version"), cfg["version"])
         self.assertEqual(getattr(event_fields["experiment"], "bucket_val"), bucket_val)
 
-    def assert_minimal_exposure_event_fields(self, experiment_name: str, variant: str, event_fields: dict, bucket_val: str = "user_id", identifier: str = USER_ID):
+    def assert_minimal_exposure_event_fields(
+        self,
+        experiment_name: str,
+        variant: str,
+        event_fields: dict,
+        bucket_val: str = "user_id",
+        identifier: str = USER_ID,
+    ):
         self.assertEqual(event_fields["variant"], variant)
         self.assertEqual(event_fields[bucket_val], identifier)
         self.assertEqual(event_fields["event_type"], EventType.EXPOSE)
@@ -419,7 +419,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
-            self.assert_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields)
+            self.assert_exposure_event_fields(
+                experiment_name="exp_1", variant=variant, event_fields=event_fields
+            )
 
     def test_none_returned_on_variant_call_with_bad_id(self):
         config = {
@@ -542,7 +544,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             event_fields = self.event_logger.log.call_args[1]
 
             # `variant == None` for holdout but event will fire with `variant == "holdout"` for analysis
-            self.assert_exposure_event_fields(experiment_name="hg", variant="holdout", event_fields=event_fields)
+            self.assert_exposure_event_fields(
+                experiment_name="hg", variant="holdout", event_fields=event_fields
+            )
 
     def test_get_variant_for_identifier_user_id(self):
         identifier = USER_ID
@@ -561,13 +565,20 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val)
+            variant = decider.get_variant_for_identifier(
+                experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val
+            )
             self.assertEqual(variant, "variant_4")
 
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
-            self.assert_minimal_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields, identifier=identifier)
+            self.assert_minimal_exposure_event_fields(
+                experiment_name="exp_1",
+                variant=variant,
+                event_fields=event_fields,
+                identifier=identifier,
+            )
 
             # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["user_id"], identifier)
@@ -589,13 +600,21 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val)
+            variant = decider.get_variant_for_identifier(
+                experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val
+            )
             self.assertEqual(variant, "variant_3")
 
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
-            self.assert_minimal_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields, bucket_val=bucket_val, identifier=identifier)
+            self.assert_minimal_exposure_event_fields(
+                experiment_name="exp_1",
+                variant=variant,
+                event_fields=event_fields,
+                bucket_val=bucket_val,
+                identifier=identifier,
+            )
 
             # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["canonical_url"], identifier)
@@ -617,13 +636,21 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val)
+            variant = decider.get_variant_for_identifier(
+                experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val
+            )
             self.assertEqual(variant, "variant_3")
 
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
-            self.assert_minimal_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields, bucket_val=bucket_val, identifier=identifier)
+            self.assert_minimal_exposure_event_fields(
+                experiment_name="exp_1",
+                variant=variant,
+                event_fields=event_fields,
+                bucket_val=bucket_val,
+                identifier=identifier,
+            )
 
             # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["device_id"], identifier)
@@ -647,13 +674,19 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(self.event_logger.log.call_count, 0)
             with self.assertLogs() as captured:
                 # `identifier_type="canonical_url"`, which doesn't match `bucket_val` of `device_id`
-                variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url")
+                variant = decider.get_variant_for_identifier(
+                    experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url"
+                )
                 # `None` is returned since `identifier_type` doesn't match `bucket_val` in experiment-config json
                 self.assertEqual(variant, None)
                 # exposure isn't emitted either
                 self.assertEqual(self.event_logger.log.call_count, 0)
 
-                assert(any('Encountered error in decider.choose(): Missing "device_id" in context for bucket_val = "device_id"' in x.getMessage() for x in captured.records))
+                assert any(
+                    'Encountered error in decider.choose(): Missing "device_id" in context for bucket_val = "device_id"'
+                    in x.getMessage()
+                    for x in captured.records
+                )
 
     def test_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:
@@ -674,7 +707,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
-            self.assert_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields)
+            self.assert_exposure_event_fields(
+                experiment_name="exp_1", variant=variant, event_fields=event_fields
+            )
 
     def test_get_variant_for_identifier_without_expose_user_id(self):
         identifier = USER_ID
@@ -692,7 +727,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val)
+            variant = decider.get_variant_for_identifier_without_expose(
+                experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val
+            )
             self.assertEqual(variant, "variant_4")
 
             # no exposures should be triggered
@@ -717,7 +754,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val)
+            variant = decider.get_variant_for_identifier_without_expose(
+                experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val
+            )
             # user is part of Holdout (100% bucketing), so `None` is returned
             self.assertEqual(variant, None)
 
@@ -726,7 +765,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             event_fields = self.event_logger.log.call_args[1]
 
             # `variant == None` for holdout but event will fire with `variant == "holdout"` for analysis
-            self.assert_minimal_exposure_event_fields(experiment_name="hg", variant="holdout", event_fields=event_fields)
+            self.assert_minimal_exposure_event_fields(
+                experiment_name="hg", variant="holdout", event_fields=event_fields
+            )
 
     def test_get_variant_for_identifier_without_expose_for_holdout_exposure_wrong_bucket_val(self):
         identifier = DEVICE_ID
@@ -750,7 +791,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             # `identifier_type="canonical_url"`, which doesn't match `bucket_val` of `device_id`
-            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url")
+            variant = decider.get_variant_for_identifier_without_expose(
+                experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url"
+            )
             # `None` is returned since `identifier_type` doesn't match `bucket_val` in experiment-config json
             self.assertEqual(variant, None)
             self.assertEqual(self.event_logger.log.call_count, 0)
@@ -772,7 +815,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url")
+            variant = decider.get_variant_for_identifier_without_expose(
+                experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url"
+            )
             self.assertEqual(variant, "variant_3")
 
             # no exposures should be triggered
@@ -795,7 +840,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier_without_expose(experiment_name="exp_1", identifier=identifier, identifier_type="device_id")
+            variant = decider.get_variant_for_identifier_without_expose(
+                experiment_name="exp_1", identifier=identifier, identifier_type="device_id"
+            )
             self.assertEqual(variant, "variant_3")
 
             # no exposures should be triggered
@@ -820,25 +867,18 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             variant_arr = decider.get_all_variants_without_expose()
 
             self.assertEqual(len(variant_arr), len(self.exp_base_config))
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), {
-                "id": 1,
-                "name": "variant_4",
-                "version": "2",
-                "experimentName": "exp_1"
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e1"), {
-                "id": 6,
-                "name": "e1treat",
-                "version": "4",
-                "experimentName": "e1"
-
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e2"), {
-                "id": 7,
-                "name": "e2treat",
-                "version": "5",
-                "experimentName": "e2"
-            })
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "exp_1"),
+                {"id": 1, "name": "variant_4", "version": "2", "experimentName": "exp_1"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e1"),
+                {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e2"),
+                {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
+            )
 
             # no exposures should be triggered
             self.assertEqual(self.event_logger.log.call_count, 0)
@@ -868,32 +908,27 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # "exp_1" returns variant None (due to "hg") and is excluded from the response arr
             self.assertEqual(len(variant_arr), len(self.exp_base_config) - 1)
             self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), None)
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e1"), {
-                "id": 6,
-                "name": "e1treat",
-                "version": "4",
-                "experimentName": "e1"
-
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e2"), {
-                "id": 7,
-                "name": "e2treat",
-                "version": "5",
-                "experimentName": "e2"
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "hg"), {
-                "id": 2,
-                "name": "holdout",
-                "version": "5",
-                "experimentName": "hg"
-            })
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e1"),
+                {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e2"),
+                {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "hg"),
+                {"id": 2, "name": "holdout", "version": "5", "experimentName": "hg"},
+            )
 
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
 
             # `variant == None` for holdout but event will fire with `variant == "holdout"` for analysis
-            self.assert_exposure_event_fields(experiment_name="hg", variant="holdout", event_fields=event_fields)
+            self.assert_exposure_event_fields(
+                experiment_name="hg", variant="holdout", event_fields=event_fields
+            )
 
     def test_get_all_variants_for_identifier_without_expose_user_id(self):
         identifier = USER_ID
@@ -914,27 +949,23 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant_arr = decider.get_all_variants_for_identifier_without_expose(identifier=identifier, identifier_type=bucket_val)
+            variant_arr = decider.get_all_variants_for_identifier_without_expose(
+                identifier=identifier, identifier_type=bucket_val
+            )
 
             self.assertEqual(len(variant_arr), len(self.exp_base_config))
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), {
-                "id": 1,
-                "name": "variant_4",
-                "version": "2",
-                "experimentName": "exp_1"
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e1"), {
-                "id": 6,
-                "name": "e1treat",
-                "version": "4",
-                "experimentName": "e1"
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e2"), {
-                "id": 7,
-                "name": "e2treat",
-                "version": "5",
-                "experimentName": "e2"
-            })
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "exp_1"),
+                {"id": 1, "name": "variant_4", "version": "2", "experimentName": "exp_1"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e1"),
+                {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e2"),
+                {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
+            )
 
             # no exposures should be triggered
             self.assertEqual(self.event_logger.log.call_count, 0)
@@ -961,25 +992,27 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             with self.assertLogs() as captured:
-                variant_arr = decider.get_all_variants_for_identifier_without_expose(identifier=identifier, identifier_type=bucket_val)
+                variant_arr = decider.get_all_variants_for_identifier_without_expose(
+                    identifier=identifier, identifier_type=bucket_val
+                )
 
-                assert(any('Encountered error for experiment: exp_1 in decider.choose_all(): Missing "device_id" in context for bucket_val = "device_id"' in x.getMessage() for x in captured.records))
+                assert any(
+                    'Encountered error for experiment: exp_1 in decider.choose_all(): Missing "device_id" in context for bucket_val = "device_id"'
+                    in x.getMessage()
+                    for x in captured.records
+                )
 
                 # "exp_1" returns err() (due to bucket_val/`identifier_type` mismatch) and is excluded from the response dict
                 self.assertEqual(len(variant_arr), len(self.exp_base_config) - 1)
                 self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), None)
-                self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e1"), {
-                    "id": 6,
-                    "name": "e1treat",
-                    "version": "4",
-                    "experimentName": "e1"
-                })
-                self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e2"), {
-                    "id": 7,
-                    "name": "e2treat",
-                    "version": "5",
-                    "experimentName": "e2"
-                })
+                self.assertEqual(
+                    self.first_experimentName_occurrence(variant_arr, "e1"),
+                    {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
+                )
+                self.assertEqual(
+                    self.first_experimentName_occurrence(variant_arr, "e2"),
+                    {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
+                )
 
                 # no exposures should be triggered
                 self.assertEqual(self.event_logger.log.call_count, 0)
@@ -1007,36 +1040,34 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant_arr = decider.get_all_variants_for_identifier_without_expose(identifier=identifier, identifier_type=bucket_val)
+            variant_arr = decider.get_all_variants_for_identifier_without_expose(
+                identifier=identifier, identifier_type=bucket_val
+            )
 
             # "exp_1" returns variant None (due to "hg") and is excluded from the response dict
             self.assertEqual(len(variant_arr), len(self.exp_base_config) - 1)
             self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), None)
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e1"), {
-                "id": 6,
-                "name": "e1treat",
-                "version": "4",
-                "experimentName": "e1"
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e2"), {
-                "id": 7,
-                "name": "e2treat",
-                "version": "5",
-                "experimentName": "e2"
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "hg"), {
-                "id": 2,
-                "name": "holdout",
-                "version": "5",
-                "experimentName": "hg"
-            })
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e1"),
+                {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e2"),
+                {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "hg"),
+                {"id": 2, "name": "holdout", "version": "5", "experimentName": "hg"},
+            )
 
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
 
             # `variant == None` for holdout but event will fire with `variant == "holdout"` for analysis
-            self.assert_minimal_exposure_event_fields(experiment_name="hg", variant="holdout", event_fields=event_fields)
+            self.assert_minimal_exposure_event_fields(
+                experiment_name="hg", variant="holdout", event_fields=event_fields
+            )
 
     def test_get_all_variants_for_identifier_without_expose_device_id(self):
         identifier = DEVICE_ID
@@ -1060,28 +1091,23 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant_arr = decider.get_all_variants_for_identifier_without_expose(identifier=identifier, identifier_type=bucket_val)
+            variant_arr = decider.get_all_variants_for_identifier_without_expose(
+                identifier=identifier, identifier_type=bucket_val
+            )
 
             self.assertEqual(len(variant_arr), len(self.exp_base_config))
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), {
-                "id": 1,
-                "name": "variant_3",
-                "version": "2",
-                "experimentName": "exp_1"
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e1"), {
-                "id": 6,
-                "name": "e1treat",
-                "version": "4",
-                "experimentName": "e1"
-
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e2"), {
-                "id": 7,
-                "name": "e2treat",
-                "version": "5",
-                "experimentName": "e2"
-            })
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "exp_1"),
+                {"id": 1, "name": "variant_3", "version": "2", "experimentName": "exp_1"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e1"),
+                {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e2"),
+                {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
+            )
 
             # no exposures should be triggered
             self.assertEqual(self.event_logger.log.call_count, 0)
@@ -1112,37 +1138,38 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant_arr = decider.get_all_variants_for_identifier_without_expose(identifier=identifier, identifier_type=bucket_val)
+            variant_arr = decider.get_all_variants_for_identifier_without_expose(
+                identifier=identifier, identifier_type=bucket_val
+            )
 
             # "exp_1" returns variant None (due to "hg") and is excluded from the response dict
             self.assertEqual(len(variant_arr), len(self.exp_base_config) - 1)
             self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), None)
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e1"), {
-                "id": 6,
-                "name": "e1treat",
-                "version": "4",
-                "experimentName": "e1"
-
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e2"), {
-                "id": 7,
-                "name": "e2treat",
-                "version": "5",
-                "experimentName": "e2"
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "hg"), {
-                "id": 2,
-                "name": "holdout",
-                "version": "5",
-                "experimentName": "hg"
-            })
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e1"),
+                {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e2"),
+                {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "hg"),
+                {"id": 2, "name": "holdout", "version": "5", "experimentName": "hg"},
+            )
 
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
 
             # `variant == None` for holdout but event will fire with `variant == "holdout"` for analysis
-            self.assert_minimal_exposure_event_fields(experiment_name="hg", variant="holdout", event_fields=event_fields, bucket_val=bucket_val, identifier=identifier)
+            self.assert_minimal_exposure_event_fields(
+                experiment_name="hg",
+                variant="holdout",
+                event_fields=event_fields,
+                bucket_val=bucket_val,
+                identifier=identifier,
+            )
 
     def test_get_all_variants_for_identifier_without_expose_canonical_url(self):
         identifier = CANONICAL_URL
@@ -1166,28 +1193,23 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant_arr = decider.get_all_variants_for_identifier_without_expose(identifier=identifier, identifier_type=bucket_val)
+            variant_arr = decider.get_all_variants_for_identifier_without_expose(
+                identifier=identifier, identifier_type=bucket_val
+            )
 
             self.assertEqual(len(variant_arr), len(self.exp_base_config))
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), {
-                "id": 1,
-                "name": "variant_3",
-                "version": "2",
-                "experimentName": "exp_1"
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e1"), {
-                "id": 6,
-                "name": "e1treat",
-                "version": "4",
-                "experimentName": "e1"
-
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e2"), {
-                "id": 7,
-                "name": "e2treat",
-                "version": "5",
-                "experimentName": "e2"
-            })
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "exp_1"),
+                {"id": 1, "name": "variant_3", "version": "2", "experimentName": "exp_1"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e1"),
+                {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e2"),
+                {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
+            )
 
             # no exposures should be triggered
             self.assertEqual(self.event_logger.log.call_count, 0)
@@ -1218,37 +1240,38 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant_arr = decider.get_all_variants_for_identifier_without_expose(identifier=identifier, identifier_type=bucket_val)
+            variant_arr = decider.get_all_variants_for_identifier_without_expose(
+                identifier=identifier, identifier_type=bucket_val
+            )
 
             # "exp_1" returns variant None (due to "hg") and is excluded from the response dict
             self.assertEqual(len(variant_arr), len(self.exp_base_config) - 1)
             self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), None)
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e1"), {
-                "id": 6,
-                "name": "e1treat",
-                "version": "4",
-                "experimentName": "e1"
-
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "e2"), {
-                "id": 7,
-                "name": "e2treat",
-                "version": "5",
-                "experimentName": "e2"
-            })
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "hg"), {
-                "id": 2,
-                "name": "holdout",
-                "version": "5",
-                "experimentName": "hg"
-            })
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e1"),
+                {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e2"),
+                {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "hg"),
+                {"id": 2, "name": "holdout", "version": "5", "experimentName": "hg"},
+            )
 
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
 
             # `variant == None` for holdout but event will fire with `variant == "holdout"` for analysis
-            self.assert_minimal_exposure_event_fields(experiment_name="hg", variant="holdout", event_fields=event_fields, bucket_val=bucket_val, identifier=identifier)
+            self.assert_minimal_exposure_event_fields(
+                experiment_name="hg",
+                variant="holdout",
+                event_fields=event_fields,
+                bucket_val=bucket_val,
+                identifier=identifier,
+            )
 
     def test_get_variant_with_exposure_kwargs(self):
         with create_temp_config_file(self.exp_base_config) as f:
@@ -1262,10 +1285,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 event_logger=self.event_logger,
             )
 
-            exp_kwargs = {
-                "foo": "test_1",
-                "bar": "test_2"
-            }
+            exp_kwargs = {"foo": "test_1", "bar": "test_2"}
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant(experiment_name="exp_1", **exp_kwargs)
             self.assertEqual(variant, "variant_4")
@@ -1273,7 +1293,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
             event_fields = self.event_logger.log.call_args[1]
-            self.assert_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields)
+            self.assert_exposure_event_fields(
+                experiment_name="exp_1", variant=variant, event_fields=event_fields
+            )
 
             # additional kwargs logged
             self.assertEqual(event_fields["foo"], exp_kwargs["foo"])

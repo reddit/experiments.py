@@ -2,8 +2,13 @@ import logging
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, IO, Optional
-from typing_extensions import Literal
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import IO
+from typing import Optional
+
+import rust_decider
 
 from baseplate import RequestContext
 from baseplate import Span
@@ -15,8 +20,8 @@ from baseplate.lib.file_watcher import FileWatcher
 from baseplate.lib.file_watcher import T
 from baseplate.lib.file_watcher import WatchedFileNotAvailableError
 from reddit_edgecontext import ValidatedAuthenticationToken
+from typing_extensions import Literal
 
-import rust_decider
 
 
 logger = logging.getLogger(__name__)

@@ -7,7 +7,6 @@ from baseplate import ServerSpan
 from baseplate.lib.file_watcher import FileWatcher
 from reddit_edgecontext import AuthenticationToken
 from reddit_edgecontext import User
-
 from reddit_experiments import Experiments
 
 ORIGINAL_ZK_CONFIG_FILE = "tests/range_variant_tests/data/original_zk_config.json"

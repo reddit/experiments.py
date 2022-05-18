@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import Dict
 
 from baseplate.lib import warn_deprecated
-
 from reddit_experiments.providers.base import Experiment
 from reddit_experiments.providers.feature_flag import FeatureFlag
 from reddit_experiments.providers.forced_variant import ForcedVariantExperiment
@@ -25,9 +24,7 @@ simple_type_class_list = frozenset(
     ["single_variant", "multi_variant", "feature_rollout", "range_variant"]
 )
 
-new_exp_type_list = frozenset(
-    ["dynamic_config"]
-)
+new_exp_type_list = frozenset(["dynamic_config"])
 
 
 def parse_experiment(config: Dict[str, str]) -> Experiment:

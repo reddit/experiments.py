@@ -11,13 +11,13 @@ from baseplate.lib.events import DebugLogger
 from baseplate.lib.file_watcher import FileWatcher
 from reddit_edgecontext import AuthenticationToken
 from reddit_edgecontext import User
-
-from reddit_decider import DeciderContextFactory
-from reddit_decider import init_decider_parser
 from reddit_experiments import EventType
 from reddit_experiments import Experiments
 from reddit_experiments import experiments_client_from_config
 from reddit_experiments import ExperimentsContextFactory
+
+from reddit_decider import DeciderContextFactory
+from reddit_decider import init_decider_parser
 
 
 THIRTY_DAYS = timedelta(days=30).total_seconds()
