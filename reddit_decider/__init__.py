@@ -580,7 +580,7 @@ class Decider:
         decider = self._get_decider()
         if decider is None:
             logger.error("Encountered error in _get_decider()")
-            return None
+            return {}
 
         context_fields = self._decider_context.to_dict()
         ctx = rust_decider.make_ctx(context_fields)
@@ -668,7 +668,7 @@ class Decider:
         decider = self._get_decider()
         if decider is None:
             logger.error("Encountered error in _get_decider()")
-            return None
+            return {}
 
         identifier_context_fields = {
             **self._decider_context.to_dict(),
