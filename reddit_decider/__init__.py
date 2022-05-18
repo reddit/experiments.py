@@ -512,8 +512,6 @@ class Decider:
             identifier=identifier, identifier_type=identifier_type
         )
 
-        identifier_context_fields[identifier_type] = identifier
-
         ctx = rust_decider.make_ctx(identifier_context_fields)
         ctx_err = ctx.err()
         if ctx_err is not None:
