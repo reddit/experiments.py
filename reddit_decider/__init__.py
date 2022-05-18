@@ -453,7 +453,7 @@ class Decider:
                 owner=owner
             )
 
-            # expose the `bucket_val` used in the experiment's config, not `identifier_context_fields`
+            # expose the `bucket_val` used in the experiment's config
             event_ctx_fields = {**event_context_fields, **{bucket_val: bucketing_value}}
 
             self._event_logger.log(
@@ -545,7 +545,7 @@ class Decider:
                     owner=owner
                 )
 
-                # expose the `bucket_val` used in the experiment's config, not `identifier_context_fields`
+                # expose the `bucket_val` used in the experiment's config
                 event_ctx_fields = {**event_context_fields, **{bucket_val: bucketing_value}}
 
                 self._event_logger.log(
@@ -561,8 +561,8 @@ class Decider:
 
     def get_all_variants_without_expose(self) -> Dict[str, Optional[str]]:
         """Return a dict of experiment name strings as keys and
-            variant names as the values (if a variant is assigned,
-            and None otherwise). All available experiments get bucketed.
+            variant names as the values (if a variant is assigned
+            or None otherwise). All available experiments get bucketed.
             Exposure events are not emitted.
 
         The `expose()` function is available to be manually called afterward to emit
@@ -575,7 +575,7 @@ class Decider:
         came from the holdout group or its child experiment).
 
         :return: dict of experiment name strings as keys and
-            variant names, or `None`, as the values
+            variant names (or `None`) as the values
         """
         decider = self._get_decider()
         if decider is None:
@@ -642,8 +642,8 @@ class Decider:
         identifier_type: Literal["user_id", "device_id", "canonical_url"]
     ) -> Optional[str]:
         """Return a dict of experiment name strings as keys and
-            variant names as the values (if a variant is assigned,
-            and None otherwise) for `identifier`. Exposure events are not emitted.
+            variant names as the values (if a variant is assigned
+            or None otherwise) for `identifier`. Exposure events are not emitted.
             All available experiments get bucketed.
 
         The `expose()` function is available to be manually called afterward to emit
@@ -663,7 +663,7 @@ class Decider:
             should match an experiment's `bucket_val` to get a variant.
 
         :return: dict of experiment name strings as keys and
-            variant names, or `None`, as the values
+            variant names (or `None`) as the values
         """
         decider = self._get_decider()
         if decider is None:
@@ -679,7 +679,7 @@ class Decider:
         ctx_err = ctx.err()
         if ctx_err is not None:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
-            return None
+            return {}
 
         all_choices = decider.choose_all(ctx)
         parsed_choices = {}
@@ -717,7 +717,7 @@ class Decider:
                             owner=owner
                         )
 
-                        # expose the `bucket_val` used in the experiment's config, not `identifier_context_fields`
+                        # expose the `bucket_val` used in the experiment's config
                         event_ctx_fields = {**event_context_fields, **{bucket_val: bucketing_value}}
 
                         self._event_logger.log(
