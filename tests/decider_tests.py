@@ -36,12 +36,14 @@ EVENT_FIELDS = {
     "cookie_created_timestamp": COOKIE_CREATED_TIMESTAMP,
 }
 
+
 @contextlib.contextmanager
 def create_temp_config_file(contents):
     with tempfile.NamedTemporaryFile() as f:
         f.write(json.dumps(contents).encode())
         f.seek(0)
         yield f
+
 
 def decider_field_extractor(_request: RequestContext):
     return {
@@ -50,6 +52,7 @@ def decider_field_extractor(_request: RequestContext):
         "build_number": BUILD_NUMBER,
         "canonical_url": CANONICAL_URL
     }
+
 
 @mock.patch("reddit_decider.FileWatcher")
 class DeciderClientFromConfigTests(unittest.TestCase):
@@ -88,6 +91,7 @@ class DeciderClientFromConfigTests(unittest.TestCase):
         file_watcher_mock.assert_called_once_with(
             path="/tmp/test", parser=init_decider_parser, timeout=60.0, backoff=None
         )
+
 
 @mock.patch("reddit_decider.FileWatcher")
 class DeciderContextFactoryTests(unittest.TestCase):
@@ -205,11 +209,11 @@ class DeciderContextFactoryTests(unittest.TestCase):
         )
 
         with self.assertLogs() as captured:
-            decider = decider_ctx_factory.make_object_for_context(name="test", span=self.mock_span)
+            decider_ctx_factory.make_object_for_context(name="test", span=self.mock_span)
 
-            assert(True == any('None key in request_field_extractor() dict is not of type str and is removed.' in x.getMessage() for x in captured.records))
-            assert(True == any('True key in request_field_extractor() dict is not of type str and is removed.' in x.getMessage() for x in captured.records))
-            assert(True == any('app_name: {} value in request_field_extractor() dict is not of oneOf type: [None, int, float, str, bool] and is removed.' in x.getMessage() for x in captured.records))
+            assert(any('None key in request_field_extractor() dict is not of type str and is removed.' in x.getMessage() for x in captured.records))
+            assert(any('True key in request_field_extractor() dict is not of type str and is removed.' in x.getMessage() for x in captured.records))
+            assert(any('app_name: {} value in request_field_extractor() dict is not of oneOf type: [None, int, float, str, bool] and is removed.' in x.getMessage() for x in captured.records))
 
 # Todo: test DeciderClient()
 # @mock.patch("reddit_decider.FileWatcher")
@@ -282,6 +286,69 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "name": "hg",
                 "owner": "test",
                 "value": "range_variant"
+            }
+        }
+
+        self.additional_two_exp = {
+            "e1": {
+                "enabled": True,
+                "version": "4",
+                "type": "range_variant",
+                "owner": "test",
+                "emit_event": True,
+                "experiment": {
+                    "variants": [
+                        {
+                            "name": "e1treat",
+                            "size": 1.0,
+                            "range_end": 1.0,
+                            "range_start": 0.0
+                        },
+                        {
+                            "name": "control_1",
+                            "size": 0.0,
+                            "range_end": 0.0,
+                            "range_start": 0.0
+                        }
+                    ],
+                    "experiment_version": 4,
+                    "shuffle_version": 0,
+                    "bucket_val": "user_id"
+                },
+                "start_ts": 0,
+                "stop_ts": 9668199193,
+                "id": 6,
+                "name": "e1"
+            },
+            "e2": {
+                "enabled": True,
+                "version": "4",
+                "type": "range_variant",
+                "owner": "test",
+                "emit_event": True,
+                "experiment": {
+                    "variants": [
+                        {
+                            "name": "e2treat",
+                            "size": 1.0,
+                            "range_end": 1.0,
+                            "range_start": 0.0
+                        },
+                        {
+                            "name": "control_1",
+                            "size": 0.0,
+                            "range_end": 0.0,
+                            "range_start": 0.0
+                        }
+                    ],
+                    "experiment_version": 4,
+                    "shuffle_version": 0,
+                    "bucket_val": "user_id"
+                },
+                "start_ts": 0,
+                "stop_ts": 9668199193,
+                "id": 7,
+                "name": "e2"
             }
         }
 
@@ -706,6 +773,301 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # no exposures should be triggered
             self.assertEqual(self.event_logger.log.call_count, 0)
 
+    def test_get_all_variants_without_expose(self):
+        # add 2 more experiments
+        self.exp_base_config.update(self.additional_two_exp)
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant_dict = decider.get_all_variants_without_expose()
+
+            self.assertEqual(len(variant_dict), len(self.exp_base_config))
+            self.assertEqual(variant_dict["exp_1"], "variant_4")
+            self.assertEqual(variant_dict["e1"], "e1treat")
+            self.assertEqual(variant_dict["e2"], "e2treat")
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
+    def test_get_all_variants_without_expose_with_hg(self):
+        # include an HG to test event still emitted for bulk call
+        self.exp_base_config["exp_1"].update({"parent_hg_name": "hg"})
+        self.exp_base_config.update(self.parent_hg_config)
+
+        # add 2 more experiments
+        self.exp_base_config.update(self.additional_two_exp)
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant_dict = decider.get_all_variants_without_expose()
+
+            self.assertEqual(len(variant_dict), len(self.exp_base_config))
+            self.assertEqual(variant_dict["exp_1"], None)
+            self.assertEqual(variant_dict["e1"], "e1treat")
+            self.assertEqual(variant_dict["e2"], "e2treat")
+
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+
+            # `variant == None` for holdout but event will fire with `variant == 'holdout'` for analysis
+            self.assert_exposure_event_fields(experiment_name="hg", variant='holdout', event_fields=event_fields)
+
+    def test_get_all_variants_for_identifier_without_expose_user_id(self):
+        # add 2 more experiments
+        self.exp_base_config.update(self.additional_two_exp)
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.minimal_decider_context,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant_dict = decider.get_all_variants_for_identifier_without_expose(identifier=USER_ID, identifier_type="user_id")
+
+            self.assertEqual(len(variant_dict), len(self.exp_base_config))
+            self.assertEqual(variant_dict["exp_1"], "variant_4")
+            self.assertEqual(variant_dict["e1"], "e1treat")
+            self.assertEqual(variant_dict["e2"], "e2treat")
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
+    def test_get_all_variants_for_identifier_without_expose_user_id_wrong_bucket(self):
+        # add 2 more experiments
+        self.exp_base_config.update(self.additional_two_exp)
+        # alter `bucket_val` on exp_1 to induce err() due to `identifier_type` mismatch
+        self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": "device_id"})
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.minimal_decider_context,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            with self.assertLogs() as captured:
+                variant_dict = decider.get_all_variants_for_identifier_without_expose(identifier=USER_ID, identifier_type="user_id")
+
+                assert(any('Encountered error for experiment: exp_1 in decider.choose_all(): Missing "device_id" in context for bucket_val = "device_id"' in x.getMessage() for x in captured.records))
+
+                self.assertEqual(len(variant_dict), len(self.exp_base_config))
+                self.assertEqual(variant_dict["exp_1"], None)
+                self.assertEqual(variant_dict["e1"], "e1treat")
+                self.assertEqual(variant_dict["e2"], "e2treat")
+
+                # no exposures should be triggered
+                self.assertEqual(self.event_logger.log.call_count, 0)
+
+    def test_get_all_variants_for_identifier_without_expose_user_id_with_hg(self):
+        # include an HG to test event still emitted for bulk call
+        self.exp_base_config["exp_1"].update({"parent_hg_name": "hg"})
+        self.exp_base_config.update(self.parent_hg_config)
+
+        # add 2 more experiments
+        self.exp_base_config.update(self.additional_two_exp)
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant_dict = decider.get_all_variants_for_identifier_without_expose(identifier=USER_ID, identifier_type="user_id")
+
+            self.assertEqual(len(variant_dict), len(self.exp_base_config))
+            self.assertEqual(variant_dict["exp_1"], None)
+            self.assertEqual(variant_dict["e1"], "e1treat")
+            self.assertEqual(variant_dict["e2"], "e2treat")
+
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+
+            # `variant == None` for holdout but event will fire with `variant == 'holdout'` for analysis
+            self.assert_exposure_event_fields(experiment_name="hg", variant='holdout', event_fields=event_fields)
+
+    def test_get_all_variants_for_identifier_without_expose_device_id(self):
+        identifier = DEVICE_ID
+        bucket_val = "device_id"
+
+        # add 2 more experiments
+        self.exp_base_config.update(self.additional_two_exp)
+
+        for exp_name in self.exp_base_config.keys():
+            self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.minimal_decider_context,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant_dict = decider.get_all_variants_for_identifier_without_expose(identifier=identifier, identifier_type="device_id")
+
+            self.assertEqual(len(variant_dict), len(self.exp_base_config))
+            self.assertEqual(variant_dict["exp_1"], "variant_3")
+            self.assertEqual(variant_dict["e1"], "e1treat")
+            self.assertEqual(variant_dict["e2"], "e2treat")
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
+    def test_get_all_variants_for_identifier_without_expose_device_id_with_hg(self):
+        identifier = DEVICE_ID
+        bucket_val = "device_id"
+
+        # include an HG to test event still emitted for bulk call
+        self.exp_base_config["exp_1"].update({"parent_hg_name": "hg"})
+        self.exp_base_config.update(self.parent_hg_config)
+
+        # add 2 more experiments
+        self.exp_base_config.update(self.additional_two_exp)
+
+        for exp_name in self.exp_base_config.keys():
+            self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant_dict = decider.get_all_variants_for_identifier_without_expose(identifier=identifier, identifier_type=bucket_val)
+
+            self.assertEqual(len(variant_dict), len(self.exp_base_config))
+            self.assertEqual(variant_dict["exp_1"], None)
+            self.assertEqual(variant_dict["e1"], "e1treat")
+            self.assertEqual(variant_dict["e2"], "e2treat")
+
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+
+            # `variant == None` for holdout but event will fire with `variant == 'holdout'` for analysis
+            self.assert_exposure_event_fields(experiment_name="hg", variant='holdout', event_fields=event_fields, bucket_val=bucket_val)
+
+    def test_get_all_variants_for_identifier_without_expose_canonical_url(self):
+        identifier = CANONICAL_URL
+        bucket_val = "canonical_url"
+
+        # add 2 more experiments
+        self.exp_base_config.update(self.additional_two_exp)
+
+        for exp_name in self.exp_base_config.keys():
+            self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.minimal_decider_context,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant_dict = decider.get_all_variants_for_identifier_without_expose(identifier=identifier, identifier_type=bucket_val)
+
+            self.assertEqual(len(variant_dict), len(self.exp_base_config))
+            self.assertEqual(variant_dict["exp_1"], "variant_3")
+            self.assertEqual(variant_dict["e1"], "e1treat")
+            self.assertEqual(variant_dict["e2"], "e2treat")
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
+    def test_get_all_variants_for_identifier_without_expose_canonical_url_with_hg(self):
+        identifier = CANONICAL_URL
+        bucket_val = "canonical_url"
+
+        # include an HG to test event still emitted for bulk call
+        self.exp_base_config["exp_1"].update({"parent_hg_name": "hg"})
+        self.exp_base_config.update(self.parent_hg_config)
+
+        # add 2 more experiments
+        self.exp_base_config.update(self.additional_two_exp)
+
+        for exp_name in self.exp_base_config.keys():
+            self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+
+            decider = Decider(
+                decider_context=self.dc,
+                config_watcher=filewatcher,
+                server_span=self.mock_span,
+                context_name="test",
+                event_logger=self.event_logger,
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant_dict = decider.get_all_variants_for_identifier_without_expose(identifier=identifier, identifier_type=bucket_val)
+
+            self.assertEqual(len(variant_dict), len(self.exp_base_config))
+            self.assertEqual(variant_dict["exp_1"], None)
+            self.assertEqual(variant_dict["e1"], "e1treat")
+            self.assertEqual(variant_dict["e2"], "e2treat")
+
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+
+            # `variant == None` for holdout but event will fire with `variant == 'holdout'` for analysis
+            self.assert_exposure_event_fields(experiment_name="hg", variant='holdout', event_fields=event_fields, bucket_val=bucket_val)
+
     def test_get_variant_with_exposure_kwargs(self):
         with create_temp_config_file(self.exp_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
@@ -794,7 +1156,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         )
 
     def test_get_bool(self):
-        self.dc_base_config["dc_1"].update({"value_type": "Boolean","value": True,})
+        self.dc_base_config["dc_1"].update({"value_type": "Boolean", "value": True})
 
         with create_temp_config_file(self.dc_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
@@ -812,7 +1174,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             self.assertEqual(res, 0.0)
 
     def test_get_int(self):
-        self.dc_base_config["dc_1"].update({"value_type": "Integer","value": 7,})
+        self.dc_base_config["dc_1"].update({"value_type": "Integer", "value": 7})
 
         with create_temp_config_file(self.dc_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
@@ -830,7 +1192,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             self.assertEqual(res, 7.0)
 
     def test_get_float(self):
-        self.dc_base_config["dc_1"].update({"value_type": "Float","value": 4.20,})
+        self.dc_base_config["dc_1"].update({"value_type": "Float", "value": 4.20})
 
         with create_temp_config_file(self.dc_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
@@ -848,7 +1210,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             self.assertEqual(res, 0)
 
     def test_get_string(self):
-        self.dc_base_config["dc_1"].update({"value_type": "Text","value": "helloworld!",})
+        self.dc_base_config["dc_1"].update({"value_type": "Text", "value": "helloworld!"})
 
         with create_temp_config_file(self.dc_base_config) as f:
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
@@ -867,7 +1229,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
 
     def test_get_map(self):
         self.dc_base_config["dc_1"].update(
-            {"value_type": "Map","value": {"key": "value", "another_key": "another_value"},}
+            {"value_type": "Map", "value": {"key": "value", "another_key": "another_value"}}
         )
 
         with create_temp_config_file(self.dc_base_config) as f:
