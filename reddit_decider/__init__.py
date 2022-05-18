@@ -47,7 +47,7 @@ class DeciderContext:
 
     def __init__(
         self,
-        user_id: str,
+        user_id: Optional[str] = None,
         country_code: Optional[str] = None,
         locale: Optional[str] = None,
         user_is_employee: Optional[bool] = None,
@@ -851,7 +851,7 @@ class DeciderContextFactory(ContextFactory):
         if span is None:
             logger.debug("`span` is `None` in reddit_decider `make_object_for_context()`.")
             return Decider(
-                decider_context=DeciderContext(user_id=""),
+                decider_context=DeciderContext(),
                 config_watcher=self._filewatcher,
                 server_span=span,
                 context_name=name,
@@ -950,9 +950,8 @@ class DeciderContextFactory(ContextFactory):
                 extracted_fields=parsed_extracted_fields,
             )
         except Exception as exc:
-            logger.warning("Could not create full DeciderContext(): %s", str(exc))
-            logger.warning("defaulting to empty DeciderContext(user_id="").")
-            decider_context = DeciderContext(user_id="")
+            logger.warning("Could not create full DeciderContext() (defaulting to empty DeciderContext()): %s", str(exc))
+            decider_context = DeciderContext()
 
         return Decider(
             decider_context=decider_context,

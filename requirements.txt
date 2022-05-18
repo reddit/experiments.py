@@ -2,7 +2,7 @@
 alabaster==0.7.12
 baseplate==2.0.0a1
 black==21.4b2
-reddit-decider==1.1.19
+reddit-decider==1.1.22
 flake8==3.9.1
 mypy==0.790
 pyramid==2.0   # required for `from baseplate.frameworks.pyramid import BaseplateRequest` which calls `import pyramid.events`
