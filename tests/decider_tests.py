@@ -569,7 +569,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             event_fields = self.event_logger.log.call_args[1]
             self.assert_minimal_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields, identifier=identifier)
 
-            # `identifier` passed to correct event field of experiment"s `bucket_val` config
+            # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["user_id"], identifier)
 
     def test_get_variant_for_identifier_canonical_url(self):
@@ -597,7 +597,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             event_fields = self.event_logger.log.call_args[1]
             self.assert_minimal_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields, bucket_val=bucket_val, identifier=identifier)
 
-            # `identifier` passed to correct event field of experiment"s `bucket_val` config
+            # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["canonical_url"], identifier)
 
     def test_get_variant_for_identifier_device_id(self):
@@ -625,7 +625,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             event_fields = self.event_logger.log.call_args[1]
             self.assert_minimal_exposure_event_fields(experiment_name="exp_1", variant=variant, event_fields=event_fields, bucket_val=bucket_val, identifier=identifier)
 
-            # `identifier` passed to correct event field of experiment"s `bucket_val` config
+            # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["device_id"], identifier)
 
     def test_get_variant_for_identifier_wrong_bucket_val(self):
@@ -650,7 +650,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url")
                 # `None` is returned since `identifier_type` doesn't match `bucket_val` in experiment-config json
                 self.assertEqual(variant, None)
-                # exposure isn"t emitted either
+                # exposure isn't emitted either
                 self.assertEqual(self.event_logger.log.call_count, 0)
 
                 assert(any('Encountered error in decider.choose(): Missing "device_id" in context for bucket_val = "device_id"' in x.getMessage() for x in captured.records))
