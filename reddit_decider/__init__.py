@@ -23,8 +23,10 @@ logger = logging.getLogger(__name__)
 
 EMPLOYEE_ROLES = ("employee", "contractor")
 
+
 class EventType(Enum):
     EXPOSE = "expose"
+
 
 @dataclass
 class ExperimentConfig:
@@ -35,6 +37,7 @@ class ExperimentConfig:
     start_ts: int
     stop_ts: int
     owner: str
+
 
 class DeciderContext:
     """DeciderContext() is used to contain all fields necessary for
@@ -132,8 +135,10 @@ class DeciderContext:
             **ef,
         }
 
+
 def init_decider_parser(file: IO) -> Any:
     return rust_decider.init("darkmode overrides targeting holdout mutex_group fractional_availability value", file.name)
+
 
 def validate_decider(decider: Optional[Any]) -> None:
     if decider is None:
@@ -448,8 +453,8 @@ class Decider:
                 owner=owner
             )
 
-            # expose the `bucket_val` used in the experiment's config, not `identifier_context_fields`
-            event_ctx_fields = { **event_context_fields, **{bucket_val: bucketing_value}}
+            # expose the `bucket_val` used in the experiment's config
+            event_ctx_fields = {**event_context_fields, **{bucket_val: bucketing_value}}
 
             self._event_logger.log(
                 experiment=experiment,
@@ -461,7 +466,6 @@ class Decider:
             )
 
         return variant
-
 
     def get_variant_for_identifier_without_expose(
         self,
@@ -541,8 +545,8 @@ class Decider:
                     owner=owner
                 )
 
-                # expose the `bucket_val` used in the experiment's config, not `identifier_context_fields`
-                event_ctx_fields = { **event_context_fields, **{bucket_val: bucketing_value}}
+                # expose the `bucket_val` used in the experiment's config
+                event_ctx_fields = {**event_context_fields, **{bucket_val: bucketing_value}}
 
                 self._event_logger.log(
                     experiment=experiment,
@@ -554,6 +558,185 @@ class Decider:
                 )
 
         return variant
+
+    def get_all_variants_without_expose(self) -> Dict[str, Optional[str]]:
+        """Return a dict of experiment name strings as keys and
+            variant names as the values. If a variant was `None` for an experiment,
+            that experiment is not included in the return dict.
+            All available experiments get bucketed. Exposure events are not emitted.
+
+        The `expose()` function is available to be manually called afterward to emit
+        exposure event.
+
+        However, experiments in Holdout Groups will still send an exposure for
+        the holdout parent experiment, since it is not possible to
+        manually expose the holdout later (because after exiting this function,
+        it's impossible to know if a returned `None` or `"control_1"` string
+        came from the holdout group or its child experiment).
+
+        :return: dict of experiment name strings as keys and
+            variant names (or `None`) as the values
+        """
+        decider = self._get_decider()
+        if decider is None:
+            logger.error("Encountered error in _get_decider()")
+            return {}
+
+        context_fields = self._decider_context.to_dict()
+        ctx = rust_decider.make_ctx(context_fields)
+        ctx_err = ctx.err()
+        if ctx_err is not None:
+            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+            return {}
+
+        all_choices = decider.choose_all(ctx)
+        parsed_choices = {}
+
+        event_context_fields = self._decider_context.to_event_dict()
+
+        for exp_name, choice in all_choices.items():
+            choice_error = choice.err()
+            if choice_error:
+                logger.info(f"Encountered error for experiment: {exp_name} in decider.choose_all(): {choice_error}")
+                continue
+
+            decision = choice.decision()
+
+            if decision:
+                parsed_choices[exp_name] = decision
+
+            # expose Holdout if the experiment is part of one
+            for event in choice.events():
+                try:
+                    event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
+                except ValueError:
+                    logger.warning(f'Encountered error in event.split("::::") for {exp_name} in get_all_variants_without_expose(). event: {event}')
+                    continue
+
+                # event_type enum:
+                #   0: regular bucketing
+                #   1: override
+                #   2: holdout
+                if event_type == "2":
+                    experiment = ExperimentConfig(
+                        id=int(exp_id),
+                        name=name,
+                        version=version,
+                        bucket_val=bucket_val,
+                        start_ts=start_ts,
+                        stop_ts=stop_ts,
+                        owner=owner
+                    )
+
+                    self._event_logger.log(
+                        experiment=experiment,
+                        variant=event_variant,
+                        span=self._span,
+                        event_type=EventType.EXPOSE,
+                        inputs=event_context_fields.copy(),
+                        **event_context_fields.copy(),
+                    )
+
+        return parsed_choices
+
+    def get_all_variants_for_identifier_without_expose(
+        self,
+        identifier: str,
+        identifier_type: Literal["user_id", "device_id", "canonical_url"]
+    ) -> Dict[str, Optional[str]]:
+        """Return a dict of experiment name strings as keys and
+            variant names as the values for `identifier`.
+            If a variant was `None` for an experiment, that experiment is
+            not included in the return dict. All available experiments get bucketed.
+            Exposure events are not emitted.
+
+        The `expose()` function is available to be manually called afterward to emit
+        exposure event.
+
+        However, experiments in Holdout Groups will still send an exposure for
+        the holdout parent experiment, since it is not possible to
+        manually expose the holdout later (because after exiting this function,
+        it's impossible to know if a returned `None` or `"control_1"` string
+        came from the holdout group or its child experiment).
+
+        :param identifier: an arbitary string used to bucket the experiment by
+            being set on `DeciderContext`'s `identifier_type` field.
+
+        :param identifier_type: (one of ["user_id", "device_id", "canonical_url"])
+            Sets `{identifier_type: identifier}` on DeciderContext and
+            should match an experiment's `bucket_val` to get a variant.
+
+        :return: dict of experiment name strings as keys and
+            variant names (or `None`) as the values
+        """
+        decider = self._get_decider()
+        if decider is None:
+            logger.error("Encountered error in _get_decider()")
+            return {}
+
+        identifier_context_fields = {
+            **self._decider_context.to_dict(),
+            **{identifier_type: identifier}
+        }
+
+        ctx = rust_decider.make_ctx(identifier_context_fields)
+        ctx_err = ctx.err()
+        if ctx_err is not None:
+            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+            return {}
+
+        all_choices = decider.choose_all(ctx)
+        parsed_choices = {}
+
+        event_context_fields = self._decider_context.to_event_dict()
+
+        for exp_name, choice in all_choices.items():
+            choice_error = choice.err()
+            if choice_error:
+                logger.info(f"Encountered error for experiment: {exp_name} in decider.choose_all(): {choice_error}")
+                continue
+
+            decision = choice.decision()
+
+            if decision:
+                parsed_choices[exp_name] = decision
+
+            # expose Holdout if the experiment is part of one
+            for event in choice.events():
+                try:
+                    event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
+                except ValueError:
+                    logger.warning(f'Encountered error in event.split("::::") for {exp_name} in get_all_variants_without_expose(). event: {event}')
+                    continue
+
+                # event_type enum:
+                #   0: regular bucketing
+                #   1: override
+                #   2: holdout
+                if event_type == "2":
+                    experiment = ExperimentConfig(
+                        id=int(exp_id),
+                        name=name,
+                        version=version,
+                        bucket_val=bucket_val,
+                        start_ts=start_ts,
+                        stop_ts=stop_ts,
+                        owner=owner
+                    )
+
+                    # expose the `bucket_val` used in the experiment's config
+                    event_ctx_fields = {**event_context_fields, **{bucket_val: bucketing_value}}
+
+                    self._event_logger.log(
+                        experiment=experiment,
+                        variant=event_variant,
+                        span=self._span,
+                        event_type=EventType.EXPOSE,
+                        inputs=event_ctx_fields.copy(),
+                        **event_ctx_fields.copy(),
+                    )
+
+        return parsed_choices
 
     def _get_dynamic_config_value(
         self,
@@ -567,7 +750,6 @@ class Decider:
         if ctx_err is not None:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
             return None
-
 
         res = decider_func(feature_name, ctx)
         if res is None:
