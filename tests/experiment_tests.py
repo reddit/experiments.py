@@ -20,7 +20,6 @@ from reddit_experiments import experiments_client_from_config
 from reddit_experiments import ExperimentsContextFactory
 
 
-
 THIRTY_DAYS = timedelta(days=30).total_seconds()
 
 
