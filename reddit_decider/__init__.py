@@ -567,10 +567,20 @@ class Decider:
         return variant
 
     def get_all_variants_without_expose(self) -> Dict[str, Optional[str]]:
-        """Return a dict of experiment name strings as keys and
-            variant names as the values. If a variant was `None` for an experiment,
-            that experiment is not included in the return dict.
-            All available experiments get bucketed. Exposure events are not emitted.
+        """Return a list of experiment dicts in this format:
+                [
+                    {
+                        "id": "1",
+                        "name": "variant_1",
+                        "version": "1",
+                        "experimentName": "exp_1"
+
+                    },
+                    ...
+                ]
+            If an experiment has a variant of `None`, it is not included
+            in the returned list. All available experiments get bucketed.
+            Exposure events are not emitted.
 
         The `expose()` function is available to be manually called afterward to emit
         exposure event.
@@ -581,8 +591,7 @@ class Decider:
         it's impossible to know if a returned `None` or `"control_1"` string
         came from the holdout group or its child experiment).
 
-        :return: dict of experiment name strings as keys and
-            variant names (or `None`) as the values
+        :return: list of experiment dicts with non-`None` variants.
         """
         decider = self._get_decider()
         if decider is None:
@@ -597,7 +606,7 @@ class Decider:
             return {}
 
         all_choices = decider.choose_all(ctx)
-        parsed_choices = {}
+        parsed_choices = []
 
         event_context_fields = self._decider_context.to_event_dict()
 
@@ -607,10 +616,10 @@ class Decider:
                 logger.info(f"Encountered error for experiment: {exp_name} in decider.choose_all(): {choice_error}")
                 continue
 
-            decision = choice.decision()
+            decision_dict = choice.decision_dict()
 
-            if decision:
-                parsed_choices[exp_name] = decision
+            if decision_dict:
+                parsed_choices.append(decision_dict)
 
             # expose Holdout if the experiment is part of one
             for event in choice.events():
@@ -651,10 +660,19 @@ class Decider:
         identifier: str,
         identifier_type: Literal[IDENTIFIERS]
     ) -> Dict[str, Optional[str]]:
-        """Return a dict of experiment name strings as keys and
-            variant names as the values for `identifier`.
-            If a variant was `None` for an experiment, that experiment is
-            not included in the return dict. All available experiments get bucketed.
+        """Return a list of experiment dicts in this format:
+                [
+                    {
+                        "id": "1",
+                        "name": "variant_1",
+                        "version": "1",
+                        "experimentName": "exp_1"
+
+                    },
+                    ...
+                ]
+            If an experiment has a variant of `None`, it is not included
+            in the returned list. All available experiments get bucketed.
             Exposure events are not emitted.
 
         The `expose()` function is available to be manually called afterward to emit
@@ -673,8 +691,7 @@ class Decider:
             Sets `{identifier_type: identifier}` on DeciderContext and
             should match an experiment's `bucket_val` to get a variant.
 
-        :return: dict of experiment name strings as keys and
-            variant names (or `None`) as the values
+        :return: list of experiment dicts with non-`None` variants.
         """
         decider = self._get_decider()
         if decider is None:
@@ -692,7 +709,7 @@ class Decider:
             return {}
 
         all_choices = decider.choose_all(ctx)
-        parsed_choices = {}
+        parsed_choices = []
 
         event_context_fields = self._decider_context.to_event_dict()
 
@@ -702,10 +719,10 @@ class Decider:
                 logger.info(f"Encountered error for experiment: {exp_name} in decider.choose_all(): {choice_error}")
                 continue
 
-            decision = choice.decision()
+            decision_dict = choice.decision_dict()
 
-            if decision:
-                parsed_choices[exp_name] = decision
+            if decision_dict:
+                parsed_choices.append(decision_dict)
 
             # expose Holdout if the experiment is part of one
             for event in choice.events():
