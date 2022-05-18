@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 EMPLOYEE_ROLES = ("employee", "contractor")
 IDENTIFIERS = ("user_id", "device_id", "canonical_url")
 
+
 class EventType(Enum):
     EXPOSE = "expose"
 
