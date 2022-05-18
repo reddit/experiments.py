@@ -8,7 +8,7 @@ from typing import Dict
 from typing import IO
 from typing import Optional
 
-import rust_decider
+import rust_decider  # type: ignore
 
 from baseplate import RequestContext
 from baseplate import Span
@@ -21,7 +21,6 @@ from baseplate.lib.file_watcher import T
 from baseplate.lib.file_watcher import WatchedFileNotAvailableError
 from reddit_edgecontext import ValidatedAuthenticationToken
 from typing_extensions import Literal
-
 
 
 logger = logging.getLogger(__name__)
@@ -62,7 +61,7 @@ class DeciderContext:
         auth_client_id: Optional[str] = None,
         origin_service: Optional[str] = None,
         cookie_created_timestamp: Optional[float] = None,
-        extracted_fields: Optional[dict] = None
+        extracted_fields: Optional[dict] = None,
     ):
         self._user_id = user_id
         self._country_code = country_code
@@ -97,7 +96,7 @@ class DeciderContext:
             "id": self._user_id,
             "logged_in": self._logged_in,
             "cookie_created_timestamp": self._cookie_created_timestamp,
-            "is_employee": self._user_is_employee
+            "is_employee": self._user_is_employee,
         }
 
         ef = (self._extracted_fields or {}).copy()
@@ -143,7 +142,9 @@ class DeciderContext:
 
 
 def init_decider_parser(file: IO) -> Any:
-    return rust_decider.init("darkmode overrides targeting holdout mutex_group fractional_availability value", file.name)
+    return rust_decider.init(
+        "darkmode overrides targeting holdout mutex_group fractional_availability value", file.name
+    )
 
 
 def validate_decider(decider: Optional[Any]) -> None:
@@ -194,7 +195,9 @@ class Decider:
             logger.error("Could not load experiment config: %s", str(exc))
         return None
 
-    def _clear_identifiers_and_set(self, identifier: str, identifier_type: Literal[IDENTIFIERS]) -> Dict[str, Any]:
+    def _clear_identifiers_and_set(
+        self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
+    ) -> Dict[str, Any]:
         ctx = self._decider_context.to_dict()
         # reset any identifiers so only the the identifier passed in gets used
         for id in IDENTIFIERS:
@@ -203,7 +206,7 @@ class Decider:
         ctx[identifier_type] = identifier
         return ctx
 
-    def _format_decision(self, decision_dict: Dict[str, str]):
+    def _format_decision(self, decision_dict: Dict[str, str]) -> Dict[str, Any]:
         out = {}
         # cast id to int
         for k, v in decision_dict.items():
@@ -211,16 +214,14 @@ class Decider:
                 try:
                     out[k] = int(v)
                 except ValueError:
-                    out[k] = v
+                    out[k] = v  # type: ignore
             else:
-                out[k] = v
+                out[k] = v  # type: ignore
 
         return out
 
     def get_variant(
-        self,
-        experiment_name: str,
-        **exposure_kwargs: Optional[Dict[str, Any]]
+        self, experiment_name: str, **exposure_kwargs: Optional[Dict[str, Any]]
     ) -> Optional[str]:
         """Return a bucketing variant, if any, with auto-exposure.
 
@@ -264,9 +265,22 @@ class Decider:
 
         for event in choice.events():
             try:
-                _event_type, exp_id, name, version, event_variant, _bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
+                (
+                    _event_type,
+                    exp_id,
+                    name,
+                    version,
+                    event_variant,
+                    _bucketing_value,
+                    bucket_val,
+                    start_ts,
+                    stop_ts,
+                    owner,
+                ) = event.split("::::")
             except ValueError:
-                logger.warning(f'Encountered error in event.split("::::") in get_variant(). event: {event}')
+                logger.warning(
+                    f'Encountered error in event.split("::::") in get_variant(). event: {event}'
+                )
                 return variant
 
             experiment = ExperimentConfig(
@@ -276,7 +290,7 @@ class Decider:
                 bucket_val=bucket_val,
                 start_ts=start_ts,
                 stop_ts=stop_ts,
-                owner=owner
+                owner=owner,
             )
 
             self._event_logger.log(
@@ -331,9 +345,22 @@ class Decider:
         # expose Holdout if the experiment is part of one
         for event in choice.events():
             try:
-                event_type, exp_id, name, version, event_variant, _bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
+                (
+                    event_type,
+                    exp_id,
+                    name,
+                    version,
+                    event_variant,
+                    _bucketing_value,
+                    bucket_val,
+                    start_ts,
+                    stop_ts,
+                    owner,
+                ) = event.split("::::")
             except ValueError:
-                logger.warning(f'Encountered error in event.split("::::") in get_variant_without_expose(). event: {event}')
+                logger.warning(
+                    f'Encountered error in event.split("::::") in get_variant_without_expose(). event: {event}'
+                )
                 return variant
 
             # event_type enum:
@@ -348,7 +375,7 @@ class Decider:
                     bucket_val=bucket_val,
                     start_ts=start_ts,
                     stop_ts=stop_ts,
-                    owner=owner
+                    owner=owner,
                 )
 
                 self._event_logger.log(
@@ -399,7 +426,7 @@ class Decider:
             bucket_val=exp_dict.get("variant_set", {}).get("bucket_val"),
             start_ts=exp_dict.get("variant_set", {}).get("start_ts"),
             stop_ts=exp_dict.get("variant_set", {}).get("stop_ts"),
-            owner=exp_dict.get("owner")
+            owner=exp_dict.get("owner"),
         )
 
         self._event_logger.log(
@@ -415,8 +442,8 @@ class Decider:
         self,
         experiment_name: str,
         identifier: str,
-        identifier_type: Literal[IDENTIFIERS],
-        **exposure_kwargs: Optional[Dict[str, Any]]
+        identifier_type: Literal["user_id", "device_id", "canonical_url"],
+        **exposure_kwargs: Optional[Dict[str, Any]],
     ) -> Optional[str]:
         """Return a bucketing variant for identifier, if any, with auto-exposure.
 
@@ -466,9 +493,22 @@ class Decider:
 
         for event in choice.events():
             try:
-                _event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
+                (
+                    _event_type,
+                    exp_id,
+                    name,
+                    version,
+                    event_variant,
+                    bucketing_value,
+                    bucket_val,
+                    start_ts,
+                    stop_ts,
+                    owner,
+                ) = event.split("::::")
             except ValueError:
-                logger.warning(f'Encountered error in event.split("::::") in get_variant_for_identifier(). event: {event}')
+                logger.warning(
+                    f'Encountered error in event.split("::::") in get_variant_for_identifier(). event: {event}'
+                )
                 return variant
 
             experiment = ExperimentConfig(
@@ -478,7 +518,7 @@ class Decider:
                 bucket_val=bucket_val,
                 start_ts=start_ts,
                 stop_ts=stop_ts,
-                owner=owner
+                owner=owner,
             )
 
             # expose the `bucket_val` used in the experiment's config
@@ -499,7 +539,7 @@ class Decider:
         self,
         experiment_name: str,
         identifier: str,
-        identifier_type: Literal[IDENTIFIERS]
+        identifier_type: Literal["user_id", "device_id", "canonical_url"],
     ) -> Optional[str]:
         """Return a bucketing variant for `identifier`, if any, without emitting exposure event.
 
@@ -552,9 +592,22 @@ class Decider:
         # expose Holdout if the experiment is part of one
         for event in choice.events():
             try:
-                event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
+                (
+                    event_type,
+                    exp_id,
+                    name,
+                    version,
+                    event_variant,
+                    bucketing_value,
+                    bucket_val,
+                    start_ts,
+                    stop_ts,
+                    owner,
+                ) = event.split("::::")
             except ValueError:
-                logger.warning(f'Encountered error in event.split("::::") in get_variant_for_identifier_without_expose(). event: {event}')
+                logger.warning(
+                    f'Encountered error in event.split("::::") in get_variant_for_identifier_without_expose(). event: {event}'
+                )
                 return variant
 
             # event_type enum:
@@ -569,7 +622,7 @@ class Decider:
                     bucket_val=bucket_val,
                     start_ts=start_ts,
                     stop_ts=stop_ts,
-                    owner=owner
+                    owner=owner,
                 )
 
                 # expose the `bucket_val` used in the experiment's config
@@ -633,7 +686,9 @@ class Decider:
         for exp_name, choice in all_choices.items():
             choice_error = choice.err()
             if choice_error:
-                logger.info(f"Encountered error for experiment: {exp_name} in decider.choose_all(): {choice_error}")
+                logger.info(
+                    f"Encountered error for experiment: {exp_name} in decider.choose_all(): {choice_error}"
+                )
                 continue
 
             decision_dict = choice.decision_dict()
@@ -644,9 +699,22 @@ class Decider:
             # expose Holdout if the experiment is part of one
             for event in choice.events():
                 try:
-                    event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
+                    (
+                        event_type,
+                        exp_id,
+                        name,
+                        version,
+                        event_variant,
+                        bucketing_value,
+                        bucket_val,
+                        start_ts,
+                        stop_ts,
+                        owner,
+                    ) = event.split("::::")
                 except ValueError:
-                    logger.warning(f'Encountered error in event.split("::::") for {exp_name} in get_all_variants_without_expose(). event: {event}')
+                    logger.warning(
+                        f'Encountered error in event.split("::::") for {exp_name} in get_all_variants_without_expose(). event: {event}'
+                    )
                     continue
 
                 # event_type enum:
@@ -661,7 +729,7 @@ class Decider:
                         bucket_val=bucket_val,
                         start_ts=start_ts,
                         stop_ts=stop_ts,
-                        owner=owner
+                        owner=owner,
                     )
 
                     self._event_logger.log(
@@ -676,9 +744,7 @@ class Decider:
         return parsed_choices
 
     def get_all_variants_for_identifier_without_expose(
-        self,
-        identifier: str,
-        identifier_type: Literal[IDENTIFIERS]
+        self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
     ) -> Dict[str, Optional[str]]:
         """Return a list of experiment dicts in this format:
                 [
@@ -736,7 +802,9 @@ class Decider:
         for exp_name, choice in all_choices.items():
             choice_error = choice.err()
             if choice_error:
-                logger.info(f"Encountered error for experiment: {exp_name} in decider.choose_all(): {choice_error}")
+                logger.info(
+                    f"Encountered error for experiment: {exp_name} in decider.choose_all(): {choice_error}"
+                )
                 continue
 
             decision_dict = choice.decision_dict()
@@ -747,9 +815,22 @@ class Decider:
             # expose Holdout if the experiment is part of one
             for event in choice.events():
                 try:
-                    event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
+                    (
+                        event_type,
+                        exp_id,
+                        name,
+                        version,
+                        event_variant,
+                        bucketing_value,
+                        bucket_val,
+                        start_ts,
+                        stop_ts,
+                        owner,
+                    ) = event.split("::::")
                 except ValueError:
-                    logger.warning(f'Encountered error in event.split("::::") for {exp_name} in get_all_variants_without_expose(). event: {event}')
+                    logger.warning(
+                        f'Encountered error in event.split("::::") for {exp_name} in get_all_variants_without_expose(). event: {event}'
+                    )
                     continue
 
                 # event_type enum:
@@ -764,7 +845,7 @@ class Decider:
                         bucket_val=bucket_val,
                         start_ts=start_ts,
                         stop_ts=stop_ts,
-                        owner=owner
+                        owner=owner,
                     )
 
                     # expose the `bucket_val` used in the experiment's config
@@ -784,9 +865,9 @@ class Decider:
     def _get_dynamic_config_value(
         self,
         feature_name: str,
-        decider_func: Callable[[str, DeciderContext], any],
-        default: any,
-    ) -> Optional[any]:
+        decider_func: Callable[[str, DeciderContext], Any],
+        default: Any,
+    ) -> Optional[Any]:
         context_fields = self._decider_context.to_dict()
         ctx = rust_decider.make_ctx(context_fields)
         ctx_err = ctx.err()
@@ -832,7 +913,7 @@ class Decider:
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_string, default)
 
-    def get_map(self, feature_name: str, default: dict = None) -> Optional[dict]:
+    def get_map(self, feature_name: str, default: Optional[dict] = None) -> Optional[dict]:
         decider = self._get_decider()
         if not decider:
             logger.error("Encountered error in _get_decider()")
@@ -860,15 +941,18 @@ class DeciderContextFactory(ContextFactory):
         "app_name" & "build_number" in DeciderContext() via `extracted_fields` arg
 
     """
+
     def __init__(
         self,
         path: str,
         event_logger: Optional[EventLogger] = None,
         timeout: Optional[float] = None,
         backoff: Optional[float] = None,
-        request_field_extractor: Optional[Callable[[RequestContext], Dict[str, str]]] = None
+        request_field_extractor: Optional[Callable[[RequestContext], Dict[str, str]]] = None,
     ):
-        self._filewatcher = FileWatcher(path=path, parser=init_decider_parser, timeout=timeout, backoff=backoff)
+        self._filewatcher = FileWatcher(
+            path=path, parser=init_decider_parser, timeout=timeout, backoff=backoff
+        )
         self._event_logger = event_logger
         self._request_field_extractor = request_field_extractor
 
@@ -905,7 +989,9 @@ class DeciderContextFactory(ContextFactory):
             request = span.context
             ec = request.edge_context
         except Exception as exc:
-            logger.info(f"Unable to access `request.edge_context` in `make_object_for_context()`. details: {exc}")
+            logger.info(
+                f"Unable to access `request.edge_context` in `make_object_for_context()`. details: {exc}"
+            )
 
         parsed_extracted_fields = {}
         try:
@@ -919,15 +1005,21 @@ class DeciderContextFactory(ContextFactory):
             for k, v in extracted_fields.items():
                 # remove invalid keys
                 if k is None or not isinstance(k, str):
-                    logger.info(f"{k} key in request_field_extractor() dict is not of type str and is removed.")
+                    logger.info(
+                        f"{k} key in request_field_extractor() dict is not of type str and is removed."
+                    )
                     del parsed_extracted_fields[k]
                     continue
                 # remove invalid values
                 if not isinstance(v, (int, float, str, bool)) and v is not None:
-                    logger.info(f"{k}: {v} value in request_field_extractor() dict is not of oneOf type: [None, int, float, str, bool] and is removed.")
+                    logger.info(
+                        f"{k}: {v} value in request_field_extractor() dict is not of oneOf type: [None, int, float, str, bool] and is removed."
+                    )
                     del parsed_extracted_fields[k]
         except Exception as exc:
-            logger.info(f"Unable to extract fields from `request_field_extractor()` in `make_object_for_context()`. details: {exc}")
+            logger.info(
+                f"Unable to extract fields from `request_field_extractor()` in `make_object_for_context()`. details: {exc}"
+            )
 
         user_id = None
         logged_in = None
@@ -938,7 +1030,9 @@ class DeciderContextFactory(ContextFactory):
             logged_in = user_event_fields.get("logged_in")
             cookie_created_timestamp = user_event_fields.get("cookie_created_timestamp")
         except Exception as exc:
-            logger.info(f"Error while accessing `user.event_fields()` in `make_object_for_context()`. details: {exc}")
+            logger.info(
+                f"Error while accessing `user.event_fields()` in `make_object_for_context()`. details: {exc}"
+            )
 
         auth_client_id = None
         try:
@@ -947,37 +1041,49 @@ class DeciderContextFactory(ContextFactory):
                 if oc_id:
                     auth_client_id = oc_id
         except Exception as exc:
-            logger.info(f"Unable to access `ec.authentication_token.oauth_client_id` in `make_object_for_context()`. details: {exc}")
+            logger.info(
+                f"Unable to access `ec.authentication_token.oauth_client_id` in `make_object_for_context()`. details: {exc}"
+            )
 
         country_code = None
         try:
             country_code = ec.geolocation.country_code
         except Exception as exc:
-            logger.info(f"Unable to access `ec.geolocation.country_code` in `make_object_for_context()`. details: {exc}")
+            logger.info(
+                f"Unable to access `ec.geolocation.country_code` in `make_object_for_context()`. details: {exc}"
+            )
 
         locale = None
         try:
             locale = ec.locale.locale_code
         except Exception as exc:
-            logger.info(f"Unable to access `ec.locale.locale_code` in `make_object_for_context()`. details: {exc}")
+            logger.info(
+                f"Unable to access `ec.locale.locale_code` in `make_object_for_context()`. details: {exc}"
+            )
 
         origin_service = None
         try:
             origin_service = ec.origin_service.name
         except Exception as exc:
-            logger.info(f"Unable to access `ec.origin_service.name` in `make_object_for_context()`. details: {exc}")
+            logger.info(
+                f"Unable to access `ec.origin_service.name` in `make_object_for_context()`. details: {exc}"
+            )
 
         is_employee = None
         try:
             is_employee = DeciderContextFactory.is_employee(ec)
         except Exception as exc:
-            logger.info(f"Error in `DeciderContextFactory.is_employee(ec)` in `make_object_for_context()`. details: {exc}")
+            logger.info(
+                f"Error in `DeciderContextFactory.is_employee(ec)` in `make_object_for_context()`. details: {exc}"
+            )
 
         device_id = None
         try:
             device_id = ec.device.id
         except Exception as exc:
-            logger.info(f"Unable to access `ec.device.id` in `make_object_for_context()`. details: {exc}")
+            logger.info(
+                f"Unable to access `ec.device.id` in `make_object_for_context()`. details: {exc}"
+            )
 
         try:
             decider_context = DeciderContext(
@@ -993,7 +1099,10 @@ class DeciderContextFactory(ContextFactory):
                 extracted_fields=parsed_extracted_fields,
             )
         except Exception as exc:
-            logger.warning("Could not create full DeciderContext() (defaulting to empty DeciderContext()): %s", str(exc))
+            logger.warning(
+                "Could not create full DeciderContext() (defaulting to empty DeciderContext()): %s",
+                str(exc),
+            )
             decider_context = DeciderContext()
 
         return Decider(
@@ -1025,7 +1134,7 @@ class DeciderClient(config.Parser):
         self,
         event_logger: EventLogger,
         prefix: str = "experiments.",
-        request_field_extractor: Optional[Callable[[RequestContext], Dict[str, str]]] = None
+        request_field_extractor: Optional[Callable[[RequestContext], Dict[str, str]]] = None,
     ):
         self._prefix = prefix
         self._event_logger = event_logger
@@ -1038,7 +1147,7 @@ class DeciderClient(config.Parser):
             app_config=raw_config,
             event_logger=self._event_logger,
             prefix=self._prefix,
-            request_field_extractor=self._request_field_extractor
+            request_field_extractor=self._request_field_extractor,
         )
 
 
