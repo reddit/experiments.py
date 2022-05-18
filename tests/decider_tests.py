@@ -190,7 +190,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertIsInstance(decider, Decider)
 
         decider_ctx_dict = decider._decider_context.to_dict()
-        self.assertEqual(decider_ctx_dict["user_id"], "")
+        self.assertEqual(decider_ctx_dict["user_id"], None)
 
     def test_make_object_for_context_and_decider_context_with_broken_decider_field_extractor(self, _filewatcher):
         def broken_decider_field_extractor(_request: RequestContext):
@@ -226,7 +226,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.event_logger = mock.Mock(spec=DebugLogger)
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = None
-        self.minimal_decider_context = DeciderContext(user_id=USER_ID)
+        self.minimal_decider_context = DeciderContext()
         self.exp_base_config = {
             "exp_1": {
                 "id": 1,
@@ -542,7 +542,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type="user_id")
+            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val)
             self.assertEqual(variant, "variant_4")
 
             # exposure assertions
@@ -570,7 +570,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url")
+            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val)
             self.assertEqual(variant, "variant_3")
 
             # exposure assertions
@@ -598,7 +598,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type="device_id")
+            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val)
             self.assertEqual(variant, "variant_3")
 
             # exposure assertions
@@ -626,12 +626,15 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            # `identifier_type="canonical_url"`, which doesn't match `bucket_val` of `device_id`
-            variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url")
-            # `None` is returned since `identifier_type` doesn't match `bucket_val` in experiment-config json
-            self.assertEqual(variant, None)
-            # exposure isn't emitted either
-            self.assertEqual(self.event_logger.log.call_count, 0)
+            with self.assertLogs() as captured:
+                # `identifier_type="canonical_url"`, which doesn't match `bucket_val` of `device_id`
+                variant = decider.get_variant_for_identifier(experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url")
+                # `None` is returned since `identifier_type` doesn't match `bucket_val` in experiment-config json
+                self.assertEqual(variant, None)
+                # exposure isn't emitted either
+                self.assertEqual(self.event_logger.log.call_count, 0)
+
+                assert(any('Encountered error in decider.choose(): Missing "device_id" in context for bucket_val = "device_id"' in x.getMessage() for x in captured.records))
 
     def test_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:
@@ -1151,7 +1154,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         self.event_logger = mock.Mock(spec=DebugLogger)
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = None
-        self.minimal_decider_context = DeciderContext(user_id=USER_ID)
+        self.minimal_decider_context = DeciderContext()
         self.dc_base_config = {
             "dc_1": {
                 "id": 1,
