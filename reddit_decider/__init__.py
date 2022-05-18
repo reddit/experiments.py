@@ -561,9 +561,9 @@ class Decider:
 
     def get_all_variants_without_expose(self) -> Dict[str, Optional[str]]:
         """Return a dict of experiment name strings as keys and
-            variant names as the values (if a variant is assigned
-            or None otherwise). All available experiments get bucketed.
-            Exposure events are not emitted.
+            variant names as the values. If a variant was `None` for an experiment,
+            that experiment is not included in the return dict.
+            All available experiments get bucketed. Exposure events are not emitted.
 
         The `expose()` function is available to be manually called afterward to emit
         exposure event.
@@ -598,41 +598,44 @@ class Decider:
             choice_error = choice.err()
             if choice_error:
                 logger.info(f"Encountered error for experiment: {exp_name} in decider.choose_all(): {choice_error}")
-                parsed_choices[exp_name] = None
-            else:
-                parsed_choices[exp_name] = choice.decision()
+                continue
 
-                # expose Holdout if the experiment is part of one
-                for event in choice.events():
-                    try:
-                        event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
-                    except ValueError:
-                        logger.warning(f'Encountered error in event.split("::::") for {exp_name} in get_all_variants_without_expose(). event: {event}')
-                        continue
+            decision = choice.decision()
 
-                    # event_type enum:
-                    #   0: regular bucketing
-                    #   1: override
-                    #   2: holdout
-                    if event_type == "2":
-                        experiment = ExperimentConfig(
-                            id=int(exp_id),
-                            name=name,
-                            version=version,
-                            bucket_val=bucket_val,
-                            start_ts=start_ts,
-                            stop_ts=stop_ts,
-                            owner=owner
-                        )
+            if decision:
+                parsed_choices[exp_name] = decision
 
-                        self._event_logger.log(
-                            experiment=experiment,
-                            variant=event_variant,
-                            span=self._span,
-                            event_type=EventType.EXPOSE,
-                            inputs=event_context_fields.copy(),
-                            **event_context_fields.copy(),
-                        )
+            # expose Holdout if the experiment is part of one
+            for event in choice.events():
+                try:
+                    event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
+                except ValueError:
+                    logger.warning(f'Encountered error in event.split("::::") for {exp_name} in get_all_variants_without_expose(). event: {event}')
+                    continue
+
+                # event_type enum:
+                #   0: regular bucketing
+                #   1: override
+                #   2: holdout
+                if event_type == "2":
+                    experiment = ExperimentConfig(
+                        id=int(exp_id),
+                        name=name,
+                        version=version,
+                        bucket_val=bucket_val,
+                        start_ts=start_ts,
+                        stop_ts=stop_ts,
+                        owner=owner
+                    )
+
+                    self._event_logger.log(
+                        experiment=experiment,
+                        variant=event_variant,
+                        span=self._span,
+                        event_type=EventType.EXPOSE,
+                        inputs=event_context_fields.copy(),
+                        **event_context_fields.copy(),
+                    )
 
         return parsed_choices
 
@@ -640,11 +643,12 @@ class Decider:
         self,
         identifier: str,
         identifier_type: Literal["user_id", "device_id", "canonical_url"]
-    ) -> Optional[str]:
+    ) -> Dict[str, Optional[str]]:
         """Return a dict of experiment name strings as keys and
-            variant names as the values (if a variant is assigned
-            or None otherwise) for `identifier`. Exposure events are not emitted.
-            All available experiments get bucketed.
+            variant names as the values for `identifier`.
+            If a variant was `None` for an experiment, that experiment is
+            not included in the return dict. All available experiments get bucketed.
+            Exposure events are not emitted.
 
         The `expose()` function is available to be manually called afterward to emit
         exposure event.
@@ -690,44 +694,47 @@ class Decider:
             choice_error = choice.err()
             if choice_error:
                 logger.info(f"Encountered error for experiment: {exp_name} in decider.choose_all(): {choice_error}")
-                parsed_choices[exp_name] = None
-            else:
-                parsed_choices[exp_name] = choice.decision()
+                continue
 
-                # expose Holdout if the experiment is part of one
-                for event in choice.events():
-                    try:
-                        event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
-                    except ValueError:
-                        logger.warning(f'Encountered error in event.split("::::") for {exp_name} in get_all_variants_without_expose(). event: {event}')
-                        continue
+            decision = choice.decision()
 
-                    # event_type enum:
-                    #   0: regular bucketing
-                    #   1: override
-                    #   2: holdout
-                    if event_type == "2":
-                        experiment = ExperimentConfig(
-                            id=int(exp_id),
-                            name=name,
-                            version=version,
-                            bucket_val=bucket_val,
-                            start_ts=start_ts,
-                            stop_ts=stop_ts,
-                            owner=owner
-                        )
+            if decision:
+                parsed_choices[exp_name] = decision
 
-                        # expose the `bucket_val` used in the experiment's config
-                        event_ctx_fields = {**event_context_fields, **{bucket_val: bucketing_value}}
+            # expose Holdout if the experiment is part of one
+            for event in choice.events():
+                try:
+                    event_type, exp_id, name, version, event_variant, bucketing_value, bucket_val, start_ts, stop_ts, owner = event.split("::::")
+                except ValueError:
+                    logger.warning(f'Encountered error in event.split("::::") for {exp_name} in get_all_variants_without_expose(). event: {event}')
+                    continue
 
-                        self._event_logger.log(
-                            experiment=experiment,
-                            variant=event_variant,
-                            span=self._span,
-                            event_type=EventType.EXPOSE,
-                            inputs=event_ctx_fields.copy(),
-                            **event_ctx_fields.copy(),
-                        )
+                # event_type enum:
+                #   0: regular bucketing
+                #   1: override
+                #   2: holdout
+                if event_type == "2":
+                    experiment = ExperimentConfig(
+                        id=int(exp_id),
+                        name=name,
+                        version=version,
+                        bucket_val=bucket_val,
+                        start_ts=start_ts,
+                        stop_ts=stop_ts,
+                        owner=owner
+                    )
+
+                    # expose the `bucket_val` used in the experiment's config
+                    event_ctx_fields = {**event_context_fields, **{bucket_val: bucketing_value}}
+
+                    self._event_logger.log(
+                        experiment=experiment,
+                        variant=event_variant,
+                        span=self._span,
+                        event_type=EventType.EXPOSE,
+                        inputs=event_ctx_fields.copy(),
+                        **event_ctx_fields.copy(),
+                    )
 
         return parsed_choices
 

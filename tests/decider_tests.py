@@ -827,10 +827,12 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_dict = decider.get_all_variants_without_expose()
 
-            self.assertEqual(len(variant_dict), len(self.exp_base_config))
-            self.assertEqual(variant_dict["exp_1"], None)
+            # "exp_1" returns variant None (due to "hg") and is excluded from the response dict
+            self.assertEqual(len(variant_dict), len(self.exp_base_config) - 1)
+            assert("exp_1" not in variant_dict)
             self.assertEqual(variant_dict["e1"], "e1treat")
             self.assertEqual(variant_dict["e2"], "e2treat")
+            self.assertEqual(variant_dict["hg"], "holdout")
 
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
@@ -894,8 +896,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
                 assert(any('Encountered error for experiment: exp_1 in decider.choose_all(): Missing "device_id" in context for bucket_val = "device_id"' in x.getMessage() for x in captured.records))
 
-                self.assertEqual(len(variant_dict), len(self.exp_base_config))
-                self.assertEqual(variant_dict["exp_1"], None)
+                # "exp_1" returns err() (due to bucket_val/`identifier_type` mismatch) and is excluded from the response dict
+                self.assertEqual(len(variant_dict), len(self.exp_base_config) - 1)
+                assert("exp_1" not in variant_dict)
                 self.assertEqual(variant_dict["e1"], "e1treat")
                 self.assertEqual(variant_dict["e2"], "e2treat")
 
@@ -927,10 +930,12 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_dict = decider.get_all_variants_for_identifier_without_expose(identifier=identifier, identifier_type=bucket_val)
 
-            self.assertEqual(len(variant_dict), len(self.exp_base_config))
-            self.assertEqual(variant_dict["exp_1"], None)
+            # "exp_1" returns variant None (due to "hg") and is excluded from the response dict
+            self.assertEqual(len(variant_dict), len(self.exp_base_config) - 1)
+            assert("exp_1" not in variant_dict)
             self.assertEqual(variant_dict["e1"], "e1treat")
             self.assertEqual(variant_dict["e2"], "e2treat")
+            self.assertEqual(variant_dict["hg"], "holdout")
 
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
@@ -999,10 +1004,12 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_dict = decider.get_all_variants_for_identifier_without_expose(identifier=identifier, identifier_type=bucket_val)
 
-            self.assertEqual(len(variant_dict), len(self.exp_base_config))
-            self.assertEqual(variant_dict["exp_1"], None)
+            # "exp_1" returns variant None (due to "hg") and is excluded from the response dict
+            self.assertEqual(len(variant_dict), len(self.exp_base_config) - 1)
+            assert("exp_1" not in variant_dict)
             self.assertEqual(variant_dict["e1"], "e1treat")
             self.assertEqual(variant_dict["e2"], "e2treat")
+            self.assertEqual(variant_dict["hg"], "holdout")
 
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
@@ -1071,10 +1078,12 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_dict = decider.get_all_variants_for_identifier_without_expose(identifier=identifier, identifier_type=bucket_val)
 
-            self.assertEqual(len(variant_dict), len(self.exp_base_config))
-            self.assertEqual(variant_dict["exp_1"], None)
+            # "exp_1" returns variant None (due to "hg") and is excluded from the response dict
+            self.assertEqual(len(variant_dict), len(self.exp_base_config) - 1)
+            assert("exp_1" not in variant_dict)
             self.assertEqual(variant_dict["e1"], "e1treat")
             self.assertEqual(variant_dict["e2"], "e2treat")
+            self.assertEqual(variant_dict["hg"], "holdout")
 
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 1)
