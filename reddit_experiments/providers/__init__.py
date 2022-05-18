@@ -25,9 +25,7 @@ simple_type_class_list = frozenset(
     ["single_variant", "multi_variant", "feature_rollout", "range_variant"]
 )
 
-new_exp_type_list = frozenset(
-    ["dynamic_config"]
-)
+new_exp_type_list = frozenset(["dynamic_config"])
 
 
 def parse_experiment(config: Dict[str, str]) -> Experiment:
