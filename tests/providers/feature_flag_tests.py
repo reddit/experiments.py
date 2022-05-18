@@ -9,6 +9,7 @@ from unittest import mock
 from baseplate import ServerSpan
 from baseplate.lib.events import EventQueue
 from baseplate.lib.file_watcher import FileWatcher
+
 from reddit_experiments import Experiments
 from reddit_experiments.providers import parse_experiment
 

@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Dict
 
 from baseplate.lib import warn_deprecated
+
 from reddit_experiments.providers.base import Experiment
 from reddit_experiments.providers.feature_flag import FeatureFlag
 from reddit_experiments.providers.forced_variant import ForcedVariantExperiment
