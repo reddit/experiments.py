@@ -188,6 +188,15 @@ class Decider:
             logger.error("Could not load experiment config: %s", str(exc))
         return None
 
+    def _clear_identifiers_and_set(self, identifier: str, identifier_type: Literal[IDENTIFIERS]) -> Dict[str, Any]:
+        ctx = self._decider_context.to_dict()
+        # reset any identifiers so only the the identifier passed in gets used
+        for id in IDENTIFIERS:
+            ctx[id] = None
+
+        ctx[identifier_type] = identifier
+        return ctx
+
     def get_variant(
         self,
         experiment_name: str,
@@ -413,12 +422,9 @@ class Decider:
             logger.error("Encountered error in _get_decider()")
             return None
 
-        identifier_context_fields = self._decider_context.to_dict()
-        # reset any identifiers so only the the identifier passed in gets used
-        for id in IDENTIFIERS:
-            identifier_context_fields[id] = None
-
-        identifier_context_fields[identifier_type] = identifier
+        identifier_context_fields = self._clear_identifiers_and_set(
+            identifier=identifier, identifier_type=identifier_type
+        )
 
         ctx = rust_decider.make_ctx(identifier_context_fields)
         ctx_err = ctx.err()
@@ -502,10 +508,9 @@ class Decider:
             logger.error("Encountered error in _get_decider()")
             return None
 
-        identifier_context_fields = self._decider_context.to_dict()
-        # reset any identifiers so only the the identifier passed in gets used
-        for id in IDENTIFIERS:
-            identifier_context_fields[id] = None
+        identifier_context_fields = self._clear_identifiers_and_set(
+            identifier=identifier, identifier_type=identifier_type
+        )
 
         identifier_context_fields[identifier_type] = identifier
 
@@ -678,12 +683,9 @@ class Decider:
             logger.error("Encountered error in _get_decider()")
             return {}
 
-        identifier_context_fields = self._decider_context.to_dict()
-        # reset any identifiers so only the the identifier passed in gets used
-        for id in IDENTIFIERS:
-            identifier_context_fields[id] = None
-
-        identifier_context_fields[identifier_type] = identifier
+        identifier_context_fields = self._clear_identifiers_and_set(
+            identifier=identifier, identifier_type=identifier_type
+        )
 
         ctx = rust_decider.make_ctx(identifier_context_fields)
         ctx_err = ctx.err()
