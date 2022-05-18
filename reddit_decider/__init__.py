@@ -22,7 +22,7 @@ import rust_decider
 logger = logging.getLogger(__name__)
 
 EMPLOYEE_ROLES = ("employee", "contractor")
-
+IDENTIFIERS = ("user_id", "device_id", "canonical_url")
 
 class EventType(Enum):
     EXPOSE = "expose"
@@ -187,6 +187,15 @@ class Decider:
         except TypeError as exc:
             logger.error("Could not load experiment config: %s", str(exc))
         return None
+
+    def _clear_identifiers_and_set(self, identifier: str, identifier_type: Literal[IDENTIFIERS]) -> Dict[str, Any]:
+        ctx = self._decider_context.to_dict()
+        # reset any identifiers so only the the identifier passed in gets used
+        for id in IDENTIFIERS:
+            ctx[id] = None
+
+        ctx[identifier_type] = identifier
+        return ctx
 
     def get_variant(
         self,
@@ -386,7 +395,7 @@ class Decider:
         self,
         experiment_name: str,
         identifier: str,
-        identifier_type: Literal["user_id", "device_id", "canonical_url"],
+        identifier_type: Literal[IDENTIFIERS],
         **exposure_kwargs: Optional[Dict[str, Any]]
     ) -> Optional[str]:
         """Return a bucketing variant for identifier, if any, with auto-exposure.
@@ -413,10 +422,9 @@ class Decider:
             logger.error("Encountered error in _get_decider()")
             return None
 
-        identifier_context_fields = {
-            **self._decider_context.to_dict(),
-            **{identifier_type: identifier}
-        }
+        identifier_context_fields = self._clear_identifiers_and_set(
+            identifier=identifier, identifier_type=identifier_type
+        )
 
         ctx = rust_decider.make_ctx(identifier_context_fields)
         ctx_err = ctx.err()
@@ -471,7 +479,7 @@ class Decider:
         self,
         experiment_name: str,
         identifier: str,
-        identifier_type: Literal["user_id", "device_id", "canonical_url"]
+        identifier_type: Literal[IDENTIFIERS]
     ) -> Optional[str]:
         """Return a bucketing variant for `identifier`, if any, without emitting exposure event.
 
@@ -500,10 +508,9 @@ class Decider:
             logger.error("Encountered error in _get_decider()")
             return None
 
-        identifier_context_fields = {
-            **self._decider_context.to_dict(),
-            **{identifier_type: identifier}
-        }
+        identifier_context_fields = self._clear_identifiers_and_set(
+            identifier=identifier, identifier_type=identifier_type
+        )
 
         ctx = rust_decider.make_ctx(identifier_context_fields)
         ctx_err = ctx.err()
@@ -642,7 +649,7 @@ class Decider:
     def get_all_variants_for_identifier_without_expose(
         self,
         identifier: str,
-        identifier_type: Literal["user_id", "device_id", "canonical_url"]
+        identifier_type: Literal[IDENTIFIERS]
     ) -> Dict[str, Optional[str]]:
         """Return a dict of experiment name strings as keys and
             variant names as the values for `identifier`.
@@ -674,10 +681,9 @@ class Decider:
             logger.error("Encountered error in _get_decider()")
             return {}
 
-        identifier_context_fields = {
-            **self._decider_context.to_dict(),
-            **{identifier_type: identifier}
-        }
+        identifier_context_fields = self._clear_identifiers_and_set(
+            identifier=identifier, identifier_type=identifier_type
+        )
 
         ctx = rust_decider.make_ctx(identifier_context_fields)
         ctx_err = ctx.err()
