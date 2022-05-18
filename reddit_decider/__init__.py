@@ -6,7 +6,9 @@ from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import IO
+from typing import List
 from typing import Optional
+from typing import Union
 
 import rust_decider  # type: ignore
 
@@ -639,7 +641,7 @@ class Decider:
 
         return variant
 
-    def get_all_variants_without_expose(self) -> Dict[str, Optional[str]]:
+    def get_all_variants_without_expose(self) -> List[Dict[str, Union[str, int]]]:
         """Return a list of experiment dicts in this format:
                 [
                     {
@@ -669,14 +671,14 @@ class Decider:
         decider = self._get_decider()
         if decider is None:
             logger.error("Encountered error in _get_decider()")
-            return {}
+            return []
 
         context_fields = self._decider_context.to_dict()
         ctx = rust_decider.make_ctx(context_fields)
         ctx_err = ctx.err()
         if ctx_err is not None:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
-            return {}
+            return []
 
         all_choices = decider.choose_all(ctx)
         parsed_choices = []
@@ -745,7 +747,7 @@ class Decider:
 
     def get_all_variants_for_identifier_without_expose(
         self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
-    ) -> Dict[str, Optional[str]]:
+    ) -> List[Dict[str, Union[str, int]]]:
         """Return a list of experiment dicts in this format:
                 [
                     {
@@ -782,7 +784,7 @@ class Decider:
         decider = self._get_decider()
         if decider is None:
             logger.error("Encountered error in _get_decider()")
-            return {}
+            return []
 
         identifier_context_fields = self._clear_identifiers_and_set(
             identifier=identifier, identifier_type=identifier_type
@@ -792,7 +794,7 @@ class Decider:
         ctx_err = ctx.err()
         if ctx_err is not None:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
-            return {}
+            return []
 
         all_choices = decider.choose_all(ctx)
         parsed_choices = []
