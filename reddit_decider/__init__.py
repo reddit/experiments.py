@@ -751,7 +751,7 @@ class Decider:
         """Return a list of experiment dicts in this format:
                 [
                     {
-                        "id": "1",
+                        "id": 1,
                         "name": "variant_1",
                         "version": "1",
                         "experimentName": "exp_1"
