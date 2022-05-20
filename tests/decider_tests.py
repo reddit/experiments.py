@@ -455,9 +455,17 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 event_logger=self.event_logger,
             )
 
-            variant = decider.get_variant("test")
-            self.assertEqual(self.event_logger.log.call_count, 0)
-            self.assertEqual(variant, None)
+            with self.assertLogs() as captured:
+                variant = decider.get_variant("test")
+
+                self.assertEqual(variant, None)
+                self.assertEqual(self.event_logger.log.call_count, 0)
+
+                assert any(
+                    'Rust decider has initialization error: Decider initialization failed: Json error: "invalid type: string \\"1\\"'
+                    in x.getMessage()
+                    for x in captured.records
+                )
 
     def test_none_returned_on_get_variant_call_with_no_experiment_data(self):
         config = {
