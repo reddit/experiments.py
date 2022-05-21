@@ -225,7 +225,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
                 for x in captured.records
             )
             assert any(
-                "app_name: {} value in request_field_extractor() dict is not of oneOf type: [None, int, float, str, bool] and is removed."
+                "app_name: {} value in `request_field_extractor()` dict is not one of type: [None, int, float, str, bool] and is removed."
                 in x.getMessage()
                 for x in captured.records
             )
