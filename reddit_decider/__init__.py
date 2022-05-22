@@ -203,9 +203,9 @@ class Decider:
         return rust_decider.make_ctx(context_fields)
 
     def _clear_ctx_identifiers_and_set(
-        self, ctx_dict: dict, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
+        self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
     ) -> Dict[str, Any]:
-        ctx = deepcopy(ctx_dict)
+        ctx = self._decider_context.to_dict()
         # reset any identifiers so only the the identifier passed in gets used
         for id in IDENTIFIERS:
             ctx[id] = None
@@ -404,7 +404,7 @@ class Decider:
 
         # expose Holdout if the experiment is part of one
         for event in choice.events():
-            self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields, overwrite_identifier=True)
+            self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
 
         return variant
 
@@ -489,7 +489,7 @@ class Decider:
             return None
 
         identifier_context_fields = self._clear_ctx_identifiers_and_set(
-            ctx_dict=self._decider_context.to_dict(), identifier=identifier, identifier_type=identifier_type
+            identifier=identifier, identifier_type=identifier_type
         )
 
         ctx = rust_decider.make_ctx(identifier_context_fields)
@@ -548,7 +548,7 @@ class Decider:
             return None
 
         identifier_context_fields = self._clear_ctx_identifiers_and_set(
-            ctx_dict=self._decider_context.to_dict(), identifier=identifier, identifier_type=identifier_type
+            identifier=identifier, identifier_type=identifier_type
         )
 
         ctx = rust_decider.make_ctx(identifier_context_fields)
@@ -676,7 +676,7 @@ class Decider:
             return []
 
         identifier_context_fields = self._clear_ctx_identifiers_and_set(
-            ctx_dict=self._decider_context.to_dict(), identifier=identifier, identifier_type=identifier_type
+            identifier=identifier, identifier_type=identifier_type
         )
 
         ctx = rust_decider.make_ctx(identifier_context_fields)

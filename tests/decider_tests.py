@@ -461,8 +461,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(variant, None)
                 self.assertEqual(self.event_logger.log.call_count, 0)
 
+                print([x.getMessage() for x in captured.records])
                 assert any(
-                    'Rust decider has initialization error: Decider initialization failed: Json error: "invalid type: string \\"1\\"'
+                    'Rust decider has initialization error: Json error: "invalid type: string \\"1\\"'
                     in x.getMessage()
                     for x in captured.records
                 )
