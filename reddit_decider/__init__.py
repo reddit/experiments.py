@@ -248,8 +248,10 @@ class Decider:
             )
             return
 
+
+
         experiment = ExperimentConfig(
-            id=int(exp_id),
+            id=Decider._cast_to_int(exp_id),
             name=name,
             version=version,
             bucket_val=bucket_val,
@@ -298,7 +300,7 @@ class Decider:
         #   2: holdout
         if event_type == "2":
             experiment = ExperimentConfig(
-                id=int(exp_id),
+                id=Decider._cast_to_int(exp_id),
                 name=name,
                 version=version,
                 bucket_val=bucket_val,
@@ -319,6 +321,17 @@ class Decider:
                 **event_fields,
             )
         return
+
+    @classmethod
+    def _cast_to_int(cls, input: str) -> int:
+        id = 1
+        try:
+            id = int(input)
+        except ValueError as e:
+            logger.info(
+                f'Encountered error casting to integer: {e}'
+            )
+        return id
 
     def get_variant(
         self, experiment_name: str, **exposure_kwargs: Optional[Dict[str, Any]]
@@ -842,7 +855,7 @@ class DeciderContextFactory(ContextFactory):
                 extracted_fields = {}
 
             # prune any invalid keys/values in `extracted_fields` dict
-            parsed_extracted_fields = deepcopy(extracted_fields)
+            parsed_extracted_fields = extracted_fields.copy()
             for k, v in extracted_fields.items():
                 # remove invalid keys
                 if k is None or not isinstance(k, str):
