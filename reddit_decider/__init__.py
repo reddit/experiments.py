@@ -334,7 +334,7 @@ class Decider:
         return out
 
     @classmethod
-    def prune_extracted_dict(cls, extracted_dict: dict):
+    def _prune_extracted_dict(cls, extracted_dict: dict):
         parsed_extracted_fields = deepcopy(extracted_dict)
 
         for k, v in extracted_dict.items():
@@ -873,7 +873,7 @@ class DeciderContextFactory(ContextFactory):
             if self._request_field_extractor:
                 extracted_fields = self._request_field_extractor(request)
                 # prune any invalid keys/values
-                parsed_extracted_fields = Decider.prune_extracted_dict(extracted_dict=extracted_fields)
+                parsed_extracted_fields = Decider._prune_extracted_dict(extracted_dict=extracted_fields)
         except Exception as exc:
             logger.info(
                 f"Unable to extract fields from `request_field_extractor()` in `make_object_for_context()`. details: {exc}"
