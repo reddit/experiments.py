@@ -844,7 +844,9 @@ class DeciderContextFactory(ContextFactory):
             else False
         )
 
-    def minimal_decider(self, name: str, span: Span, parsed_extracted_fields: Optional[Dict] = None) -> Decider:
+    def _minimal_decider(
+        self, name: str, span: Span, parsed_extracted_fields: Optional[Dict] = None
+    ) -> Decider:
         return Decider(
             decider_context=DeciderContext(extracted_fields=parsed_extracted_fields),
             config_watcher=self._filewatcher,
@@ -866,7 +868,7 @@ class DeciderContextFactory(ContextFactory):
 
         if span is None:
             logger.debug("`span` is `None` in reddit_decider `make_object_for_context()`.")
-            return self.minimal_decider(name=name, span=span)
+            return self._minimal_decider(name=name, span=span)
 
         request = None
         parsed_extracted_fields = {}
@@ -888,17 +890,23 @@ class DeciderContextFactory(ContextFactory):
         try:
             # if `edge_context` is inaccessible, bail early
             if request is None:
-                return self.minimal_decider(name=name, span=span, parsed_extracted_fields=parsed_extracted_fields)
+                return self._minimal_decider(
+                    name=name, span=span, parsed_extracted_fields=parsed_extracted_fields
+                )
 
             ec = request.edge_context
 
             if ec is None:
-                return self.minimal_decider(name=name, span=span, parsed_extracted_fields=parsed_extracted_fields)
+                return self._minimal_decider(
+                    name=name, span=span, parsed_extracted_fields=parsed_extracted_fields
+                )
         except Exception as exc:
             logger.info(
                 f"Unable to access `request.edge_context` in `make_object_for_context()`. details: {exc}"
             )
-            return self.minimal_decider(name=name, span=span, parsed_extracted_fields=parsed_extracted_fields)
+            return self._minimal_decider(
+                name=name, span=span, parsed_extracted_fields=parsed_extracted_fields
+            )
 
         # All fields below are derived from `edge_context`
 
