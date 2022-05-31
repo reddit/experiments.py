@@ -334,7 +334,7 @@ class Decider:
         return out
 
     @classmethod
-    def _prune_extracted_dict(cls, extracted_dict: dict):
+    def _prune_extracted_dict(cls, extracted_dict: dict) -> dict:
         parsed_extracted_fields = deepcopy(extracted_dict)
 
         for k, v in extracted_dict.items():
@@ -844,6 +844,15 @@ class DeciderContextFactory(ContextFactory):
             else False
         )
 
+    def minimal_decider(self, name: str, span: Span, parsed_extracted_fields: Optional[Dict] = None) -> Decider:
+        return Decider(
+            decider_context=DeciderContext(extracted_fields=parsed_extracted_fields),
+            config_watcher=self._filewatcher,
+            server_span=span,
+            context_name=name,
+            event_logger=self._event_logger,
+        )
+
     def make_object_for_context(self, name: str, span: Span) -> Decider:
         decider = None
         try:
@@ -857,13 +866,7 @@ class DeciderContextFactory(ContextFactory):
 
         if span is None:
             logger.debug("`span` is `None` in reddit_decider `make_object_for_context()`.")
-            return Decider(
-                decider_context=DeciderContext(),
-                config_watcher=self._filewatcher,
-                server_span=span,
-                context_name=name,
-                event_logger=self._event_logger,
-            )
+            return self.minimal_decider(name=name, span=span)
 
         request = None
         parsed_extracted_fields = {}
@@ -881,19 +884,23 @@ class DeciderContextFactory(ContextFactory):
                 f"Unable to extract fields from `request_field_extractor()` in `make_object_for_context()`. details: {exc}"
             )
 
+        ec = None
         try:
+            # if `edge_context` is inaccessible, bail early
+            if request is None:
+                return self.minimal_decider(name=name, span=span, parsed_extracted_fields=parsed_extracted_fields)
+
             ec = request.edge_context
+
+            if ec is None:
+                return self.minimal_decider(name=name, span=span, parsed_extracted_fields=parsed_extracted_fields)
         except Exception as exc:
             logger.info(
                 f"Unable to access `request.edge_context` in `make_object_for_context()`. details: {exc}"
             )
-            return Decider(
-                decider_context=DeciderContext(extracted_fields=parsed_extracted_fields),
-                config_watcher=self._filewatcher,
-                server_span=span,
-                context_name=name,
-                event_logger=self._event_logger,
-            )
+            return self.minimal_decider(name=name, span=span, parsed_extracted_fields=parsed_extracted_fields)
+
+        # All fields below are derived from `edge_context`
 
         user_id = None
         logged_in = None
