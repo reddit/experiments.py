@@ -198,7 +198,7 @@ class Decider:
             logger.error("Could not load experiment config: %s", str(exc))
         return None
 
-    def _get_ctx(self) -> T:
+    def _get_ctx(self) -> Any:
         context_fields = self._decider_context.to_dict()
         return rust_decider.make_ctx(context_fields)
 
@@ -227,7 +227,7 @@ class Decider:
 
         return out
 
-    def _send_expose(self, event: str, exposure_fields: dict, overwrite_identifier: bool = False):
+    def _send_expose(self, event: str, exposure_fields: dict, overwrite_identifier: bool = False) -> None:
         event_fields = deepcopy(exposure_fields)
         try:
             (
@@ -253,8 +253,8 @@ class Decider:
             name=name,
             version=version,
             bucket_val=bucket_val,
-            start_ts=start_ts,
-            stop_ts=stop_ts,
+            start_ts=Decider._cast_to_int(start_ts),
+            stop_ts=Decider._cast_to_int(stop_ts),
             owner=owner,
         )
 
@@ -273,7 +273,7 @@ class Decider:
 
     def _send_expose_if_holdout(
         self, event: str, exposure_fields: dict, overwrite_identifier: bool = False
-    ):
+    ) -> None:
         event_fields = deepcopy(exposure_fields)
         try:
             (
@@ -304,8 +304,8 @@ class Decider:
                 name=name,
                 version=version,
                 bucket_val=bucket_val,
-                start_ts=start_ts,
-                stop_ts=stop_ts,
+                start_ts=Decider._cast_to_int(start_ts),
+                stop_ts=Decider._cast_to_int(stop_ts),
                 owner=owner,
             )
 
@@ -324,12 +324,12 @@ class Decider:
 
     @classmethod
     def _cast_to_int(cls, input: str) -> int:
-        id = 1
+        out = 1
         try:
-            id = int(input)
+            out = int(input)
         except ValueError as e:
             logger.info(f"Encountered error casting to integer: {e}")
-        return id
+        return out
 
     def get_variant(
         self, experiment_name: str, **exposure_kwargs: Optional[Dict[str, Any]]
