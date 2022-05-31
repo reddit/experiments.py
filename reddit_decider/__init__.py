@@ -227,7 +227,9 @@ class Decider:
 
         return out
 
-    def _send_expose(self, event: str, exposure_fields: dict, overwrite_identifier: bool = False) -> None:
+    def _send_expose(
+        self, event: str, exposure_fields: dict, overwrite_identifier: bool = False
+    ) -> None:
         event_fields = deepcopy(exposure_fields)
         try:
             (
