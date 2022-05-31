@@ -872,11 +872,8 @@ class DeciderContextFactory(ContextFactory):
 
             if self._request_field_extractor:
                 extracted_fields = self._request_field_extractor(request)
-            else:
-                extracted_fields = {}
-
-            # prune any invalid keys/values in `extracted_fields` dict
-            parsed_extracted_fields = Decider.prune_extracted_dict(extracted_dict=extracted_fields)
+                # prune any invalid keys/values
+                parsed_extracted_fields = Decider.prune_extracted_dict(extracted_dict=extracted_fields)
         except Exception as exc:
             logger.info(
                 f"Unable to extract fields from `request_field_extractor()` in `make_object_for_context()`. details: {exc}"
@@ -889,7 +886,7 @@ class DeciderContextFactory(ContextFactory):
                 f"Unable to access `request.edge_context` in `make_object_for_context()`. details: {exc}"
             )
             return Decider(
-                decider_context=DeciderContext(extracted_fields=parsed_extracted_fields,),
+                decider_context=DeciderContext(extracted_fields=parsed_extracted_fields),
                 config_watcher=self._filewatcher,
                 server_span=span,
                 context_name=name,
