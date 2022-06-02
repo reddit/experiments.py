@@ -1,5 +1,6 @@
 import logging
 
+from copy import deepcopy
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
@@ -77,7 +78,7 @@ class DeciderContext:
         self._extracted_fields = extracted_fields
 
     def to_dict(self) -> Dict:
-        ef = (self._extracted_fields or {}).copy()
+        ef = deepcopy(self._extracted_fields or {})
 
         return {
             "user_id": self._user_id,
@@ -101,7 +102,7 @@ class DeciderContext:
             "is_employee": self._user_is_employee,
         }
 
-        ef = (self._extracted_fields or {}).copy()
+        ef = deepcopy(self._extracted_fields or {})
 
         app_fields = {}
         if ef.get("app_name"):
@@ -156,7 +157,7 @@ def validate_decider(decider: Optional[Any]) -> None:
     if decider:
         decider_err = decider.err()
         if decider_err:
-            logger.error(f"Rust decider has error: {decider_err}")
+            logger.error(f"Rust decider has initialization error: {decider_err}")
 
 
 class Decider:
@@ -197,7 +198,11 @@ class Decider:
             logger.error("Could not load experiment config: %s", str(exc))
         return None
 
-    def _clear_identifiers_and_set(
+    def _get_ctx(self) -> Any:
+        context_fields = self._decider_context.to_dict()
+        return rust_decider.make_ctx(context_fields)
+
+    def _clear_ctx_identifiers_and_set(
         self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
     ) -> Dict[str, Any]:
         ctx = self._decider_context.to_dict()
@@ -222,6 +227,112 @@ class Decider:
 
         return out
 
+    def _send_expose(
+        self, event: str, exposure_fields: dict, overwrite_identifier: bool = False
+    ) -> None:
+        event_fields = deepcopy(exposure_fields)
+        try:
+            (
+                _event_type,
+                exp_id,
+                name,
+                version,
+                event_variant,
+                bucketing_value,
+                bucket_val,
+                start_ts,
+                stop_ts,
+                owner,
+            ) = event.split("::::")
+        except ValueError:
+            logger.warning(
+                f'Encountered error in event.split("::::") for event: {event}. Exposure not emitted.'
+            )
+            return
+
+        experiment = ExperimentConfig(
+            id=Decider._cast_to_int(exp_id),
+            name=name,
+            version=version,
+            bucket_val=bucket_val,
+            start_ts=Decider._cast_to_int(start_ts),
+            stop_ts=Decider._cast_to_int(stop_ts),
+            owner=owner,
+        )
+
+        if overwrite_identifier:
+            event_fields = {**event_fields, **{bucket_val: bucketing_value}}
+
+        self._event_logger.log(
+            experiment=experiment,
+            variant=event_variant,
+            span=self._span,
+            event_type=EventType.EXPOSE,
+            inputs=event_fields,
+            **event_fields,
+        )
+        return
+
+    def _send_expose_if_holdout(
+        self, event: str, exposure_fields: dict, overwrite_identifier: bool = False
+    ) -> None:
+        event_fields = deepcopy(exposure_fields)
+        try:
+            (
+                event_type,
+                exp_id,
+                name,
+                version,
+                event_variant,
+                bucketing_value,
+                bucket_val,
+                start_ts,
+                stop_ts,
+                owner,
+            ) = event.split("::::")
+        except ValueError:
+            logger.warning(
+                f'Encountered error in event.split("::::") for event: {event}. Exposure not emitted.'
+            )
+            return
+
+        # event_type enum:
+        #   0: regular bucketing
+        #   1: override
+        #   2: holdout
+        if event_type == "2":
+            experiment = ExperimentConfig(
+                id=Decider._cast_to_int(exp_id),
+                name=name,
+                version=version,
+                bucket_val=bucket_val,
+                start_ts=Decider._cast_to_int(start_ts),
+                stop_ts=Decider._cast_to_int(stop_ts),
+                owner=owner,
+            )
+
+            if overwrite_identifier:
+                event_fields = {**event_fields, **{bucket_val: bucketing_value}}
+
+            self._event_logger.log(
+                experiment=experiment,
+                variant=event_variant,
+                span=self._span,
+                event_type=EventType.EXPOSE,
+                inputs=event_fields,
+                **event_fields,
+            )
+        return
+
+    @classmethod
+    def _cast_to_int(cls, input: str) -> int:
+        out = 1
+        try:
+            out = int(input)
+        except ValueError as e:
+            logger.info(f"Encountered error casting to integer: {e}")
+        return out
+
     def get_variant(
         self, experiment_name: str, **exposure_kwargs: Optional[Dict[str, Any]]
     ) -> Optional[str]:
@@ -243,11 +354,9 @@ class Decider:
         """
         decider = self._get_decider()
         if decider is None:
-            logger.error("Encountered error in _get_decider()")
             return None
 
-        context_fields = self._decider_context.to_dict()
-        ctx = rust_decider.make_ctx(context_fields)
+        ctx = self._get_ctx()
         ctx_err = ctx.err()
         if ctx_err is not None:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
@@ -266,43 +375,7 @@ class Decider:
         event_context_fields.update(exposure_kwargs or {})
 
         for event in choice.events():
-            try:
-                (
-                    _event_type,
-                    exp_id,
-                    name,
-                    version,
-                    event_variant,
-                    _bucketing_value,
-                    bucket_val,
-                    start_ts,
-                    stop_ts,
-                    owner,
-                ) = event.split("::::")
-            except ValueError:
-                logger.warning(
-                    f'Encountered error in event.split("::::") in get_variant(). event: {event}'
-                )
-                return variant
-
-            experiment = ExperimentConfig(
-                id=int(exp_id),
-                name=name,
-                version=version,
-                bucket_val=bucket_val,
-                start_ts=start_ts,
-                stop_ts=stop_ts,
-                owner=owner,
-            )
-
-            self._event_logger.log(
-                experiment=experiment,
-                variant=event_variant,
-                span=self._span,
-                event_type=EventType.EXPOSE,
-                inputs=event_context_fields.copy(),
-                **event_context_fields.copy(),
-            )
+            self._send_expose(event=event, exposure_fields=event_context_fields)
 
         return variant
 
@@ -323,11 +396,9 @@ class Decider:
         """
         decider = self._get_decider()
         if decider is None:
-            logger.error("Encountered error in _get_decider()")
             return None
 
-        context_fields = self._decider_context.to_dict()
-        ctx = rust_decider.make_ctx(context_fields)
+        ctx = self._get_ctx()
         ctx_err = ctx.err()
         if ctx_err is not None:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
@@ -346,48 +417,7 @@ class Decider:
 
         # expose Holdout if the experiment is part of one
         for event in choice.events():
-            try:
-                (
-                    event_type,
-                    exp_id,
-                    name,
-                    version,
-                    event_variant,
-                    _bucketing_value,
-                    bucket_val,
-                    start_ts,
-                    stop_ts,
-                    owner,
-                ) = event.split("::::")
-            except ValueError:
-                logger.warning(
-                    f'Encountered error in event.split("::::") in get_variant_without_expose(). event: {event}'
-                )
-                return variant
-
-            # event_type enum:
-            #   0: regular bucketing
-            #   1: override
-            #   2: holdout
-            if event_type == "2":
-                experiment = ExperimentConfig(
-                    id=int(exp_id),
-                    name=name,
-                    version=version,
-                    bucket_val=bucket_val,
-                    start_ts=start_ts,
-                    stop_ts=stop_ts,
-                    owner=owner,
-                )
-
-                self._event_logger.log(
-                    experiment=experiment,
-                    variant=event_variant,
-                    span=self._span,
-                    event_type=EventType.EXPOSE,
-                    inputs=event_context_fields.copy(),
-                    **event_context_fields.copy(),
-                )
+            self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
 
         return variant
 
@@ -408,7 +438,6 @@ class Decider:
         """
         decider = self._get_decider()
         if decider is None:
-            logger.error("Encountered error in _get_decider()")
             return
 
         experiment = decider.get_experiment(experiment_name)
@@ -419,6 +448,8 @@ class Decider:
 
         event_context_fields = self._decider_context.to_event_dict()
         event_context_fields.update(exposure_kwargs or {})
+        event_fields = deepcopy(event_context_fields)
+
         exp_dict = experiment.val()
 
         experiment = ExperimentConfig(
@@ -436,8 +467,8 @@ class Decider:
             variant=variant_name,
             span=self._span,
             event_type=EventType.EXPOSE,
-            inputs=event_context_fields.copy(),
-            **event_context_fields.copy(),
+            inputs=event_fields,
+            **event_fields,
         )
 
     def get_variant_for_identifier(
@@ -468,10 +499,9 @@ class Decider:
         """
         decider = self._get_decider()
         if decider is None:
-            logger.error("Encountered error in _get_decider()")
             return None
 
-        identifier_context_fields = self._clear_identifiers_and_set(
+        identifier_context_fields = self._clear_ctx_identifiers_and_set(
             identifier=identifier, identifier_type=identifier_type
         )
 
@@ -494,45 +524,8 @@ class Decider:
         event_context_fields.update(exposure_kwargs or {})
 
         for event in choice.events():
-            try:
-                (
-                    _event_type,
-                    exp_id,
-                    name,
-                    version,
-                    event_variant,
-                    bucketing_value,
-                    bucket_val,
-                    start_ts,
-                    stop_ts,
-                    owner,
-                ) = event.split("::::")
-            except ValueError:
-                logger.warning(
-                    f'Encountered error in event.split("::::") in get_variant_for_identifier(). event: {event}'
-                )
-                return variant
-
-            experiment = ExperimentConfig(
-                id=int(exp_id),
-                name=name,
-                version=version,
-                bucket_val=bucket_val,
-                start_ts=start_ts,
-                stop_ts=stop_ts,
-                owner=owner,
-            )
-
-            # expose the `bucket_val` used in the experiment's config
-            event_ctx_fields = {**event_context_fields, **{bucket_val: bucketing_value}}
-
-            self._event_logger.log(
-                experiment=experiment,
-                variant=event_variant,
-                span=self._span,
-                event_type=EventType.EXPOSE,
-                inputs=event_ctx_fields.copy(),
-                **event_ctx_fields.copy(),
+            self._send_expose(
+                event=event, exposure_fields=event_context_fields, overwrite_identifier=True
             )
 
         return variant
@@ -567,10 +560,9 @@ class Decider:
         """
         decider = self._get_decider()
         if decider is None:
-            logger.error("Encountered error in _get_decider()")
             return None
 
-        identifier_context_fields = self._clear_identifiers_and_set(
+        identifier_context_fields = self._clear_ctx_identifiers_and_set(
             identifier=identifier, identifier_type=identifier_type
         )
 
@@ -593,51 +585,9 @@ class Decider:
 
         # expose Holdout if the experiment is part of one
         for event in choice.events():
-            try:
-                (
-                    event_type,
-                    exp_id,
-                    name,
-                    version,
-                    event_variant,
-                    bucketing_value,
-                    bucket_val,
-                    start_ts,
-                    stop_ts,
-                    owner,
-                ) = event.split("::::")
-            except ValueError:
-                logger.warning(
-                    f'Encountered error in event.split("::::") in get_variant_for_identifier_without_expose(). event: {event}'
-                )
-                return variant
-
-            # event_type enum:
-            #   0: regular bucketing
-            #   1: override
-            #   2: holdout
-            if event_type == "2":
-                experiment = ExperimentConfig(
-                    id=int(exp_id),
-                    name=name,
-                    version=version,
-                    bucket_val=bucket_val,
-                    start_ts=start_ts,
-                    stop_ts=stop_ts,
-                    owner=owner,
-                )
-
-                # expose the `bucket_val` used in the experiment's config
-                event_ctx_fields = {**event_context_fields, **{bucket_val: bucketing_value}}
-
-                self._event_logger.log(
-                    experiment=experiment,
-                    variant=event_variant,
-                    span=self._span,
-                    event_type=EventType.EXPOSE,
-                    inputs=event_ctx_fields.copy(),
-                    **event_ctx_fields.copy(),
-                )
+            self._send_expose_if_holdout(
+                event=event, exposure_fields=event_context_fields, overwrite_identifier=True
+            )
 
         return variant
 
@@ -670,11 +620,9 @@ class Decider:
         """
         decider = self._get_decider()
         if decider is None:
-            logger.error("Encountered error in _get_decider()")
             return []
 
-        context_fields = self._decider_context.to_dict()
-        ctx = rust_decider.make_ctx(context_fields)
+        ctx = self._get_ctx()
         ctx_err = ctx.err()
         if ctx_err is not None:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
@@ -700,48 +648,7 @@ class Decider:
 
             # expose Holdout if the experiment is part of one
             for event in choice.events():
-                try:
-                    (
-                        event_type,
-                        exp_id,
-                        name,
-                        version,
-                        event_variant,
-                        bucketing_value,
-                        bucket_val,
-                        start_ts,
-                        stop_ts,
-                        owner,
-                    ) = event.split("::::")
-                except ValueError:
-                    logger.warning(
-                        f'Encountered error in event.split("::::") for {exp_name} in get_all_variants_without_expose(). event: {event}'
-                    )
-                    continue
-
-                # event_type enum:
-                #   0: regular bucketing
-                #   1: override
-                #   2: holdout
-                if event_type == "2":
-                    experiment = ExperimentConfig(
-                        id=int(exp_id),
-                        name=name,
-                        version=version,
-                        bucket_val=bucket_val,
-                        start_ts=start_ts,
-                        stop_ts=stop_ts,
-                        owner=owner,
-                    )
-
-                    self._event_logger.log(
-                        experiment=experiment,
-                        variant=event_variant,
-                        span=self._span,
-                        event_type=EventType.EXPOSE,
-                        inputs=event_context_fields.copy(),
-                        **event_context_fields.copy(),
-                    )
+                self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
 
         return parsed_choices
 
@@ -783,10 +690,9 @@ class Decider:
         """
         decider = self._get_decider()
         if decider is None:
-            logger.error("Encountered error in _get_decider()")
             return []
 
-        identifier_context_fields = self._clear_identifiers_and_set(
+        identifier_context_fields = self._clear_ctx_identifiers_and_set(
             identifier=identifier, identifier_type=identifier_type
         )
 
@@ -816,51 +722,9 @@ class Decider:
 
             # expose Holdout if the experiment is part of one
             for event in choice.events():
-                try:
-                    (
-                        event_type,
-                        exp_id,
-                        name,
-                        version,
-                        event_variant,
-                        bucketing_value,
-                        bucket_val,
-                        start_ts,
-                        stop_ts,
-                        owner,
-                    ) = event.split("::::")
-                except ValueError:
-                    logger.warning(
-                        f'Encountered error in event.split("::::") for {exp_name} in get_all_variants_without_expose(). event: {event}'
-                    )
-                    continue
-
-                # event_type enum:
-                #   0: regular bucketing
-                #   1: override
-                #   2: holdout
-                if event_type == "2":
-                    experiment = ExperimentConfig(
-                        id=int(exp_id),
-                        name=name,
-                        version=version,
-                        bucket_val=bucket_val,
-                        start_ts=start_ts,
-                        stop_ts=stop_ts,
-                        owner=owner,
-                    )
-
-                    # expose the `bucket_val` used in the experiment's config
-                    event_ctx_fields = {**event_context_fields, **{bucket_val: bucketing_value}}
-
-                    self._event_logger.log(
-                        experiment=experiment,
-                        variant=event_variant,
-                        span=self._span,
-                        event_type=EventType.EXPOSE,
-                        inputs=event_ctx_fields.copy(),
-                        **event_ctx_fields.copy(),
-                    )
+                self._send_expose_if_holdout(
+                    event=event, exposure_fields=event_context_fields, overwrite_identifier=True
+                )
 
         return parsed_choices
 
@@ -870,8 +734,7 @@ class Decider:
         decider_func: Callable[[str, DeciderContext], Any],
         default: Any,
     ) -> Optional[Any]:
-        context_fields = self._decider_context.to_dict()
-        ctx = rust_decider.make_ctx(context_fields)
+        ctx = self._get_ctx()
         ctx_err = ctx.err()
         if ctx_err is not None:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
@@ -890,35 +753,30 @@ class Decider:
     def get_bool(self, feature_name: str, default: bool = False) -> bool:
         decider = self._get_decider()
         if not decider:
-            logger.error("Encountered error in _get_decider()")
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_bool, default)
 
     def get_int(self, feature_name: str, default: int = 0) -> int:
         decider = self._get_decider()
         if not decider:
-            logger.error("Encountered error in _get_decider()")
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_int, default)
 
     def get_float(self, feature_name: str, default: float = 0.0) -> float:
         decider = self._get_decider()
         if not decider:
-            logger.error("Encountered error in _get_decider()")
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_float, default)
 
     def get_string(self, feature_name: str, default: str = "") -> str:
         decider = self._get_decider()
         if not decider:
-            logger.error("Encountered error in _get_decider()")
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_string, default)
 
     def get_map(self, feature_name: str, default: Optional[dict] = None) -> Optional[dict]:
         decider = self._get_decider()
         if not decider:
-            logger.error("Encountered error in _get_decider()")
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_map, default)
 
