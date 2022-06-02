@@ -871,7 +871,7 @@ class DeciderContextFactory(ContextFactory):
             return self._minimal_decider(name=name, span=span)
 
         request = None
-        parsed_extracted_fields = {}
+        parsed_extracted_fields = None
         try:
             request = span.context
 
