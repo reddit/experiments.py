@@ -721,7 +721,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(variant, None)
 
                 assert any(
-                    '"blah" is not a supported "identifier_type", use one of [\'user_id\', \'device_id\', \'canonical_url\'].'
+                    '"blah" is not one of supported "identifier_type": [\'user_id\', \'device_id\', \'canonical_url\'].'
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -913,7 +913,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(variant, None)
 
                 assert any(
-                    '"blah" is not a supported "identifier_type", use one of [\'user_id\', \'device_id\', \'canonical_url\'].'
+                    '"blah" is not one of supported "identifier_type": [\'user_id\', \'device_id\', \'canonical_url\'].'
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -1372,7 +1372,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(len(variant_arr), 0)
 
                 assert any(
-                    '"blah" is not a supported "identifier_type", use one of [\'user_id\', \'device_id\', \'canonical_url\'].'
+                    '"blah" is not one of supported "identifier_type": [\'user_id\', \'device_id\', \'canonical_url\'].'
                     in x.getMessage()
                     for x in captured.records
                 )

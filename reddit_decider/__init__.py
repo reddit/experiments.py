@@ -515,7 +515,7 @@ class Decider:
         :return: Variant name if a variant is assigned, None otherwise.
         """
         if identifier_type not in IDENTIFIERS:
-            logger.warning(f'"{identifier_type}" is not a supported "identifier_type", use one of {IDENTIFIERS}.')
+            logger.warning(f'"{identifier_type}" is not one of supported "identifier_type": {IDENTIFIERS}.')
             return None
 
         decider = self._get_decider()
@@ -577,7 +577,7 @@ class Decider:
         :return: Variant name if a variant is assigned, None otherwise.
         """
         if identifier_type not in IDENTIFIERS:
-            logger.warning(f'"{identifier_type}" is not a supported "identifier_type", use one of {IDENTIFIERS}.')
+            logger.warning(f'"{identifier_type}" is not one of supported "identifier_type": {IDENTIFIERS}.')
             return None
 
         decider = self._get_decider()
@@ -713,7 +713,7 @@ class Decider:
         :return: list of experiment dicts with non-`None` variants.
         """
         if identifier_type not in IDENTIFIERS:
-            logger.warning(f'"{identifier_type}" is not a supported "identifier_type", use one of {IDENTIFIERS}.')
+            logger.warning(f'"{identifier_type}" is not one of supported "identifier_type": {IDENTIFIERS}.')
             return []
 
         decider = self._get_decider()
