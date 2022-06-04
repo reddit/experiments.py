@@ -28,8 +28,8 @@ from typing_extensions import Literal
 
 logger = logging.getLogger(__name__)
 
-EMPLOYEE_ROLES = ("employee", "contractor")
-IDENTIFIERS = ("user_id", "device_id", "canonical_url")
+EMPLOYEE_ROLES = ["employee", "contractor"]
+IDENTIFIERS = ["user_id", "device_id", "canonical_url"]
 
 
 class EventType(Enum):
@@ -202,16 +202,13 @@ class Decider:
         context_fields = self._decider_context.to_dict()
         return rust_decider.make_ctx(context_fields)
 
-    def _clear_ctx_identifiers_and_set(
+    def _get_ctx_with_set_identifier(
         self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
     ) -> Dict[str, Any]:
-        ctx = self._decider_context.to_dict()
-        # reset any identifiers so only the the identifier passed in gets used
-        for id in IDENTIFIERS:
-            ctx[id] = None
+        context_fields = self._decider_context.to_dict()
+        context_fields[identifier_type] = identifier
 
-        ctx[identifier_type] = identifier
-        return ctx
+        return rust_decider.make_ctx(context_fields)
 
     def _format_decision(self, decision_dict: Dict[str, str]) -> Dict[str, Any]:
         out = {}
@@ -517,21 +514,22 @@ class Decider:
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
+        if identifier_type not in IDENTIFIERS:
+            logger.warning(f'"{identifier_type}" is not a supported "identifier_type", use one of {IDENTIFIERS}.')
+            return None
+
         decider = self._get_decider()
         if decider is None:
             return None
 
-        identifier_context_fields = self._clear_ctx_identifiers_and_set(
-            identifier=identifier, identifier_type=identifier_type
-        )
-
-        ctx = rust_decider.make_ctx(identifier_context_fields)
+        ctx = self._get_ctx_with_set_identifier(identifier=identifier, identifier_type=identifier_type)
         ctx_err = ctx.err()
         if ctx_err is not None:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
             return None
 
-        choice = decider.choose(experiment_name, ctx)
+
+        choice = decider.choose(feature_name=experiment_name, ctx=ctx, identifier_type=identifier_type)
         error = choice.err()
 
         if error:
@@ -578,23 +576,22 @@ class Decider:
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
+        if identifier_type not in IDENTIFIERS:
+            logger.warning(f'"{identifier_type}" is not a supported "identifier_type", use one of {IDENTIFIERS}.')
+            return None
+
         decider = self._get_decider()
         if decider is None:
             return None
 
-        identifier_context_fields = self._clear_ctx_identifiers_and_set(
-            identifier=identifier, identifier_type=identifier_type
-        )
-
-        ctx = rust_decider.make_ctx(identifier_context_fields)
+        ctx = self._get_ctx_with_set_identifier(identifier=identifier, identifier_type=identifier_type)
         ctx_err = ctx.err()
         if ctx_err is not None:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
             return None
 
-        choice = decider.choose(experiment_name, ctx)
+        choice = decider.choose(feature_name=experiment_name, ctx=ctx, identifier_type=identifier_type)
         error = choice.err()
-
         if error:
             logger.info(f"Encountered error in decider.choose(): {error}")
             return None
@@ -648,7 +645,14 @@ class Decider:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
             return []
 
-        all_choices = decider.choose_all(ctx)
+        all_choice_result = decider.choose_all(ctx)
+
+        error = all_choice_result.err()
+        if error:
+            logger.info(f"Encountered error in decider.choose_all(): {error}")
+            return None
+
+        all_choices = all_choice_result.decisions()
         parsed_choices = []
 
         event_context_fields = self._decider_context.to_event_dict()
@@ -708,21 +712,28 @@ class Decider:
 
         :return: list of experiment dicts with non-`None` variants.
         """
+        if identifier_type not in IDENTIFIERS:
+            logger.warning(f'"{identifier_type}" is not a supported "identifier_type", use one of {IDENTIFIERS}.')
+            return []
+
         decider = self._get_decider()
         if decider is None:
             return []
 
-        identifier_context_fields = self._clear_ctx_identifiers_and_set(
-            identifier=identifier, identifier_type=identifier_type
-        )
-
-        ctx = rust_decider.make_ctx(identifier_context_fields)
+        ctx = self._get_ctx_with_set_identifier(identifier=identifier, identifier_type=identifier_type)
         ctx_err = ctx.err()
         if ctx_err is not None:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
             return []
 
-        all_choices = decider.choose_all(ctx)
+        all_choice_result = decider.choose_all(ctx)
+
+        error = all_choice_result.err()
+        if error:
+            logger.info(f"Encountered error in decider.choose_all(): {error}")
+            return None
+
+        all_choices = all_choice_result.decisions()
         parsed_choices = []
 
         event_context_fields = self._decider_context.to_event_dict()

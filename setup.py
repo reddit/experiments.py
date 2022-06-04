@@ -19,7 +19,7 @@ setup(
     install_requires=[
         "baseplate>=2.0.0a1,<3.0",
         "reddit-edgecontext>=1.0.0a3,<2.0",
-        "reddit-decider>=1.1.23",
+        "reddit-decider>=1.2.0",
     ],
     package_data={"reddit_experiments": ["py.typed"]},
     zip_safe=True,
