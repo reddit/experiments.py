@@ -661,7 +661,7 @@ class Decider:
         error = all_choice_result.err()
         if error:
             logger.info(f"Encountered error in decider.choose_all(): {error}")
-            return None
+            return []
 
         all_choices = all_choice_result.decisions()
         parsed_choices = []
@@ -746,7 +746,7 @@ class Decider:
         error = all_choice_result.err()
         if error:
             logger.info(f"Encountered error in decider.choose_all(): {error}")
-            return None
+            return []
 
         all_choices = all_choice_result.decisions()
         parsed_choices = []
