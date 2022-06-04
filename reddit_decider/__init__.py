@@ -515,21 +515,26 @@ class Decider:
         :return: Variant name if a variant is assigned, None otherwise.
         """
         if identifier_type not in IDENTIFIERS:
-            logger.warning(f'"{identifier_type}" is not one of supported "identifier_type": {IDENTIFIERS}.')
+            logger.warning(
+                f'"{identifier_type}" is not one of supported "identifier_type": {IDENTIFIERS}.'
+            )
             return None
 
         decider = self._get_decider()
         if decider is None:
             return None
 
-        ctx = self._get_ctx_with_set_identifier(identifier=identifier, identifier_type=identifier_type)
+        ctx = self._get_ctx_with_set_identifier(
+            identifier=identifier, identifier_type=identifier_type
+        )
         ctx_err = ctx.err()
         if ctx_err is not None:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
             return None
 
-
-        choice = decider.choose(feature_name=experiment_name, ctx=ctx, identifier_type=identifier_type)
+        choice = decider.choose(
+            feature_name=experiment_name, ctx=ctx, identifier_type=identifier_type
+        )
         error = choice.err()
 
         if error:
@@ -577,20 +582,26 @@ class Decider:
         :return: Variant name if a variant is assigned, None otherwise.
         """
         if identifier_type not in IDENTIFIERS:
-            logger.warning(f'"{identifier_type}" is not one of supported "identifier_type": {IDENTIFIERS}.')
+            logger.warning(
+                f'"{identifier_type}" is not one of supported "identifier_type": {IDENTIFIERS}.'
+            )
             return None
 
         decider = self._get_decider()
         if decider is None:
             return None
 
-        ctx = self._get_ctx_with_set_identifier(identifier=identifier, identifier_type=identifier_type)
+        ctx = self._get_ctx_with_set_identifier(
+            identifier=identifier, identifier_type=identifier_type
+        )
         ctx_err = ctx.err()
         if ctx_err is not None:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
             return None
 
-        choice = decider.choose(feature_name=experiment_name, ctx=ctx, identifier_type=identifier_type)
+        choice = decider.choose(
+            feature_name=experiment_name, ctx=ctx, identifier_type=identifier_type
+        )
         error = choice.err()
         if error:
             logger.info(f"Encountered error in decider.choose(): {error}")
@@ -713,14 +724,18 @@ class Decider:
         :return: list of experiment dicts with non-`None` variants.
         """
         if identifier_type not in IDENTIFIERS:
-            logger.warning(f'"{identifier_type}" is not one of supported "identifier_type": {IDENTIFIERS}.')
+            logger.warning(
+                f'"{identifier_type}" is not one of supported "identifier_type": {IDENTIFIERS}.'
+            )
             return []
 
         decider = self._get_decider()
         if decider is None:
             return []
 
-        ctx = self._get_ctx_with_set_identifier(identifier=identifier, identifier_type=identifier_type)
+        ctx = self._get_ctx_with_set_identifier(
+            identifier=identifier, identifier_type=identifier_type
+        )
         ctx_err = ctx.err()
         if ctx_err is not None:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
