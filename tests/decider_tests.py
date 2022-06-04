@@ -565,7 +565,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -600,7 +600,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -636,7 +636,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -672,7 +672,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -689,7 +689,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(variant, None)
                 # exposure isn't emitted either
                 self.assertEqual(self.event_logger.log.call_count, 0)
-                print([x.getMessage() for x in captured.records])
+
                 assert any(
                     'Requested identifier_type: "canonical_url" is incompatible with experiment\'s "bucket_val" = "device_id".'
                     in x.getMessage()
@@ -760,7 +760,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -787,7 +787,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -823,7 +823,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -832,11 +832,20 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             # `identifier_type="canonical_url"`, which doesn't match `bucket_val` of `device_id`
-            variant = decider.get_variant_for_identifier_without_expose(
-                experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url"
-            )
-            # `None` is returned since `identifier_type` doesn't match `bucket_val` in experiment-config json
-            self.assertEqual(variant, None)
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            with self.assertLogs() as captured:
+                variant = decider.get_variant_for_identifier_without_expose(
+                    experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url"
+                )
+                # `None` is returned since `identifier_type` doesn't match `bucket_val` in experiment-config json
+                self.assertEqual(variant, None)
+
+                assert any(
+                    'Encountered error in decider.choose(): Requested identifier_type: "canonical_url" is incompatible with experiment\'s "bucket_val" = "device_id".'
+                    in x.getMessage()
+                    for x in captured.records
+                )
+
             self.assertEqual(self.event_logger.log.call_count, 0)
 
     def test_get_variant_for_identifier_without_expose_canonical_url(self):
@@ -848,7 +857,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -873,7 +882,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -1014,7 +1023,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -1105,7 +1114,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -1156,7 +1165,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -1203,7 +1212,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -1258,7 +1267,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -1305,7 +1314,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
@@ -1355,7 +1364,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
 
             decider = Decider(
-                decider_context=self.minimal_decider_context,
+                decider_context=self.dc,
                 config_watcher=filewatcher,
                 server_span=self.mock_span,
                 context_name="test",
