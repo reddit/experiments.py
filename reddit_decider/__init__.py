@@ -741,7 +741,7 @@ class Decider:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
             return []
 
-        all_choice_result = decider.choose_all(ctx)
+        all_choice_result = decider.choose_all(ctx, identifier_type=identifier_type)
 
         error = all_choice_result.err()
         if error:
