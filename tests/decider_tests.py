@@ -1073,31 +1073,25 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            with self.assertLogs() as captured:
-                variant_arr = decider.get_all_variants_for_identifier_without_expose(
-                    identifier=identifier, identifier_type=bucket_val
-                )
 
-                assert any(
-                    'Encountered error for experiment: exp_1 in decider.choose_all(): Missing "device_id" in context for bucket_val = "device_id"'
-                    in x.getMessage()
-                    for x in captured.records
-                )
+            variant_arr = decider.get_all_variants_for_identifier_without_expose(
+                identifier=identifier, identifier_type=bucket_val
+            )
 
-                # "exp_1" returns err() (due to bucket_val/`identifier_type` mismatch) and is excluded from the response dict
-                self.assertEqual(len(variant_arr), len(self.exp_base_config) - 1)
-                self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), None)
-                self.assertEqual(
-                    self.first_experimentName_occurrence(variant_arr, "e1"),
-                    {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
-                )
-                self.assertEqual(
-                    self.first_experimentName_occurrence(variant_arr, "e2"),
-                    {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
-                )
+            # "exp_1" returns err() (due to bucket_val/`identifier_type` mismatch) and is excluded from the response dict
+            self.assertEqual(len(variant_arr), len(self.exp_base_config) - 1)
+            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), None)
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e1"),
+                {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
+            )
+            self.assertEqual(
+                self.first_experimentName_occurrence(variant_arr, "e2"),
+                {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
+            )
 
-                # no exposures should be triggered
-                self.assertEqual(self.event_logger.log.call_count, 0)
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
 
     def test_get_all_variants_for_identifier_without_expose_user_id_with_hg(self):
         identifier = USER_ID
