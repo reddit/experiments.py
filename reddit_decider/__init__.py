@@ -656,33 +656,33 @@ class Decider:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
             return []
 
-        all_choice_result = decider.choose_all(ctx)
+        all_decisions_result = decider.choose_all(ctx)
 
-        error = all_choice_result.err()
+        error = all_decisions_result.err()
         if error:
             logger.info(f"Encountered error in decider.choose_all(): {error}")
             return []
 
-        all_choices = all_choice_result.decisions()
+        all_decisions = all_decisions_result.decisions()
         parsed_choices = []
 
         event_context_fields = self._decider_context.to_event_dict()
 
-        for exp_name, choice in all_choices.items():
-            choice_error = choice.err()
-            if choice_error:
+        for exp_name, decision in all_decisions.items():
+            decision_error = decision.err()
+            if decision_error:
                 logger.info(
-                    f"Encountered error for experiment: {exp_name} in decider.choose_all(): {choice_error}"
+                    f"Encountered error for experiment: {exp_name} in decider.choose_all(): {decision_error}"
                 )
                 continue
 
-            decision_dict = choice.decision_dict()
+            decision_dict = decision.decision_dict()
 
             if decision_dict:
                 parsed_choices.append(self._format_decision(decision_dict))
 
             # expose Holdout if the experiment is part of one
-            for event in choice.events():
+            for event in decision.events():
                 self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
 
         return parsed_choices
@@ -741,33 +741,33 @@ class Decider:
             logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
             return []
 
-        all_choice_result = decider.choose_all(ctx, identifier_type=identifier_type)
+        all_decisions_result = decider.choose_all(ctx=ctx, identifier_type=identifier_type)
 
-        error = all_choice_result.err()
+        error = all_decisions_result.err()
         if error:
             logger.info(f"Encountered error in decider.choose_all(): {error}")
             return []
 
-        all_choices = all_choice_result.decisions()
+        all_decisions = all_decisions_result.decisions()
         parsed_choices = []
 
         event_context_fields = self._decider_context.to_event_dict()
 
-        for exp_name, choice in all_choices.items():
-            choice_error = choice.err()
-            if choice_error:
+        for exp_name, decision in all_decisions.items():
+            decision_error = decision.err()
+            if decision_error:
                 logger.info(
-                    f"Encountered error for experiment: {exp_name} in decider.choose_all(): {choice_error}"
+                    f"Encountered error for experiment: {exp_name} in decider.choose_all(): {decision_error}"
                 )
                 continue
 
-            decision_dict = choice.decision_dict()
+            decision_dict = decision.decision_dict()
 
             if decision_dict:
                 parsed_choices.append(self._format_decision(decision_dict))
 
             # expose Holdout if the experiment is part of one
-            for event in choice.events():
+            for event in decision.events():
                 self._send_expose_if_holdout(
                     event=event, exposure_fields=event_context_fields, overwrite_identifier=True
                 )
@@ -825,6 +825,66 @@ class Decider:
         if not decider:
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_map, default)
+
+    def get_all_dynamic_configs(self) -> Optional[dict]:
+        """Return a list of dynamic configuration dicts in this format:
+                [
+                    {
+                        "name": "example_dc",
+                        "type": "float",
+                        "value": 1.0,
+                    },
+                    ...
+                ]
+
+        where "type" field can be one of:
+            "boolean", "integer", "float", "string", or "map"
+
+        Dynamic Configurations that are malformed, fail parsing, or otherwirse
+        error for any reason are included in the response and have their respective default
+        values set:
+            "boolean" -> False
+            "integer" -> 0
+            "float"   -> 0.0
+            "string"  -> ""
+            "map"     -> {}
+
+        :return: list of dynamic config dicts with non-`None` variants.
+        """
+        decider = self._get_decider()
+        if not decider:
+            return []
+
+        ctx = self._get_ctx()
+        ctx_err = ctx.err()
+        if ctx_err is not None:
+            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+            return []
+
+        all_decisions_result = decider.get_all_values(ctx)
+
+        error = all_decisions_result.err()
+        if error:
+            logger.info(f"Encountered error in decider.choose_all(): {error}")
+            return []
+
+        all_decisions = all_decisions_result.decisions()
+        parsed_configs = []
+
+        for dc_name, decision in all_decisions.items():
+            decision_error = decision.err()
+            if decision_error:
+                logger.info(
+                    f"Encountered error for experiment: {dc_name} in decider.get_all_values(): {decision_error}"
+                )
+                continue
+
+            value_dict = decision.value_dict()
+
+            if value_dict:
+                parsed_configs.append(value_dict)
+
+        return parsed_configs
 
 
 class DeciderContextFactory(ContextFactory):
