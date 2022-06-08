@@ -849,7 +849,7 @@ class Decider:
             "string"  -> ""
             "map"     -> {}
 
-        :return: list of dynamic config dicts with non-`None` variants.
+        :return: list of all active dynamic config dicts.
         """
         decider = self._get_decider()
         if not decider:
@@ -875,7 +875,7 @@ class Decider:
             decision_error = decision.err()
             if decision_error:
                 logger.info(
-                    f"Encountered error for experiment: {dc_name} in decider.get_all_values(): {decision_error}"
+                    f"Encountered error for dynamic config: {dc_name} in decider.get_all_values(): {decision_error}"
                 )
                 continue
 
