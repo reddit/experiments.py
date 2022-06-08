@@ -414,15 +414,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_get_variant(self):
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant(experiment_name="exp_1")
@@ -458,14 +450,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             }
         }
         with create_temp_config_file(config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.minimal_decider_context,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.minimal_decider_context)
 
             with self.assertLogs() as captured:
                 variant = decider.get_variant("test")
@@ -492,14 +477,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             }
         }
         with create_temp_config_file(config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.minimal_decider_context,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.minimal_decider_context)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant("test")
@@ -507,14 +485,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_none_returned_on_get_variant_call_with_experiment_not_found(self):
         with create_temp_config_file({}) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.minimal_decider_context,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.minimal_decider_context)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant("anything")
@@ -522,15 +493,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_get_variant_without_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_without_expose(experiment_name="exp_1")
@@ -544,15 +507,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.parent_hg_config)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_without_expose(experiment_name="exp_1")
@@ -574,15 +529,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier(
@@ -609,15 +556,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier(
@@ -645,15 +584,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier(
@@ -681,15 +612,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             with self.assertLogs() as captured:
@@ -713,15 +636,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         identifier_type = "blah"
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.minimal_decider_context,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.minimal_decider_context)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             with self.assertLogs() as captured:
@@ -742,15 +657,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = "variant_4"
@@ -768,15 +675,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         bucket_val = "user_id"
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier_without_expose(
@@ -795,15 +694,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.parent_hg_config)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier_without_expose(
@@ -831,15 +722,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.parent_hg_config)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             # `identifier_type="canonical_url"`, which doesn't match `bucket_val` of `device_id`
@@ -865,15 +748,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier_without_expose(
@@ -890,15 +765,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier_without_expose(
@@ -914,15 +781,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         identifier_type = "blah"
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             with self.assertLogs() as captured:
@@ -946,15 +805,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.additional_two_exp)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_without_expose()
@@ -985,15 +836,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.additional_two_exp)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_without_expose()
@@ -1033,15 +876,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.additional_two_exp)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1075,15 +910,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": "device_id"})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.minimal_decider_context,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.minimal_decider_context)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
 
@@ -1120,15 +947,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.additional_two_exp)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1173,15 +992,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1220,15 +1031,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1277,15 +1080,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1324,15 +1119,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1376,15 +1163,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         identifier_type = "blah"
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
 
@@ -1406,15 +1185,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_get_variant_with_exposure_kwargs(self):
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             exp_kwargs = {"foo": "test_1", "bar": "test_2"}
             self.assertEqual(self.event_logger.log.call_count, 0)
@@ -1439,15 +1210,8 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"].update({"enabled": False})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+            decider = self.setup_decider(f.name, self.dc)
 
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant(experiment_name="exp_1")
             self.assertEqual(variant, None)
@@ -1505,14 +1269,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         self.dc_base_config["dc_1"].update({"value_type": "Boolean", "value": True})
 
         with create_temp_config_file(self.dc_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             res = decider.get_bool("dc_1")
             self.assertEqual(res, True)
@@ -1523,14 +1280,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         self.dc_base_config["dc_1"].update({"value_type": "Integer", "value": 7})
 
         with create_temp_config_file(self.dc_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             res = decider.get_int("dc_1")
             self.assertEqual(res, 7)
@@ -1541,14 +1291,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         self.dc_base_config["dc_1"].update({"value_type": "Float", "value": 4.20})
 
         with create_temp_config_file(self.dc_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             res = decider.get_float("dc_1")
             self.assertEqual(res, 4.20)
@@ -1559,14 +1302,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         self.dc_base_config["dc_1"].update({"value_type": "Text", "value": "helloworld!"})
 
         with create_temp_config_file(self.dc_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             res = decider.get_string("dc_1")
             self.assertEqual(res, "helloworld!")
@@ -1579,14 +1315,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         )
 
         with create_temp_config_file(self.dc_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             res = decider.get_map("dc_1")
             self.assertEqual(res, dict({"key": "value", "another_key": "another_value"}))
