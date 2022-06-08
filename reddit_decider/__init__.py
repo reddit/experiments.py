@@ -826,7 +826,7 @@ class Decider:
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_map, default)
 
-    def get_all_dynamic_configs(self) -> Optional[dict]:
+    def get_all_dynamic_configs(self) -> List[Dict[str, Any]]:
         """Return a list of dynamic configuration dicts in this format:
                 [
                     {
