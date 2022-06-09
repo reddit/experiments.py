@@ -1219,6 +1219,21 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 0)
 
+    def test_get_experiment(self):
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = self.setup_decider(f.name, self.dc)
+
+            experiment = decider.get_experiment("exp_1")
+
+            cfg = self.exp_base_config["exp_1"]
+            self.assertEqual(experiment.id, cfg["id"])
+            self.assertEqual(experiment.name, cfg["name"])
+            self.assertEqual(experiment.version, cfg["version"])
+            self.assertEqual(experiment.bucket_val, cfg["experiment"]["bucket_val"])
+            self.assertEqual(experiment.start_ts, cfg["start_ts"])
+            self.assertEqual(experiment.stop_ts, cfg["stop_ts"])
+            self.assertEqual(experiment.owner, cfg["owner"])
+
 
 class TestDeciderGetDynamicConfig(unittest.TestCase):
     def setUp(self):
