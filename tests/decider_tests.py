@@ -54,6 +54,10 @@ def decider_field_extractor(_request: RequestContext):
     }
 
 
+def first_occurrence_of_key_in(array, dict_key, name):
+    return next((v for v in array if v[dict_key] == name), None)
+
+
 @mock.patch("reddit_decider.FileWatcher")
 class DeciderClientFromConfigTests(unittest.TestCase):
     def setUp(self):
@@ -351,6 +355,17 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             extracted_fields=decider_field_extractor(_request=None),
         )
 
+    def setup_decider(self, file_name, decider_context):
+        filewatcher = FileWatcher(path=file_name, parser=init_decider_parser, timeout=2, backoff=2)
+
+        return Decider(
+            decider_context=decider_context,
+            config_watcher=filewatcher,
+            server_span=self.mock_span,
+            context_name="test",
+            event_logger=self.event_logger,
+        )
+
     def assert_exposure_event_fields(
         self,
         experiment_name: str,
@@ -397,20 +412,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.assertEqual(getattr(event_fields["experiment"], "version"), cfg["version"])
         self.assertEqual(getattr(event_fields["experiment"], "bucket_val"), bucket_val)
 
-    def first_experimentName_occurrence(self, array, exp_name):
-        return next((v for v in array if v["experimentName"] == exp_name), None)
-
     def test_get_variant(self):
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant(experiment_name="exp_1")
@@ -446,14 +450,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             }
         }
         with create_temp_config_file(config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.minimal_decider_context,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.minimal_decider_context)
 
             with self.assertLogs() as captured:
                 variant = decider.get_variant("test")
@@ -480,14 +477,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             }
         }
         with create_temp_config_file(config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.minimal_decider_context,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.minimal_decider_context)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant("test")
@@ -495,14 +485,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_none_returned_on_get_variant_call_with_experiment_not_found(self):
         with create_temp_config_file({}) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.minimal_decider_context,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.minimal_decider_context)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant("anything")
@@ -510,15 +493,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_get_variant_without_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_without_expose(experiment_name="exp_1")
@@ -532,15 +507,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.parent_hg_config)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_without_expose(experiment_name="exp_1")
@@ -562,15 +529,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier(
@@ -597,15 +556,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier(
@@ -633,15 +584,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier(
@@ -669,15 +612,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             with self.assertLogs() as captured:
@@ -701,23 +636,14 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         identifier_type = "blah"
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.minimal_decider_context,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.minimal_decider_context)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             with self.assertLogs() as captured:
-                # `identifier_type="canonical_url"`, which doesn't match `bucket_val` of `device_id`
                 variant = decider.get_variant_for_identifier(
                     experiment_name="exp_1", identifier=identifier, identifier_type=identifier_type
                 )
-                # `None` is returned since `identifier_type` doesn't match `bucket_val` in experiment-config json
+
                 self.assertEqual(variant, None)
 
                 assert any(
@@ -731,15 +657,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = "variant_4"
@@ -757,15 +675,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         bucket_val = "user_id"
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier_without_expose(
@@ -784,15 +694,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.parent_hg_config)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier_without_expose(
@@ -820,15 +722,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.parent_hg_config)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             # `identifier_type="canonical_url"`, which doesn't match `bucket_val` of `device_id`
@@ -854,15 +748,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier_without_expose(
@@ -879,15 +765,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier_without_expose(
@@ -903,15 +781,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         identifier_type = "blah"
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             with self.assertLogs() as captured:
@@ -935,30 +805,22 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.additional_two_exp)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_without_expose()
 
             self.assertEqual(len(variant_arr), len(self.exp_base_config))
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "exp_1"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "exp_1"),
                 {"id": 1, "name": "variant_4", "version": "2", "experimentName": "exp_1"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e1"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e1"),
                 {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e2"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e2"),
                 {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
             )
 
@@ -974,32 +836,26 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.additional_two_exp)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_without_expose()
 
             # "exp_1" returns variant None (due to "hg") and is excluded from the response arr
             self.assertEqual(len(variant_arr), len(self.exp_base_config) - 1)
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), None)
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e1"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "exp_1"), None
+            )
+            self.assertEqual(
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e1"),
                 {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e2"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e2"),
                 {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "hg"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "hg"),
                 {"id": 2, "name": "holdout", "version": "5", "experimentName": "hg"},
             )
 
@@ -1020,15 +876,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.additional_two_exp)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1037,15 +885,15 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             self.assertEqual(len(variant_arr), len(self.exp_base_config))
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "exp_1"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "exp_1"),
                 {"id": 1, "name": "variant_4", "version": "2", "experimentName": "exp_1"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e1"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e1"),
                 {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e2"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e2"),
                 {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
             )
 
@@ -1062,15 +910,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": "device_id"})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.minimal_decider_context,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.minimal_decider_context)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
 
@@ -1080,13 +920,15 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             # "exp_1" returns err() (due to bucket_val/`identifier_type` mismatch) and is excluded from the response dict
             self.assertEqual(len(variant_arr), len(self.exp_base_config) - 1)
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), None)
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e1"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "exp_1"), None
+            )
+            self.assertEqual(
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e1"),
                 {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e2"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e2"),
                 {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
             )
 
@@ -1105,15 +947,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.additional_two_exp)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1122,17 +956,19 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             # "exp_1" returns variant None (due to "hg") and is excluded from the response dict
             self.assertEqual(len(variant_arr), len(self.exp_base_config) - 1)
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), None)
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e1"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "exp_1"), None
+            )
+            self.assertEqual(
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e1"),
                 {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e2"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e2"),
                 {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "hg"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "hg"),
                 {"id": 2, "name": "holdout", "version": "5", "experimentName": "hg"},
             )
 
@@ -1156,15 +992,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1173,15 +1001,15 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             self.assertEqual(len(variant_arr), len(self.exp_base_config))
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "exp_1"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "exp_1"),
                 {"id": 1, "name": "variant_3", "version": "2", "experimentName": "exp_1"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e1"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e1"),
                 {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e2"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e2"),
                 {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
             )
 
@@ -1203,15 +1031,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1220,17 +1040,19 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             # "exp_1" returns variant None (due to "hg") and is excluded from the response dict
             self.assertEqual(len(variant_arr), len(self.exp_base_config) - 1)
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), None)
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e1"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "exp_1"), None
+            )
+            self.assertEqual(
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e1"),
                 {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e2"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e2"),
                 {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "hg"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "hg"),
                 {"id": 2, "name": "holdout", "version": "5", "experimentName": "hg"},
             )
 
@@ -1258,15 +1080,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1275,15 +1089,15 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             self.assertEqual(len(variant_arr), len(self.exp_base_config))
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "exp_1"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "exp_1"),
                 {"id": 1, "name": "variant_3", "version": "2", "experimentName": "exp_1"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e1"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e1"),
                 {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e2"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e2"),
                 {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
             )
 
@@ -1305,15 +1119,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1322,17 +1128,19 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             # "exp_1" returns variant None (due to "hg") and is excluded from the response dict
             self.assertEqual(len(variant_arr), len(self.exp_base_config) - 1)
-            self.assertEqual(self.first_experimentName_occurrence(variant_arr, "exp_1"), None)
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e1"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "exp_1"), None
+            )
+            self.assertEqual(
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e1"),
                 {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "e2"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "e2"),
                 {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
             )
             self.assertEqual(
-                self.first_experimentName_occurrence(variant_arr, "hg"),
+                first_occurrence_of_key_in(variant_arr, "experimentName", "hg"),
                 {"id": 2, "name": "holdout", "version": "5", "experimentName": "hg"},
             )
 
@@ -1355,15 +1163,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         identifier_type = "blah"
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
 
@@ -1385,15 +1185,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_get_variant_with_exposure_kwargs(self):
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             exp_kwargs = {"foo": "test_1", "bar": "test_2"}
             self.assertEqual(self.event_logger.log.call_count, 0)
@@ -1418,15 +1210,8 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"].update({"enabled": False})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
+            decider = self.setup_decider(f.name, self.dc)
 
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant(experiment_name="exp_1")
             self.assertEqual(variant, None)
@@ -1469,18 +1254,22 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             cookie_created_timestamp=COOKIE_CREATED_TIMESTAMP,
         )
 
+    def setup_decider(self, file_name, decider_context):
+        filewatcher = FileWatcher(path=file_name, parser=init_decider_parser, timeout=2, backoff=2)
+
+        return Decider(
+            decider_context=decider_context,
+            config_watcher=filewatcher,
+            server_span=self.mock_span,
+            context_name="test",
+            event_logger=self.event_logger,
+        )
+
     def test_get_bool(self):
         self.dc_base_config["dc_1"].update({"value_type": "Boolean", "value": True})
 
         with create_temp_config_file(self.dc_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             res = decider.get_bool("dc_1")
             self.assertEqual(res, True)
@@ -1491,14 +1280,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         self.dc_base_config["dc_1"].update({"value_type": "Integer", "value": 7})
 
         with create_temp_config_file(self.dc_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             res = decider.get_int("dc_1")
             self.assertEqual(res, 7)
@@ -1509,14 +1291,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         self.dc_base_config["dc_1"].update({"value_type": "Float", "value": 4.20})
 
         with create_temp_config_file(self.dc_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             res = decider.get_float("dc_1")
             self.assertEqual(res, 4.20)
@@ -1527,14 +1302,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         self.dc_base_config["dc_1"].update({"value_type": "Text", "value": "helloworld!"})
 
         with create_temp_config_file(self.dc_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             res = decider.get_string("dc_1")
             self.assertEqual(res, "helloworld!")
@@ -1547,16 +1315,263 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         )
 
         with create_temp_config_file(self.dc_base_config) as f:
-            filewatcher = FileWatcher(path=f.name, parser=init_decider_parser, timeout=2, backoff=2)
-            decider = Decider(
-                decider_context=self.dc,
-                config_watcher=filewatcher,
-                server_span=self.mock_span,
-                context_name="test",
-                event_logger=self.event_logger,
-            )
+            decider = self.setup_decider(f.name, self.dc)
 
             res = decider.get_map("dc_1")
             self.assertEqual(res, dict({"key": "value", "another_key": "another_value"}))
             res = decider.get_string("dc_1")
             self.assertEqual(res, "")
+
+    def test_get_all_values(self):
+        base_cfg = self.dc_base_config["dc_1"].copy()
+
+        bool_val = True
+        cfg_bool = {"dc_bool": base_cfg.copy()}
+        cfg_bool["dc_bool"].update({"name": "dc_bool", "value": bool_val, "value_type": "Boolean"})
+
+        cfg_missing_bool = {}
+        cfg_missing_bool["dc_missing_bool"] = cfg_bool["dc_bool"].copy()
+        cfg_missing_bool["dc_missing_bool"].update({"value": None, "name": "dc_missing_bool"})
+
+        int_val = 99
+        cfg_int = {"dc_int": base_cfg.copy()}
+        cfg_int["dc_int"].update({"name": "dc_int", "value": int_val, "value_type": "Integer"})
+
+        cfg_missing_int = {}
+        cfg_missing_int["dc_missing_int"] = cfg_int["dc_int"].copy()
+        cfg_missing_int["dc_missing_int"].update({"value": None, "name": "dc_missing_int"})
+
+        float_val = 3.2
+        cfg_float = {"dc_float": base_cfg.copy()}
+        cfg_float["dc_float"].update(
+            {"name": "dc_float", "value": float_val, "value_type": "Float"}
+        )
+
+        cfg_missing_float = {}
+        cfg_missing_float["dc_missing_float"] = cfg_float["dc_float"].copy()
+        cfg_missing_float["dc_missing_float"].update({"value": None, "name": "dc_missing_float"})
+
+        string_val = "some_string"
+        cfg_string = {"dc_string": base_cfg.copy()}
+        cfg_string["dc_string"].update(
+            {"name": "dc_string", "value": string_val, "value_type": "String"}
+        )
+        cfg_text = {"dc_text": base_cfg.copy()}
+        cfg_text["dc_text"].update({"name": "dc_text", "value": string_val, "value_type": "Text"})
+
+        cfg_missing_string = {}
+        cfg_missing_string["dc_missing_string"] = cfg_string["dc_string"].copy()
+        cfg_missing_string["dc_missing_string"].update({"value": None, "name": "dc_missing_string"})
+
+        cfg_missing_text = {}
+        cfg_missing_text["dc_missing_text"] = cfg_text["dc_text"].copy()
+        cfg_missing_text["dc_missing_text"].update({"value": None, "name": "dc_missing_text"})
+
+        map_val = {
+            "v": {"nested_map": {"w": True, "x": 1, "y": "some_string", "z": 3.0}},
+            "w": False,
+            "x": 1,
+            "y": "some_string",
+            "z": 3.0,
+        }
+        cfg_map = {"dc_map": base_cfg.copy()}
+        cfg_map["dc_map"].update({"name": "dc_map", "value": map_val, "value_type": "Map"})
+
+        cfg_missing_map = {}
+        cfg_missing_map["dc_missing_map"] = cfg_map["dc_map"].copy()
+        cfg_missing_map["dc_missing_map"].update({"value": None, "name": "dc_missing_map"})
+
+        missing_value_type_cfg = {
+            "dc_missing_value_type": {
+                "id": 3393,
+                "value": False,
+                "type": "dynamic_config",
+                "version": "2",
+                "enabled": True,
+                "owner": "test",
+                "name": "dc_missing_value_type",
+                "experiment": {"experiment_version": 2},
+            }
+        }
+
+        experiments_cfg = {
+            "genexp_0": {
+                "id": 6299,
+                "name": "genexp_0",
+                "enabled": True,
+                "owner": "test",
+                "version": "5",
+                "emit_event": True,
+                "type": "range_variant",
+                "start_ts": 0,
+                "stop_ts": 2147483648,
+                "experiment": {
+                    "variants": [
+                        {"range_start": 0.0, "range_end": 0.2, "name": "control_1"},
+                        {"range_start": 0.2, "range_end": 0.4, "name": "variant_2"},
+                        {"range_start": 0.4, "range_end": 0.6, "name": "variant_3"},
+                        {"range_start": 0.6, "range_end": 0.8, "name": "variant_4"},
+                        {"range_start": 0.8, "range_end": 1.0, "name": "variant_5"},
+                    ],
+                    "experiment_version": 5,
+                    "shuffle_version": 91,
+                    "bucket_val": "user_id",
+                    "log_bucketing": False,
+                },
+            },
+            "exp_0": {
+                "id": 3248,
+                "name": "exp_0",
+                "enabled": True,
+                "owner": "test",
+                "version": "2",
+                "type": "range_variant",
+                "emit_event": True,
+                "start_ts": 37173982,
+                "stop_ts": 2147483648,
+                "experiment": {
+                    "variants": [
+                        {"range_start": 0.0, "range_end": 0.2, "name": "control_1"},
+                        {"range_start": 0.2, "range_end": 0.4, "name": "control_2"},
+                        {"range_start": 0.4, "range_end": 0.6, "name": "variant_2"},
+                        {"range_start": 0.6, "range_end": 0.8, "name": "variant_3"},
+                        {"range_start": 0.8, "range_end": 1.0, "name": "variant_4"},
+                    ],
+                    "experiment_version": 2,
+                    "shuffle_version": 91,
+                    "bucket_val": "user_id",
+                    "log_bucketing": False,
+                },
+            },
+            "exp_1": {
+                "id": 3246,
+                "name": "exp_1",
+                "enabled": True,
+                "owner": "test",
+                "version": "2",
+                "type": "range_variant",
+                "emit_event": True,
+                "start_ts": 37173982,
+                "stop_ts": 2147483648,
+                "experiment": {
+                    "variants": [{"range_start": 0, "range_end": 0, "name": "variant_0"}],
+                    "experiment_version": 2,
+                    "shuffle_version": 0,
+                    "bucket_val": "user_id",
+                    "log_bucketing": False,
+                },
+            },
+        }
+        experiments_cfg.update(cfg_bool)
+        experiments_cfg.update(cfg_int)
+        experiments_cfg.update(cfg_float)
+        experiments_cfg.update(cfg_string)
+        experiments_cfg.update(cfg_text)
+        experiments_cfg.update(cfg_map)
+
+        # should be set to default values
+        experiments_cfg.update(cfg_missing_bool)
+        experiments_cfg.update(cfg_missing_int)
+        experiments_cfg.update(cfg_missing_float)
+        experiments_cfg.update(cfg_missing_string)
+        experiments_cfg.update(cfg_missing_text)
+        experiments_cfg.update(cfg_missing_map)
+
+        # missing "value_type" field
+        experiments_cfg.update(missing_value_type_cfg)
+
+        print(experiments_cfg)
+        with create_temp_config_file(experiments_cfg) as f:
+            decider = self.setup_decider(f.name, self.dc)
+
+            configs = decider.get_all_dynamic_configs()
+
+            # 6 correct DCs, 6 DCs w/ values set to respective defaults
+            # 1 `missing_value_type_cfg` which sets "type" to empty string
+            # (3 regular experiments are excluded)
+            self.assertEqual(len(configs), 13)
+
+            # test values get set
+            bool_val_res = first_occurrence_of_key_in(configs, "name", "dc_bool")
+            self.assertEqual(
+                bool_val_res,
+                {"name": "dc_bool", "value": bool_val, "type": "boolean"},
+            )
+
+            int_val_res = first_occurrence_of_key_in(configs, "name", "dc_int")
+            self.assertEqual(
+                int_val_res,
+                {"name": "dc_int", "value": int_val, "type": "integer"},
+            )
+
+            float_val_res = first_occurrence_of_key_in(configs, "name", "dc_float")
+            self.assertEqual(
+                float_val_res,
+                {"name": "dc_float", "value": float_val, "type": "float"},
+            )
+
+            string_val_res = first_occurrence_of_key_in(configs, "name", "dc_string")
+            self.assertEqual(
+                string_val_res,
+                {"name": "dc_string", "value": string_val, "type": "string"},
+            )
+
+            text_val_res = first_occurrence_of_key_in(configs, "name", "dc_text")
+            self.assertEqual(
+                text_val_res,
+                {"name": "dc_text", "value": string_val, "type": "string"},
+            )
+
+            map_val_res = first_occurrence_of_key_in(configs, "name", "dc_map")
+            self.assertEqual(
+                map_val_res,
+                {"name": "dc_map", "value": map_val, "type": "map"},
+            )
+
+            # test default values
+            missing_bool_val_res = first_occurrence_of_key_in(configs, "name", "dc_missing_bool")
+            self.assertEqual(
+                missing_bool_val_res,
+                {"name": "dc_missing_bool", "value": False, "type": "boolean"},
+            )
+
+            missing_int_val_res = first_occurrence_of_key_in(configs, "name", "dc_missing_int")
+            self.assertEqual(
+                missing_int_val_res,
+                {"name": "dc_missing_int", "value": 0, "type": "integer"},
+            )
+
+            missing_float_val_res = first_occurrence_of_key_in(configs, "name", "dc_missing_float")
+            self.assertEqual(
+                missing_float_val_res,
+                {"name": "dc_missing_float", "value": 0.0, "type": "float"},
+            )
+
+            missing_string_val_res = first_occurrence_of_key_in(
+                configs, "name", "dc_missing_string"
+            )
+            self.assertEqual(
+                missing_string_val_res,
+                {"name": "dc_missing_string", "value": "", "type": "string"},
+            )
+
+            missing_text_val_res = first_occurrence_of_key_in(configs, "name", "dc_missing_text")
+            self.assertEqual(
+                missing_text_val_res,
+                {"name": "dc_missing_text", "value": "", "type": "string"},
+            )
+
+            missing_map_val_res = first_occurrence_of_key_in(configs, "name", "dc_missing_map")
+            self.assertEqual(
+                missing_map_val_res,
+                {"name": "dc_missing_map", "value": {}, "type": "map"},
+            )
+
+            # set "type" to empty string if "value_type" is missing on cfg
+            missing_map_val_res = first_occurrence_of_key_in(
+                configs, "name", "dc_missing_value_type"
+            )
+            self.assertEqual(
+                missing_map_val_res,
+                {"name": "dc_missing_value_type", "value": False, "type": ""},
+            )
