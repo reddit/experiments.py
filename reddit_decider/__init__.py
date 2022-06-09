@@ -900,7 +900,8 @@ class Decider:
         experiment = decider.get_experiment(experiment_name)
         error = experiment.err()
         if error:
-            logger.warning(f"Encountered error in decider.get_experiment(): {error}")
+            # sending to debug logger to avoid printing "Feature x not found." logs
+            logger.debug(f"Encountered error in decider.get_experiment(): {error}")
             return None
 
         exp_dict = experiment.val()
