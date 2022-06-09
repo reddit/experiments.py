@@ -886,7 +886,7 @@ class Decider:
 
         return parsed_configs
 
-    def get_experiment(self, experiment_name: str) -> None:
+    def get_experiment(self, experiment_name: str) -> Optional[ExperimentConfig]:
         """Get an `ExperimentConfig` representation of an experiment or `None` if not found.
 
         :param experiment_name: Name of the experiment to be fetched.
@@ -895,7 +895,7 @@ class Decider:
         """
         decider = self._get_decider()
         if decider is None:
-            return
+            return None
 
         experiment = decider.get_experiment(experiment_name)
         error = experiment.err()
