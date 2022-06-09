@@ -886,6 +886,39 @@ class Decider:
 
         return parsed_configs
 
+    def get_experiment(self, experiment_name: str) -> Optional[ExperimentConfig]:
+        """Get an `ExperimentConfig` representation of an experiment or `None` if not found.
+
+        :param experiment_name: Name of the experiment to be fetched.
+
+        :return: an `ExperimentConfig` representation of an experiment if found, else `None`.
+        """
+        decider = self._get_decider()
+        if decider is None:
+            return None
+
+        experiment = decider.get_experiment(experiment_name)
+        error = experiment.err()
+        if error:
+            # sending to debug logger to avoid printing "Feature x not found." logs
+            logger.debug(f"Encountered error in decider.get_experiment(): {error}")
+            return None
+
+        exp_dict = experiment.val()
+
+        if exp_dict is None:
+            return None
+
+        return ExperimentConfig(
+            id=int(exp_dict.get("id", 0)),
+            name=exp_dict.get("name"),
+            version=str(exp_dict.get("version")),
+            bucket_val=exp_dict.get("variant_set", {}).get("bucket_val"),
+            start_ts=exp_dict.get("variant_set", {}).get("start_ts"),
+            stop_ts=exp_dict.get("variant_set", {}).get("stop_ts"),
+            owner=exp_dict.get("owner"),
+        )
+
 
 class DeciderContextFactory(ContextFactory):
     """Decider client context factory.
