@@ -9,13 +9,14 @@ Example
 To add the experiments client to your application, add the appropriate client
 declaration to your context configuration::
 
-   baseplate.configure_context(
-      {
-         ...
-         "experiments": ExperimentsClient(event_logger),
-         ...
-      }
-   )
+   from reddit_decider import decider_client_from_config
+    
+    decider = decider_client_from_config(
+        app_config=app_config,
+        event_logger=ExperimentLogger(),
+        request_field_extractor=decider_field_extractor,
+    )
+    baseplate.add_to_context("decider", decider)
 
 configure it in your application's configuration file:
 
@@ -40,24 +41,24 @@ configure it in your application's configuration file:
 
    ...
 
-and then use the attached :py:class:`~reddit_experiments.Experiments` object in
+and then use the attached :py:class:`~reddit_decider.Decider` object in
 request::
 
    def my_method(request):
-       if request.experiments.variant("foo") == "bar":
+       if request.decider.get_variant("foo") == "bar":
            pass
 
 Configuration
 -------------
 
-.. autoclass:: ExperimentsClient
+.. autoclass:: DeciderClient
 
-.. autofunction:: experiments_client_from_config
+.. autofunction:: decider_client_from_config
 
 Classes
 -------
 
-.. autoclass:: ExperimentsContextFactory
+.. autoclass:: DeciderContextFactory
 
-.. autoclass:: Experiments
+.. autoclass:: Decider
    :members:

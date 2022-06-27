@@ -16,20 +16,21 @@ $ pip install reddit-experiments
 Add the client to your application's Baseplate context:
 
 ```python
-baseplate.configure_context(
-  {
-     ...
-     "experiments": ExperimentsClient(event_logger),
-     ...
-  }
-)
+ from reddit_decider import decider_client_from_config
+ 
+ decider = decider_client_from_config(
+     app_config=app_config,
+     event_logger=ExperimentLogger(),
+     request_field_extractor=decider_field_extractor,
+ )
+ baseplate.add_to_context("decider", decider)
 ```
 
 and use it in request:
 
 ```python
 def my_method(request):
-   if request.experiments.variant("foo") == "bar":
+   if request.decider.get_variant("foo") == "bar":
        pass
 ```
 
