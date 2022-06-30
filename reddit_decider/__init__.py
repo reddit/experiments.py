@@ -248,12 +248,12 @@ class Decider:
             return
 
         experiment = ExperimentConfig(
-            id=Decider._cast_to_int(exp_id),
+            id=self._cast_to_int(exp_id),
             name=name,
             version=version,
             bucket_val=bucket_val,
-            start_ts=Decider._cast_to_int(start_ts),
-            stop_ts=Decider._cast_to_int(stop_ts),
+            start_ts=self._cast_to_int(start_ts),
+            stop_ts=self._cast_to_int(stop_ts),
             owner=owner,
         )
 
@@ -299,12 +299,12 @@ class Decider:
         #   2: holdout
         if event_type == "2":
             experiment = ExperimentConfig(
-                id=Decider._cast_to_int(exp_id),
+                id=self._cast_to_int(exp_id),
                 name=name,
                 version=version,
                 bucket_val=bucket_val,
-                start_ts=Decider._cast_to_int(start_ts),
-                stop_ts=Decider._cast_to_int(stop_ts),
+                start_ts=self._cast_to_int(start_ts),
+                stop_ts=self._cast_to_int(stop_ts),
                 owner=owner,
             )
 
@@ -321,34 +321,14 @@ class Decider:
             )
         return
 
-    @classmethod
-    def _cast_to_int(cls, input: str) -> int:
+    @staticmethod
+    def _cast_to_int(input: str) -> int:
         out = 1
         try:
             out = int(input)
         except ValueError as e:
             logger.info(f"Encountered error casting to integer: {e}")
         return out
-
-    @classmethod
-    def _prune_extracted_dict(cls, extracted_dict: dict) -> dict:
-        parsed_extracted_fields = deepcopy(extracted_dict)
-
-        for k, v in extracted_dict.items():
-            # remove invalid keys
-            if k is None or not isinstance(k, str):
-                logger.info(
-                    f"{k} key in request_field_extractor() dict is not of type str and is removed."
-                )
-                del parsed_extracted_fields[k]
-                continue
-            # remove invalid values
-            if not isinstance(v, (int, float, str, bool)) and v is not None:
-                logger.info(
-                    f"{k}: {v} value in `request_field_extractor()` dict is not one of type: [None, int, float, str, bool] and is removed."
-                )
-                del parsed_extracted_fields[k]
-        return parsed_extracted_fields
 
     def get_variant(
         self, experiment_name: str, **exposure_kwargs: Optional[Dict[str, Any]]
@@ -955,13 +935,33 @@ class DeciderContextFactory(ContextFactory):
         self._event_logger = event_logger
         self._request_field_extractor = request_field_extractor
 
-    @classmethod
-    def is_employee(cls, edge_context: Any) -> bool:
+    @staticmethod
+    def _is_employee(edge_context: Any) -> bool:
         return (
             any([edge_context.user.has_role(role) for role in EMPLOYEE_ROLES])
             if edge_context.user.is_logged_in
             else False
         )
+
+    @staticmethod
+    def _prune_extracted_dict(extracted_dict: dict) -> dict:
+        parsed_extracted_fields = deepcopy(extracted_dict)
+
+        for k, v in extracted_dict.items():
+            # remove invalid keys
+            if k is None or not isinstance(k, str):
+                logger.info(
+                    f"{k} key in request_field_extractor() dict is not of type str and is removed."
+                )
+                del parsed_extracted_fields[k]
+                continue
+            # remove invalid values
+            if not isinstance(v, (int, float, str, bool)) and v is not None:
+                logger.info(
+                    f"{k}: {v} value in `request_field_extractor()` dict is not one of type: [None, int, float, str, bool] and is removed."
+                )
+                del parsed_extracted_fields[k]
+        return parsed_extracted_fields
 
     def _minimal_decider(
         self, name: str, span: Span, parsed_extracted_fields: Optional[Dict] = None
@@ -997,7 +997,7 @@ class DeciderContextFactory(ContextFactory):
             if self._request_field_extractor:
                 extracted_fields = self._request_field_extractor(request)
                 # prune any invalid keys/values
-                parsed_extracted_fields = Decider._prune_extracted_dict(
+                parsed_extracted_fields = self._prune_extracted_dict(
                     extracted_dict=extracted_fields
                 )
         except Exception as exc:
@@ -1079,7 +1079,7 @@ class DeciderContextFactory(ContextFactory):
 
         is_employee = None
         try:
-            is_employee = DeciderContextFactory.is_employee(ec)
+            is_employee = self._is_employee(ec)
         except Exception as exc:
             logger.info(
                 f"Error in `DeciderContextFactory.is_employee(ec)` in `make_object_for_context()`. details: {exc}"
