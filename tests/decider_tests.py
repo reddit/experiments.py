@@ -1,5 +1,6 @@
 import contextlib
 import json
+import logging
 import tempfile
 import unittest
 
@@ -17,6 +18,8 @@ from reddit_decider import DeciderContext
 from reddit_decider import DeciderContextFactory
 from reddit_decider import EventType
 from reddit_decider import init_decider_parser
+
+logger = logging.getLogger()
 
 USER_ID = "t2_1234"
 IS_LOGGED_IN = True
@@ -67,37 +70,39 @@ class DeciderClientFromConfigTests(unittest.TestCase):
         self.mock_span.context = None
 
     def test_make_clients(self, file_watcher_mock):
-        decider_ctx_factory = decider_client_from_config(
-            {"experiments.path": "/tmp/test"}, self.event_logger
-        )
+        with create_temp_config_file({}) as f:
+            decider_ctx_factory = decider_client_from_config(
+                {"experiments.path": f.name}, self.event_logger
+            )
         self.assertIsInstance(decider_ctx_factory, DeciderContextFactory)
         file_watcher_mock.assert_called_once_with(
-            path="/tmp/test", parser=init_decider_parser, timeout=None, backoff=None
+            path=f.name, parser=init_decider_parser, timeout=None, backoff=None
         )
 
     def test_timeout(self, file_watcher_mock):
-        decider_ctx_factory = decider_client_from_config(
-            {"experiments.path": "/tmp/test", "experiments.timeout": "60 seconds"},
-            self.event_logger,
-        )
+        with create_temp_config_file({}) as f:
+            decider_ctx_factory = decider_client_from_config(
+                {"experiments.path": f.name, "experiments.timeout": "2 seconds"},
+                self.event_logger,
+            )
         self.assertIsInstance(decider_ctx_factory, DeciderContextFactory)
         file_watcher_mock.assert_called_once_with(
-            path="/tmp/test", parser=init_decider_parser, timeout=60.0, backoff=None
+            path=f.name, parser=init_decider_parser, timeout=2.0, backoff=None
         )
 
     def test_prefix(self, file_watcher_mock):
-        decider_ctx_factory = decider_client_from_config(
-            {"r2_experiments.path": "/tmp/test", "r2_experiments.timeout": "60 seconds"},
-            self.event_logger,
-            prefix="r2_experiments.",
-        )
+        with create_temp_config_file({}) as f:
+            decider_ctx_factory = decider_client_from_config(
+                {"r2_experiments.path": f.name, "r2_experiments.timeout": "2 seconds"},
+                self.event_logger,
+                prefix="r2_experiments.",
+            )
         self.assertIsInstance(decider_ctx_factory, DeciderContextFactory)
         file_watcher_mock.assert_called_once_with(
-            path="/tmp/test", parser=init_decider_parser, timeout=60.0, backoff=None
+            path=f.name, parser=init_decider_parser, timeout=2.0, backoff=None
         )
 
 
-@mock.patch("reddit_decider.FileWatcher")
 class DeciderContextFactoryTests(unittest.TestCase):
     def setUp(self):
         super().setUp()
@@ -115,14 +120,22 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.mock_span.context.edge_context.origin_service.name = ORIGIN_SERVICE
         self.mock_span.context.edge_context.device.id = DEVICE_ID
 
-    def test_make_object_for_context_and_decider_context(self, _filewatcher):
-        decider_ctx_factory = decider_client_from_config(
-            {"experiments.path": "/tmp/test", "experiments.timeout": "60 seconds"},
-            self.event_logger,
-            prefix="experiments.",
-            request_field_extractor=decider_field_extractor,
-        )
-        decider = decider_ctx_factory.make_object_for_context(name="test", span=self.mock_span)
+    def test_make_object_for_context_and_decider_context(self):
+        with create_temp_config_file({}) as f:
+            decider_ctx_factory = decider_client_from_config(
+                {"experiments.path": f.name, "experiments.timeout": "2 seconds"},
+                self.event_logger,
+                prefix="experiments.",
+                request_field_extractor=decider_field_extractor,
+            )
+        with self.assertLogs(logger, logging.WARN) as captured:
+            # ensure no warnings are printed except for the dummy one
+            # https://stackoverflow.com/a/61381576/4260179
+            logger.warn("Dummy warning")
+            decider = decider_ctx_factory.make_object_for_context(name="test", span=self.mock_span)
+            assert len(captured.records) == 1
+            self.assertEqual(["WARNING:root:Dummy warning"], captured.output)
+
         self.assertIsInstance(decider, Decider)
 
         decider_context = getattr(decider, "_decider_context")
@@ -183,22 +196,29 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(decider_event_dict["canonical_url"], CANONICAL_URL)
         self.assertEqual(decider_event_dict["request"]["canonical_url"], CANONICAL_URL)
 
-    def test_make_object_for_context_and_decider_context_without_span(self, _filewatcher):
-        decider_ctx_factory = decider_client_from_config(
-            {"experiments.path": "/tmp/test", "experiments.timeout": "60 seconds"},
-            self.event_logger,
-            prefix="experiments.",
-            request_field_extractor=decider_field_extractor,
-        )
-        decider = decider_ctx_factory.make_object_for_context(name="test", span=None)
+    def test_make_object_for_context_and_decider_context_without_span(self):
+        with create_temp_config_file({}) as f:
+            decider_ctx_factory = decider_client_from_config(
+                {"experiments.path": f.name, "experiments.timeout": "2 seconds"},
+                self.event_logger,
+                prefix="experiments.",
+                request_field_extractor=decider_field_extractor,
+            )
+        with self.assertLogs(logger, logging.WARN) as captured:
+            # ensure no warnings are printed except for the dummy one
+            # https://stackoverflow.com/a/61381576/4260179
+            logger.warn("Dummy warning")
+
+            decider = decider_ctx_factory.make_object_for_context(name="test", span=None)
+            assert len(captured.records) == 1
+            self.assertEqual(["WARNING:root:Dummy warning"], captured.output)
+
         self.assertIsInstance(decider, Decider)
 
         decider_ctx_dict = decider._decider_context.to_dict()
         self.assertEqual(decider_ctx_dict["user_id"], None)
 
-    def test_make_object_for_context_and_decider_context_with_broken_decider_field_extractor(
-        self, _filewatcher
-    ):
+    def test_make_object_for_context_and_decider_context_with_broken_decider_field_extractor(self):
         def broken_decider_field_extractor(_request: RequestContext):
             return {
                 "app_name": {},
@@ -208,15 +228,18 @@ class DeciderContextFactoryTests(unittest.TestCase):
                 None: "xyz",
             }
 
-        decider_ctx_factory = decider_client_from_config(
-            {"experiments.path": "/tmp/test", "experiments.timeout": "60 seconds"},
-            self.event_logger,
-            prefix="experiments.",
-            request_field_extractor=broken_decider_field_extractor,
-        )
+        with create_temp_config_file({}) as f:
+            decider_ctx_factory = decider_client_from_config(
+                {"experiments.path": f.name, "experiments.timeout": "2 seconds"},
+                self.event_logger,
+                prefix="experiments.",
+                request_field_extractor=broken_decider_field_extractor,
+            )
 
         with self.assertLogs() as captured:
             decider_ctx_factory.make_object_for_context(name="test", span=self.mock_span)
+
+            assert len(captured.records) == 3
 
             assert any(
                 "None key in request_field_extractor() dict is not of type str and is removed."
