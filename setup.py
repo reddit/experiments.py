@@ -20,6 +20,7 @@ setup(
         "baseplate>=2.0.0a1,<3.0",
         "reddit-edgecontext>=1.0.0a3,<2.0",
         "reddit-decider>=1.2.2",
+        "typing_extensions>=3.10.0.0",
     ],
     package_data={"reddit_experiments": ["py.typed"]},
     zip_safe=True,
