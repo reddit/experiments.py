@@ -14,7 +14,6 @@ from reddit_decider import DeciderContext
 from reddit_decider import init_decider_parser
 from reddit_experiments import Experiments
 
-
 ORIGINAL_ZK_CONFIG_FILE = "tests/range_variant_tests/data/original_zk_config.json"
 RANGE_VARIANT_ZK_CONFIG_FILE = "tests/range_variant_tests/data/range_variant_zk_config.json"
 RESULTS_OUTPUT = "tests/range_variant_tests/data/output.json"
@@ -51,8 +50,9 @@ class TestExperiments(unittest.TestCase):
             cfg_data=self.range_variant_zk_config,
         )
 
-
-        filewatcher = FileWatcher(path=RANGE_VARIANT_ZK_CONFIG_FILE, parser=init_decider_parser, timeout=2, backoff=2)
+        filewatcher = FileWatcher(
+            path=RANGE_VARIANT_ZK_CONFIG_FILE, parser=init_decider_parser, timeout=2, backoff=2
+        )
         extracted_fields = {"app_name": "", "build_number": 0}
 
         # results = {}
@@ -71,9 +71,7 @@ class TestExperiments(unittest.TestCase):
                 og_variant = original_experiments.variant(
                     experiment_name, user=user, **extracted_fields
                 )
-                rv_variant = rv_experiments.variant(
-                    experiment_name, user=user, **extracted_fields
-                )
+                rv_variant = rv_experiments.variant(experiment_name, user=user, **extracted_fields)
 
                 # compare experiments sdk in original data format to range-variants format
                 if og_variant != rv_variant:
@@ -84,10 +82,7 @@ class TestExperiments(unittest.TestCase):
                 self.assertEqual(og_variant, rv_variant)
 
                 # decider sdk
-                decider_context = DeciderContext(
-                    user_id=uuid,
-                    extracted_fields=extracted_fields
-                )
+                decider_context = DeciderContext(user_id=uuid, extracted_fields=extracted_fields)
 
                 decider = Decider(
                     decider_context=decider_context,
