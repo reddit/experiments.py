@@ -94,13 +94,13 @@ class TestExperiments(unittest.TestCase):
 
                 decider_variant = decider.get_variant(experiment_name=experiment_name)
 
-                # compare experiments sdk in original data format to range-variants format
+                # compare decider sdk to original experiments sdk in range-variant format
                 if decider_variant != rv_variant:
                     print(f"\n\nexperiment: {experiment_name}")
                     print(f"uuid: {uuid}")
                     print(f"rv variant: {rv_variant}")
                     print(f"decider variant: {decider_variant}")
-                self.assertEqual(rv_variant, decider_variant)
+                self.assertEqual(decider_variant, rv_variant)
 
                 # construct experiment/uuid to variant mapping
                 # used to compare results across baseplate languages
