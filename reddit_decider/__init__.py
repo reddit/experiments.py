@@ -820,7 +820,7 @@ class Decider:
         where "type" field can be one of:
             "boolean", "integer", "float", "string", or "map"
 
-        Dynamic Configurations that are malformed, fail parsing, or otherwirse
+        Dynamic Configurations that are malformed, fail parsing, or otherwise
         error for any reason are included in the response and have their respective default
         values set:
             "boolean" -> False
