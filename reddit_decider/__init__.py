@@ -61,7 +61,7 @@ class DeciderContext:
         user_is_employee: Optional[bool] = None,
         logged_in: Optional[bool] = None,
         device_id: Optional[str] = None,
-        auth_client_id: Optional[str] = None,
+        oauth_client_id: Optional[str] = None,
         origin_service: Optional[str] = None,
         cookie_created_timestamp: Optional[float] = None,
         extracted_fields: Optional[dict] = None,
@@ -72,7 +72,7 @@ class DeciderContext:
         self._user_is_employee = user_is_employee
         self._logged_in = logged_in
         self._device_id = device_id
-        self._auth_client_id = auth_client_id
+        self._oauth_client_id = oauth_client_id
         self._origin_service = origin_service
         self._cookie_created_timestamp = cookie_created_timestamp
         self._extracted_fields = extracted_fields
@@ -87,7 +87,7 @@ class DeciderContext:
             "user_is_employee": self._user_is_employee,
             "logged_in": self._logged_in,
             "device_id": self._device_id,
-            "auth_client_id": self._auth_client_id,
+            "oauth_client_id": self._oauth_client_id,
             "origin_service": self._origin_service,
             "cookie_created_timestamp": self._cookie_created_timestamp,
             "other_fields": ef,
@@ -1042,12 +1042,12 @@ class DeciderContextFactory(ContextFactory):
                 f"Error while accessing `user.event_fields()` in `make_object_for_context()`. details: {exc}"
             )
 
-        auth_client_id = None
+        oauth_client_id = None
         try:
             if isinstance(ec.authentication_token, ValidatedAuthenticationToken):
                 oc_id = ec.authentication_token.oauth_client_id
                 if oc_id:
-                    auth_client_id = oc_id
+                    oauth_client_id = oc_id
         except Exception as exc:
             logger.info(
                 f"Unable to access `ec.authentication_token.oauth_client_id` in `make_object_for_context()`. details: {exc}"
@@ -1102,7 +1102,7 @@ class DeciderContextFactory(ContextFactory):
                 origin_service=origin_service,
                 user_is_employee=is_employee,
                 device_id=device_id,
-                auth_client_id=auth_client_id,
+                oauth_client_id=oauth_client_id,
                 cookie_created_timestamp=cookie_created_timestamp,
                 extracted_fields=parsed_extracted_fields,
             )

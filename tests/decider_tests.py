@@ -149,7 +149,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(decider_ctx_dict["device_id"], DEVICE_ID)
         self.assertEqual(decider_ctx_dict["locale"], LOCALE_CODE)
         self.assertEqual(decider_ctx_dict["origin_service"], ORIGIN_SERVICE)
-        self.assertEqual(decider_ctx_dict["auth_client_id"], AUTH_CLIENT_ID)
+        self.assertEqual(decider_ctx_dict["oauth_client_id"], AUTH_CLIENT_ID)
         self.assertEqual(
             decider_ctx_dict["cookie_created_timestamp"],
             self.mock_span.context.edge_context.user.event_fields().get("cookie_created_timestamp"),
@@ -178,7 +178,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(decider_event_dict["locale"], LOCALE_CODE)
         self.assertEqual(decider_event_dict["app"]["relevant_locale"], LOCALE_CODE)
         self.assertEqual(decider_event_dict["origin_service"], ORIGIN_SERVICE)
-        self.assertEqual(decider_event_dict.get("auth_client_id"), None)
+        self.assertEqual(decider_event_dict.get("oauth_client_id"), None)
         self.assertEqual(
             decider_event_dict["cookie_created_timestamp"],
             self.mock_span.context.edge_context.user.event_fields().get("cookie_created_timestamp"),
@@ -373,7 +373,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             origin_service=ORIGIN_SERVICE,
             user_is_employee=True,
             device_id=DEVICE_ID,
-            auth_client_id=AUTH_CLIENT_ID,
+            oauth_client_id=AUTH_CLIENT_ID,
             cookie_created_timestamp=COOKIE_CREATED_TIMESTAMP,
             extracted_fields=decider_field_extractor(_request=None),
         )
@@ -649,7 +649,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(self.event_logger.log.call_count, 0)
 
                 assert any(
-                    'Requested identifier_type: "canonical_url" is incompatible with experiment\'s "bucket_val" = "device_id".'
+                    'Requested identifier_type: "canonical_url" is incompatible with experiment\'s bucket_val = device_id.'
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -758,7 +758,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(variant, None)
 
                 assert any(
-                    'Encountered error in decider.choose(): Requested identifier_type: "canonical_url" is incompatible with experiment\'s "bucket_val" = "device_id".'
+                    'Encountered error in decider.choose(): Requested identifier_type: "canonical_url" is incompatible with experiment\'s bucket_val = device_id.'
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -1288,7 +1288,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             origin_service=ORIGIN_SERVICE,
             user_is_employee=True,
             device_id=DEVICE_ID,
-            auth_client_id=AUTH_CLIENT_ID,
+            oauth_client_id=AUTH_CLIENT_ID,
             cookie_created_timestamp=COOKIE_CREATED_TIMESTAMP,
         )
 
