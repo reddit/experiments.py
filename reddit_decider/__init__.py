@@ -102,7 +102,6 @@ class DeciderContext:
             "id": self._user_id,
             "logged_in": self._logged_in,
             "cookie_created_timestamp": self._cookie_created_timestamp,
-            "loid_created_timstamp": self._loid_created_timestamp,
             "is_employee": self._user_is_employee,
         }
 
@@ -139,7 +138,6 @@ class DeciderContext:
             "device_id": self._device_id,
             "origin_service": self._origin_service,
             "cookie_created_timestamp": self._cookie_created_timestamp,
-            "loid_created_timestamp": self._loid_created_timestamp,
             "user": user_fields,
             "app": app_fields,
             "geo": geo_fields,

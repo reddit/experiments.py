@@ -184,7 +184,6 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(decider_event_dict["app"]["relevant_locale"], LOCALE_CODE)
         self.assertEqual(decider_event_dict["origin_service"], ORIGIN_SERVICE)
         self.assertEqual(decider_event_dict.get("oauth_client_id"), None)
-        self.assertEqual(decider_event_dict["loid_created_timestamp"], LOID_CREATED_TIMESTAMP)
         self.assertEqual(
             decider_event_dict["cookie_created_timestamp"],
             self.mock_span.context.edge_context.user.event_fields().get("cookie_created_timestamp"),
