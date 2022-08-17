@@ -50,7 +50,7 @@ class ExperimentConfig:
 class DeciderContext:
     """DeciderContext() is used to contain all fields necessary for
     bucketing, targeting, and overrides.
-    DeciderContext() is populated in `make_object_for_context()`.
+    :code:`DeciderContext()` is populated in :code:`make_object_for_context()`.
     """
 
     def __init__(
@@ -163,11 +163,11 @@ def validate_decider(decider: Optional[Any]) -> None:
 class Decider:
     """Access to experiments with automatic refresh when changed.
 
-    This experiments client allows access to the experiments cached on disk by
-    the experiment configuration fetcher daemon.  It will automatically reload
-    the cache when changed.  This client also handles logging bucketing events
-    to the event pipeline when it is determined that the request is part of an
-    active variant.
+    This decider client allows access to the experiments cached on disk by
+    the experiment configuration fetcher daemon.
+    It will automatically reload the cache when changed.
+    This client also handles logging bucketing events to the event pipeline
+    when it is determined that the request is part of an active variant.
     """
 
     def __init__(
@@ -335,19 +335,20 @@ class Decider:
     ) -> Optional[str]:
         """Return a bucketing variant, if any, with auto-exposure.
 
-        Since calling `get_variant()` will fire an exposure event, it
+        Since calling :code:`get_variant()` will fire an exposure event, it
         is best to call it when you are sure the user will be exposed to the experiment.
+
         If you absolutely must check the status of an experiment
         before the user will be exposed to the experiment,
-        use `get_variant_without_expose()` to disable exposure events
-        and call `expose()` manually later.
+        use :code:`get_variant_without_expose()` to disable exposure events
+        and call :code:`expose()` manually later.
 
         :param experiment_name: Name of the experiment you want a variant for.
 
         :param exposure_kwargs:  Additional arguments that will be passed
             to events_logger (keys must be part of v2 event schema).
 
-        :return: Variant name if a variant is assigned, None otherwise.
+        :return: Variant name if a variant is assigned, :code:`None` otherwise.
         """
         decider = self._get_decider()
         if decider is None:
@@ -379,12 +380,12 @@ class Decider:
     def get_variant_without_expose(self, experiment_name: str) -> Optional[str]:
         """Return a bucketing variant, if any, without emitting exposure event.
 
-        The `expose()` function is available to be manually called afterward.
+        The :code:`expose()` function is available to be manually called afterward.
 
         However, experiments in Holdout Groups will still send an exposure for
         the holdout parent experiment, since it is not possible to
         manually expose the holdout later (because after exiting this function,
-        it's impossible to know if a returned `None` or `"control_1"` string
+        it's impossible to know if a returned :code:`None` or :code:`"control_1"` string
         came from the holdout group or its child experiment).
 
         :param experiment_name: Name of the experiment you want a variant for.
@@ -423,8 +424,8 @@ class Decider:
     ) -> None:
         """Log an event to indicate that a user has been exposed to an experimental treatment.
 
-        Meant to be used after calling `get_variant_without_expose()`
-        since `get_variant()` emits exposure event automatically.
+        Meant to be used after calling :code:`get_variant_without_expose()`
+        since :code:`get_variant()` emits exposure event automatically.
 
         :param experiment_name: Name of the experiment that was exposed.
 
@@ -477,17 +478,17 @@ class Decider:
     ) -> Optional[str]:
         """Return a bucketing variant for identifier, if any, with auto-exposure.
 
-        Since calling `get_variant_for_identifier()` will fire an exposure event, it
+        Since calling :code:`get_variant_for_identifier()` will fire an exposure event, it
         is best to call it when you are sure the user will be exposed to the experiment.
 
         :param experiment_name: Name of the experiment you want a variant for.
 
         :param identifier: an arbitary string used to bucket the experiment by
-            being set on `DeciderContext`'s `identifier_type` field.
+            being set on :code:`DeciderContext`'s :code:`identifier_type` field.
 
         :param identifier_type: (one of ["user_id", "device_id", "canonical_url"])
-            Sets `{identifier_type: identifier}` on DeciderContext and
-            should match an experiment's `bucket_val` to get a variant.
+            Sets :code:`{identifier_type: identifier}` on DeciderContext and
+            should match an experiment's :code:`bucket_val` to get a variant.
 
         :param exposure_kwargs:  Additional arguments that will be passed
             to events_logger under "inputs" key.
@@ -539,25 +540,25 @@ class Decider:
         identifier: str,
         identifier_type: Literal["user_id", "device_id", "canonical_url"],
     ) -> Optional[str]:
-        """Return a bucketing variant for `identifier`, if any, without emitting exposure event.
+        """Return a bucketing variant for :code:`identifier`, if any, without emitting exposure event.
 
-        The `expose()` function is available to be manually called afterward to emit
+        The :code:`expose()` function is available to be manually called afterward to emit
         exposure event.
 
         However, experiments in Holdout Groups will still send an exposure for
         the holdout parent experiment, since it is not possible to
         manually expose the holdout later (because after exiting this function,
-        it's impossible to know if a returned `None` or `"control_1"` string
+        it's impossible to know if a returned :code:`None` or :code:`"control_1"` string
         came from the holdout group or its child experiment).
 
         :param experiment_name: Name of the experiment you want a variant for.
 
         :param identifier: an arbitary string used to bucket the experiment by
-            being set on `DeciderContext`'s `identifier_type` field.
+            being set on :code:`DeciderContext`'s :code:`identifier_type` field.
 
         :param identifier_type: (one of ["user_id", "device_id", "canonical_url"])
-            Sets `{identifier_type: identifier}` on DeciderContext and
-            should match an experiment's `bucket_val` to get a variant.
+            Sets :code:`{identifier_type: identifier}` on DeciderContext and
+            should match an experiment's :code:`bucket_val` to get a variant.
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
@@ -601,6 +602,9 @@ class Decider:
 
     def get_all_variants_without_expose(self) -> List[Dict[str, Union[str, int]]]:
         """Return a list of experiment dicts in this format:
+
+            .. code-block:: json
+
                 [
                     {
                         "id": 1,
@@ -611,20 +615,21 @@ class Decider:
                     },
                     ...
                 ]
-            If an experiment has a variant of `None`, it is not included
+
+            If an experiment has a variant of :code:`None`, it is not included
             in the returned list. All available experiments get bucketed.
             Exposure events are not emitted.
 
-        The `expose()` function is available to be manually called afterward to emit
+        The :code:`expose()` function is available to be manually called afterward to emit
         exposure event.
 
         However, experiments in Holdout Groups will still send an exposure for
         the holdout parent experiment, since it is not possible to
         manually expose the holdout later (because after exiting this function,
-        it's impossible to know if a returned `None` or `"control_1"` string
+        it's impossible to know if a returned :code:`None` or :code:`"control_1"` string
         came from the holdout group or its child experiment).
 
-        :return: list of experiment dicts with non-`None` variants.
+        :return: list of experiment dicts with non-:code:`None` variants.
         """
         decider = self._get_decider()
         if decider is None:
@@ -671,37 +676,37 @@ class Decider:
         self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
     ) -> List[Dict[str, Union[str, int]]]:
         """Return a list of experiment dicts in this format:
-                [
-                    {
-                        "id": 1,
-                        "name": "variant_1",
-                        "version": "1",
-                        "experimentName": "exp_1"
 
-                    },
-                    ...
-                ]
-            If an experiment has a variant of `None`, it is not included
+                .. code-block:: json
+
+                    [
+                        {
+                            "id": 1,
+                            "name": "variant_1",
+                            "version": "1",
+                            "experimentName": "exp_1"
+
+                        },
+                        ...
+                    ]
+            If an experiment has a variant of :code:`None`, it is not included
             in the returned list. All available experiments get bucketed.
             Exposure events are not emitted.
-
-        The `expose()` function is available to be manually called afterward to emit
-        exposure event.
 
         However, experiments in Holdout Groups will still send an exposure for
         the holdout parent experiment, since it is not possible to
         manually expose the holdout later (because after exiting this function,
-        it's impossible to know if a returned `None` or `"control_1"` string
+        it's impossible to know if a returned :code:`None` or :code:`"control_1"` string
         came from the holdout group or its child experiment).
 
         :param identifier: an arbitary string used to bucket the experiment by
-            being set on `DeciderContext`'s `identifier_type` field.
+            being set on :code:`DeciderContext`'s :code:`identifier_type` field.
 
         :param identifier_type: (one of ["user_id", "device_id", "canonical_url"])
-            Sets `{identifier_type: identifier}` on DeciderContext and
-            should match an experiment's `bucket_val` to get a variant.
+            Sets :code:`{identifier_type: identifier}` on DeciderContext and
+            should match an experiment's :code:`bucket_val` to get a variant.
 
-        :return: list of experiment dicts with non-`None` variants.
+        :return: list of experiment dicts with non-:code:`None` variants.
         """
         if identifier_type not in IDENTIFIERS:
             logger.warning(
@@ -808,6 +813,9 @@ class Decider:
 
     def get_all_dynamic_configs(self) -> List[Dict[str, Any]]:
         """Return a list of dynamic configuration dicts in this format:
+
+            .. code-block:: json
+
                 [
                     {
                         "name": "example_dc",
@@ -823,6 +831,9 @@ class Decider:
         Dynamic Configurations that are malformed, fail parsing, or otherwise
         error for any reason are included in the response and have their respective default
         values set:
+
+        .. code-block:: json
+
             "boolean" -> False
             "integer" -> 0
             "float"   -> 0.0
@@ -867,11 +878,11 @@ class Decider:
         return parsed_configs
 
     def get_experiment(self, experiment_name: str) -> Optional[ExperimentConfig]:
-        """Get an `ExperimentConfig` representation of an experiment or `None` if not found.
+        """Get an :code:`ExperimentConfig` (dataclass) representation of an experiment or :code:`None` if not found.
 
         :param experiment_name: Name of the experiment to be fetched.
 
-        :return: an `ExperimentConfig` representation of an experiment if found, else `None`.
+        :return: an :code:`ExperimentConfig` dataclass representation of an experiment if found, else :code:`None`.
         """
         decider = self._get_decider()
         if decider is None:
@@ -917,7 +928,7 @@ class DeciderContextFactory(ContextFactory):
     :param backoff: retry backoff time for experiments file watcher. Defaults to
         None, which is mapped to DEFAULT_FILEWATCHER_BACKOFF.
     :param request_field_extractor: an optional function used to populate fields such as
-        "app_name" & "build_number" in DeciderContext() via `extracted_fields` arg
+        "app_name" & "build_number" in DeciderContext() via :code:`extracted_fields` arg
 
     """
 
@@ -1135,7 +1146,7 @@ class DeciderClient(config.Parser):
     :param prefix: the prefix used to filter config keys (defaults to "experiments.").
 
     :param request_field_extractor: (optional) function used to populate fields such as
-        "app_name" & "build_number" in DeciderContext() via `extracted_fields` arg
+        :code:`"app_name"` & :code:`"build_number"` in :code:`DeciderContext()` via :code:`extracted_fields` arg
     """
 
     def __init__(
