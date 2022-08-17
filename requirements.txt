@@ -1,5 +1,4 @@
 -r requirements-transitive.txt
-alabaster==0.7.12
 baseplate==2.0.0a1
 black==21.4b2
 reddit-decider==1.2.15
@@ -10,7 +9,5 @@ pydocstyle==5.1.1
 pytest==6.2.5
 pytest-cov==2.10.1
 reorder-python-imports==2.3.6
-Sphinx==3.4.0
-sphinx-autodoc-typehints==1.11.1
 reddit-edgecontext==1.0.0a3
 typing_extensions==4.2.0
