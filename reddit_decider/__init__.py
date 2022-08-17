@@ -64,6 +64,7 @@ class DeciderContext:
         oauth_client_id: Optional[str] = None,
         origin_service: Optional[str] = None,
         cookie_created_timestamp: Optional[float] = None,
+        loid_created_timestamp: Optional[float] = None,
         extracted_fields: Optional[dict] = None,
     ):
         self._user_id = user_id
@@ -75,6 +76,7 @@ class DeciderContext:
         self._oauth_client_id = oauth_client_id
         self._origin_service = origin_service
         self._cookie_created_timestamp = cookie_created_timestamp
+        self._loid_created_timestamp = loid_created_timestamp
         self._extracted_fields = extracted_fields
 
     def to_dict(self) -> Dict:
@@ -90,6 +92,7 @@ class DeciderContext:
             "oauth_client_id": self._oauth_client_id,
             "origin_service": self._origin_service,
             "cookie_created_timestamp": self._cookie_created_timestamp,
+            "loid_created_timestamp": self._loid_created_timestamp,
             "other_fields": ef,
             **ef,
         }
@@ -1053,6 +1056,17 @@ class DeciderContextFactory(ContextFactory):
                 f"Error while accessing `user.event_fields()` in `make_object_for_context()`. details: {exc}"
             )
 
+        loid_created_timestamp = None
+        try:
+            if isinstance(ec.authentication_token, ValidatedAuthenticationToken):
+                loid_cms = ec.authentication_token.loid_created_ms
+                if loid_cms:
+                    loid_created_timestamp = loid_cms
+        except Exception as exc:
+            logger.info(
+                f"Unable to access `ec.authentication_token.loid_created_ms` in `make_object_for_context()`. details: {exc}"
+            )
+
         oauth_client_id = None
         try:
             if isinstance(ec.authentication_token, ValidatedAuthenticationToken):
@@ -1115,6 +1129,7 @@ class DeciderContextFactory(ContextFactory):
                 device_id=device_id,
                 oauth_client_id=oauth_client_id,
                 cookie_created_timestamp=cookie_created_timestamp,
+                loid_created_timestamp=loid_created_timestamp,
                 extracted_fields=parsed_extracted_fields,
             )
         except Exception as exc:

@@ -27,6 +27,7 @@ AUTH_CLIENT_ID = "token"
 COUNTRY_CODE = "US"
 DEVICE_ID = "abc"
 COOKIE_CREATED_TIMESTAMP = 1234
+LOID_CREATED_TIMESTAMP = 123456
 LOCALE_CODE = "us_en"
 ORIGIN_SERVICE = "origin"
 APP_NAME = "ios"
@@ -115,6 +116,9 @@ class DeciderContextFactoryTests(unittest.TestCase):
             spec=ValidatedAuthenticationToken
         )
         self.mock_span.context.edge_context.authentication_token.oauth_client_id = AUTH_CLIENT_ID
+        self.mock_span.context.edge_context.authentication_token.loid_created_ms = (
+            LOID_CREATED_TIMESTAMP
+        )
         self.mock_span.context.edge_context.geolocation.country_code = COUNTRY_CODE
         self.mock_span.context.edge_context.locale.locale_code = LOCALE_CODE
         self.mock_span.context.edge_context.origin_service.name = ORIGIN_SERVICE
@@ -154,6 +158,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
             decider_ctx_dict["cookie_created_timestamp"],
             self.mock_span.context.edge_context.user.event_fields().get("cookie_created_timestamp"),
         )
+        self.assertEqual(decider_ctx_dict["loid_created_timestamp"], LOID_CREATED_TIMESTAMP)
         self.assertEqual(decider_ctx_dict["app_name"], APP_NAME)
         self.assertEqual(decider_ctx_dict["other_fields"]["app_name"], APP_NAME)
         self.assertEqual(decider_ctx_dict["app_version"], APP_VERSION)
@@ -375,6 +380,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             device_id=DEVICE_ID,
             oauth_client_id=AUTH_CLIENT_ID,
             cookie_created_timestamp=COOKIE_CREATED_TIMESTAMP,
+            loid_created_timestamp=LOID_CREATED_TIMESTAMP,
             extracted_fields=decider_field_extractor(_request=None),
         )
 
@@ -1290,6 +1296,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             device_id=DEVICE_ID,
             oauth_client_id=AUTH_CLIENT_ID,
             cookie_created_timestamp=COOKIE_CREATED_TIMESTAMP,
+            loid_created_timestamp=LOID_CREATED_TIMESTAMP,
         )
 
     def setup_decider(self, file_name, decider_context):
