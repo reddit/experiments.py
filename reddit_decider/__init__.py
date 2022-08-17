@@ -1046,7 +1046,7 @@ class DeciderContextFactory(ContextFactory):
             logger.info(
                 f"Error while accessing `user.event_fields()` in `make_object_for_context()`. details: {exc}"
             )
-        
+
         loid_created_timestamp = None
         try:
             if isinstance(ec.authentication_token, ValidatedAuthenticationToken):

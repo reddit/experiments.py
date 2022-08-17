@@ -116,7 +116,9 @@ class DeciderContextFactoryTests(unittest.TestCase):
             spec=ValidatedAuthenticationToken
         )
         self.mock_span.context.edge_context.authentication_token.oauth_client_id = AUTH_CLIENT_ID
-        self.mock_span.context.edge_context.authentication_token.loid_created_ms = LOID_CREATED_TIMESTAMP
+        self.mock_span.context.edge_context.authentication_token.loid_created_ms = (
+            LOID_CREATED_TIMESTAMP
+        )
         self.mock_span.context.edge_context.geolocation.country_code = COUNTRY_CODE
         self.mock_span.context.edge_context.locale.locale_code = LOCALE_CODE
         self.mock_span.context.edge_context.origin_service.name = ORIGIN_SERVICE
