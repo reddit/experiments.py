@@ -1050,8 +1050,8 @@ class DeciderContextFactory(ContextFactory):
         loid_created_timestamp = None
         try:
             if isinstance(ec.authentication_token, ValidatedAuthenticationToken):
-                loid_cms = ec.authentication_token.oauth_client_id
-                if oc_id:
+                loid_cms = ec.authentication_token.loid_created_ms
+                if loid_cms:
                     loid_created_timestamp = loid_cms
         except Exception as exc:
             logger.info(
