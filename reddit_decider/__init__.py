@@ -169,8 +169,6 @@ class Decider:
     This decider client allows access to the experiments cached on disk by
     the experiment configuration fetcher daemon.
     It will automatically reload the cache when changed.
-    This client also handles logging bucketing events to the event pipeline
-    when it is determined that the request is part of an active variant.
     """
 
     def __init__(
@@ -349,7 +347,8 @@ class Decider:
         :param experiment_name: Name of the experiment you want a variant for.
 
         :param exposure_kwargs:  Additional arguments that will be passed
-            to events_logger (keys must be part of v2 event schema).
+            to :code:`events_logger` (keys must be part of v2 event schema,
+            use dicts for nested fields) under :code:`inputs` and as :code:`kwargs`
 
         :return: Variant name if a variant is assigned, :code:`None` otherwise.
         """
@@ -387,9 +386,9 @@ class Decider:
 
         However, experiments in Holdout Groups will still send an exposure for
         the holdout parent experiment, since it is not possible to
-        manually expose the holdout later (because after exiting this function,
-        it's impossible to know if a returned :code:`None` or :code:`"control_1"` string
-        came from the holdout group or its child experiment).
+        manually expose the holdout later (because it's impossible to know if a
+        returned :code:`None` or :code:`"control_1"` string
+        came from the holdout group or its child experiment once this function exits).
 
         :param experiment_name: Name of the experiment you want a variant for.
 
@@ -435,7 +434,8 @@ class Decider:
         :param variant_name: Name of the variant that was exposed.
 
         :param exposure_kwargs: Additional arguments that will be passed
-            to events_logger (keys must be part of v2 event schema).
+            to :code:`events_logger` (keys must be part of v2 event schema,
+            use dicts for nested fields) under :code:`inputs` and as :code:`kwargs`
         """
         decider = self._get_decider()
         if decider is None:
@@ -479,7 +479,7 @@ class Decider:
         identifier_type: Literal["user_id", "device_id", "canonical_url"],
         **exposure_kwargs: Optional[Dict[str, Any]],
     ) -> Optional[str]:
-        """Return a bucketing variant for identifier, if any, with auto-exposure.
+        """Return a bucketing variant, if any, with auto-exposure for a given :code:`identifier`.
 
         Since calling :code:`get_variant_for_identifier()` will fire an exposure event, it
         is best to call it when you are sure the user will be exposed to the experiment.
@@ -489,12 +489,13 @@ class Decider:
         :param identifier: an arbitary string used to bucket the experiment by
             being set on :code:`DeciderContext`'s :code:`identifier_type` field.
 
-        :param identifier_type: (one of ["user_id", "device_id", "canonical_url"])
-            Sets :code:`{identifier_type: identifier}` on DeciderContext and
+        :param identifier_type: Sets :code:`{identifier_type: identifier}` on DeciderContext and
             should match an experiment's :code:`bucket_val` to get a variant.
 
-        :param exposure_kwargs:  Additional arguments that will be passed
-            to events_logger under "inputs" key.
+        :param exposure_kwargs: Additional arguments that will be passed
+            to :code:`events_logger` (keys must be part of v2 event schema,
+            use dicts for nested fields) under :code:`inputs` and as :code:`kwargs`
+
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
@@ -543,24 +544,23 @@ class Decider:
         identifier: str,
         identifier_type: Literal["user_id", "device_id", "canonical_url"],
     ) -> Optional[str]:
-        """Return a bucketing variant for :code:`identifier`, if any, without emitting exposure event.
+        """Return a bucketing variant, if any, without emitting exposure event for a given :code:`identifier`.
 
         The :code:`expose()` function is available to be manually called afterward to emit
         exposure event.
 
         However, experiments in Holdout Groups will still send an exposure for
         the holdout parent experiment, since it is not possible to
-        manually expose the holdout later (because after exiting this function,
-        it's impossible to know if a returned :code:`None` or :code:`"control_1"` string
-        came from the holdout group or its child experiment).
+        manually expose the holdout later (because it's impossible to know if a
+        returned :code:`None` or :code:`"control_1"` string
+        came from the holdout group or its child experiment once this function exits).
 
         :param experiment_name: Name of the experiment you want a variant for.
 
         :param identifier: an arbitary string used to bucket the experiment by
             being set on :code:`DeciderContext`'s :code:`identifier_type` field.
 
-        :param identifier_type: (one of ["user_id", "device_id", "canonical_url"])
-            Sets :code:`{identifier_type: identifier}` on DeciderContext and
+        :param identifier_type: Sets :code:`{identifier_type: identifier}` on DeciderContext and
             should match an experiment's :code:`bucket_val` to get a variant.
 
         :return: Variant name if a variant is assigned, None otherwise.
@@ -615,8 +615,7 @@ class Decider:
                         "version": "1",
                         "experimentName": "exp_1"
 
-                    },
-                    ...
+                    }
                 ]
 
             If an experiment has a variant of :code:`None`, it is not included
@@ -628,9 +627,9 @@ class Decider:
 
         However, experiments in Holdout Groups will still send an exposure for
         the holdout parent experiment, since it is not possible to
-        manually expose the holdout later (because after exiting this function,
-        it's impossible to know if a returned :code:`None` or :code:`"control_1"` string
-        came from the holdout group or its child experiment).
+        manually expose the holdout later (because it's impossible to know if a
+        returned :code:`None` or :code:`"control_1"` string
+        came from the holdout group or its child experiment once this function exits).
 
         :return: list of experiment dicts with non-:code:`None` variants.
         """
@@ -678,7 +677,7 @@ class Decider:
     def get_all_variants_for_identifier_without_expose(
         self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
     ) -> List[Dict[str, Union[str, int]]]:
-        """Return a list of experiment dicts in this format:
+        """Return a list of experiment dicts for a given :code:`identifier` in this format:
 
                 .. code-block:: json
 
@@ -689,8 +688,7 @@ class Decider:
                             "version": "1",
                             "experimentName": "exp_1"
 
-                        },
-                        ...
+                        }
                     ]
             If an experiment has a variant of :code:`None`, it is not included
             in the returned list. All available experiments get bucketed.
@@ -698,15 +696,14 @@ class Decider:
 
         However, experiments in Holdout Groups will still send an exposure for
         the holdout parent experiment, since it is not possible to
-        manually expose the holdout later (because after exiting this function,
-        it's impossible to know if a returned :code:`None` or :code:`"control_1"` string
-        came from the holdout group or its child experiment).
+        manually expose the holdout later (because it's impossible to know if a
+        returned :code:`None` or :code:`"control_1"` string
+        came from the holdout group or its child experiment once this function exits).
 
         :param identifier: an arbitary string used to bucket the experiment by
             being set on :code:`DeciderContext`'s :code:`identifier_type` field.
 
-        :param identifier_type: (one of ["user_id", "device_id", "canonical_url"])
-            Sets :code:`{identifier_type: identifier}` on DeciderContext and
+        :param identifier_type: Sets :code:`{identifier_type: identifier}` on DeciderContext and
             should match an experiment's :code:`bucket_val` to get a variant.
 
         :return: list of experiment dicts with non-:code:`None` variants.
@@ -823,19 +820,21 @@ class Decider:
                     {
                         "name": "example_dc",
                         "type": "float",
-                        "value": 1.0,
-                    },
-                    ...
+                        "value": 1.0
+                    }
                 ]
 
         where "type" field can be one of:
-            "boolean", "integer", "float", "string", or "map"
+
+            .. code-block:: python
+
+                "boolean", "integer", "float", "string", "map"
 
         Dynamic Configurations that are malformed, fail parsing, or otherwise
         error for any reason are included in the response and have their respective default
         values set:
 
-        .. code-block:: json
+        .. code-block:: python
 
             "boolean" -> False
             "integer" -> 0
@@ -881,11 +880,13 @@ class Decider:
         return parsed_configs
 
     def get_experiment(self, experiment_name: str) -> Optional[ExperimentConfig]:
-        """Get an :code:`ExperimentConfig` (dataclass) representation of an experiment or :code:`None` if not found.
+        """Get an :py:class:`~reddit_decider.ExperimentConfig` `dataclass <https://github.com/reddit/experiments.py/blob/728a9501faceab7072f9d62f4e391fa4c34a68b1/reddit_decider/__init__.py#L39-L47>`_
+        representation of an experiment or :code:`None` if not found.
 
         :param experiment_name: Name of the experiment to be fetched.
 
-        :return: an :code:`ExperimentConfig` dataclass representation of an experiment if found, else :code:`None`.
+        :return: an :py:class:`~reddit_decider.ExperimentConfig` `dataclass <https://github.com/reddit/experiments.py/blob/728a9501faceab7072f9d62f4e391fa4c34a68b1/reddit_decider/__init__.py#L39-L47>`_
+            representation of an experiment if found, else :code:`None`.
         """
         decider = self._get_decider()
         if decider is None:
@@ -931,7 +932,7 @@ class DeciderContextFactory(ContextFactory):
     :param backoff: retry backoff time for experiments file watcher. Defaults to
         None, which is mapped to DEFAULT_FILEWATCHER_BACKOFF.
     :param request_field_extractor: an optional function used to populate fields such as
-        "app_name" & "build_number" in DeciderContext() via :code:`extracted_fields` arg
+        "app_name" & "build_number" in DeciderContext() that may be used for targeting
 
     """
 
@@ -941,7 +942,7 @@ class DeciderContextFactory(ContextFactory):
         event_logger: Optional[EventLogger] = None,
         timeout: Optional[float] = None,
         backoff: Optional[float] = None,
-        request_field_extractor: Optional[Callable[[RequestContext], Dict[str, str]]] = None,
+        request_field_extractor: Optional[Callable[[RequestContext], Dict[str, Union[str, int, float, bool]]]] = None,
     ):
         self._filewatcher = FileWatcher(
             path=path, parser=init_decider_parser, timeout=timeout, backoff=backoff
@@ -1161,14 +1162,14 @@ class DeciderClient(config.Parser):
     :param prefix: the prefix used to filter config keys (defaults to "experiments.").
 
     :param request_field_extractor: (optional) function used to populate fields such as
-        :code:`"app_name"` & :code:`"build_number"` in :code:`DeciderContext()` via :code:`extracted_fields` arg
+        :code:`"app_name"` & :code:`"build_number"` in :code:`DeciderContext()` that may be used for targeting
     """
 
     def __init__(
         self,
         event_logger: EventLogger,
         prefix: str = "experiments.",
-        request_field_extractor: Optional[Callable[[RequestContext], Dict[str, str]]] = None,
+        request_field_extractor: Optional[Callable[[RequestContext], Dict[str, Union[str, int, float, bool]]]] = None,
     ):
         self._prefix = prefix
         self._event_logger = event_logger
@@ -1189,32 +1190,31 @@ def decider_client_from_config(
     app_config: config.RawConfig,
     event_logger: EventLogger,
     prefix: str = "experiments.",
-    request_field_extractor: Optional[Callable[[RequestContext], Dict[str, str]]] = None,
+    request_field_extractor: Optional[Callable[[RequestContext], Dict[str, Union[str, int, float, bool]]]] = None,
 ) -> DeciderContextFactory:
     """Configure and return an :py:class:`DeciderContextFactory` object.
 
-    The keys useful to :py:func:`decider_client_from_config` should be prefixed, e.g.
+    The keys used in your app's :code:`some_config.ini` file should be prefixed, e.g.
     ``experiments.path``, etc.
 
-    Supported keys:
+    Supported :code:`.ini` keys:
 
-    ``path`` (optional)
-        The path to the experiment configuration file generated by the
-        experiment configuration fetcher daemon.
-    ``timeout`` (optional)
-        The time that we should wait for the file specified by ``path`` to
-        exist.  Defaults to `None` which is `infinite`.
-    ``backoff`` (optional)
-        The base amount of time for exponential backoff when trying to find the
-        experiments config file. Defaults to no backoff between tries.
-    ``request_field_extractor`` (optional) function used to populate fields such as
-        "app_name" & "build_number" in DeciderContext() via `extracted_fields` arg
+        ``path`` (optional)
+            The path to the experiment configuration file generated by the
+            experiment configuration fetcher daemon.
+        ``timeout`` (optional)
+            The time that we should wait for the file specified by ``path`` to
+            exist.  Defaults to `None` which is `infinite`.
+        ``backoff`` (optional)
+            The base amount of time for exponential backoff when trying to find the
+            experiments config file. Defaults to no backoff between tries.
 
-    :param raw_config: The application configuration which should have
-        settings for the experiments client.
+    :param app_config: The application configuration which should have
+        settings for the decider client.
     :param event_logger: The EventLogger to be used to log bucketing events.
     :param prefix: the prefix used to filter keys (defaults to "experiments.").
-
+    :param request_field_extractor: (optional) function used to populate fields such as
+        "app_name" & "build_number" in DeciderContext() that may be used for targeting
     """
     assert prefix.endswith(".")
     config_prefix = prefix[:-1]

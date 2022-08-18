@@ -54,7 +54,7 @@ pygments_style = "friendly"
 # -- Options for HTML output ----------------------------------------------
 
 html_theme_path = [alabaster.get_path()]
-html_static_path = []
+html_static_path = ["images"]
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
@@ -76,12 +76,14 @@ html_theme_options = {
     "github_repo": "experiments.py",
     "github_user": "reddit",
     "github_banner": True,
+    "logo": "ddg-logo.png",
     "logo_name": True,
     "show_powered_by": False,
     "show_related": False,
     "show_relbars": True,
     "page_width": "960px",
 }
+
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32

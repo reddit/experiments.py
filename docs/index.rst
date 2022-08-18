@@ -5,7 +5,7 @@
 
 
 Prerequisite packages
--------
+---------------------
 .. code-block:: python
 
     baseplate>=2.0.0
@@ -18,13 +18,13 @@ Prerequisite packages
     reddit-v2-events
 
 Prerequisite infrastructure
--------
+---------------------------
 Set up your service to pull down & synchronize experiment configurations from Zookeeper via the Baseplate `live-data watcher sidecar
 <https://baseplate.readthedocs.io/en/stable/api/baseplate/lib/live_data.html?highlight=sidecar#watcher-daemon>`_ (minimum v2.4.13).
 You'll have to make sure that your service is authorized to fetch the appropriate secret from Vault.
 
-Prerequisite configuration:
--------
+Prerequisite configuration
+---------------------------
 Setup :code:`reddit-experiments` in your application's configuration file:
 
 .. code-block:: ini
@@ -50,7 +50,7 @@ Setup :code:`reddit-experiments` in your application's configuration file:
 
 
 Integrate :code:`reddit-experiments` into Baseplate service
--------
+-----------------------------------------------------------
 In your service's initialization process, add a :code:`decider` instance to baseplate's context:
 (Note the use of the :code:`ExperimentLogger`, which is used to publish exposure V2 events,
 an example can be seen `here <https://github.snooguts.net/reddit/reddit-service-graphql/blob/3734b51732c29d07eef32aced86677cce5064dbb/graphql-py/graphql_api/events/utils.py#L205>`_)
@@ -78,11 +78,11 @@ an example can be seen `here <https://github.snooguts.net/reddit/reddit-service-
         baseplate.configure_context({
             "decider": DeciderClient(
                 prefix="experiments.",
-                event_logger=EventLogger,
+                event_logger=ExperimentLogger,
                 request_field_extractor=my_field_extractor  # optional
         })
 
-Make sure :code:`edge_context` is accessible on :code:`request` object like so:
+Make sure :code:`EdgeContext` is accessible on :code:`request` object like so:
 
 .. code-block:: python
 
@@ -108,14 +108,15 @@ Make sure :code:`edge_context` is accessible on :code:`request` object like so:
 
     # Customized fields can be defined below to be extracted from a baseplate request
     # and will override above edge_context fields.
+    # These fields may be used for targeting.
 
     def my_field_extractor(request):
         # an example of customized baseplate request field extractor:
         return {"foo": request.headers.get("Foo"), "bar": "something"}
 
 
-Usage
--------
+Basic Usage
+-----------
 Use the attached :py:class:`~reddit_decider.Decider` object in request to call
 :code:`decider.get_variant()` (automatically sends an expose event)::
 
@@ -130,20 +131,25 @@ or optionally, if manual exposure is necessary, use::
         ...
         request.decider.expose(experiment_name='experiment_name', variant_name=variant)
 
-Configuration Classes
--------------
+
+Decider API
+-----------
+
+.. autoclass:: Decider
+   :members:
+
+Configuration Class
+-------------------
+
+.. autoclass:: DeciderClient
+
+Configuration function
+----------------------
 
 .. autofunction:: decider_client_from_config
 
 
-.. autoclass:: DeciderClient
-
+Configuration Context Factory
+-----------------------------
 
 .. autoclass:: DeciderContextFactory
-
-
-Decider API
--------
-
-.. autoclass:: Decider
-   :members:
