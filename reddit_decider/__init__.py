@@ -942,7 +942,9 @@ class DeciderContextFactory(ContextFactory):
         event_logger: Optional[EventLogger] = None,
         timeout: Optional[float] = None,
         backoff: Optional[float] = None,
-        request_field_extractor: Optional[Callable[[RequestContext], Dict[str, Union[str, int, float, bool]]]] = None,
+        request_field_extractor: Optional[
+            Callable[[RequestContext], Dict[str, Union[str, int, float, bool]]]
+        ] = None,
     ):
         self._filewatcher = FileWatcher(
             path=path, parser=init_decider_parser, timeout=timeout, backoff=backoff
@@ -1169,7 +1171,9 @@ class DeciderClient(config.Parser):
         self,
         event_logger: EventLogger,
         prefix: str = "experiments.",
-        request_field_extractor: Optional[Callable[[RequestContext], Dict[str, Union[str, int, float, bool]]]] = None,
+        request_field_extractor: Optional[
+            Callable[[RequestContext], Dict[str, Union[str, int, float, bool]]]
+        ] = None,
     ):
         self._prefix = prefix
         self._event_logger = event_logger
@@ -1190,7 +1194,9 @@ def decider_client_from_config(
     app_config: config.RawConfig,
     event_logger: EventLogger,
     prefix: str = "experiments.",
-    request_field_extractor: Optional[Callable[[RequestContext], Dict[str, Union[str, int, float, bool]]]] = None,
+    request_field_extractor: Optional[
+        Callable[[RequestContext], Dict[str, Union[str, int, float, bool]]]
+    ] = None,
 ) -> DeciderContextFactory:
     """Configure and return an :py:class:`DeciderContextFactory` object.
 
