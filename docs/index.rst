@@ -116,8 +116,8 @@ Make sure :code:`edge_context` is accessible on :code:`request` object like so:
 
 Usage
 -------
-Use the attached :py:class:`~reddit_decider.Decider` object in request and
-:code:`decider.get_variant()` (which will automatically send an expose event)::
+Use the attached :py:class:`~reddit_decider.Decider` object in request to call
+:code:`decider.get_variant()` (automatically sends an expose event)::
 
     def my_method(request):
         if request.decider.get_variant("foo") == "bar":
