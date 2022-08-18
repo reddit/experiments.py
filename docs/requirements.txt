@@ -1,9 +1,11 @@
 alabaster==0.7.12
+baseplate==2.0.0a1
 docutils==0.16
 Jinja2==2.11.2
 MarkupSafe==1.1.1
 pydocstyle==5.1.1
 reddit-decider==1.2.15
+reddit-edgecontext==1.0.0a3
 Sphinx==3.4.0
 sphinx-autodoc-typehints==1.11.1
 sphinxcontrib-applehelp==1.0.2
@@ -12,3 +14,4 @@ sphinxcontrib-htmlhelp==1.0.3
 sphinxcontrib-jsmath==1.0.1
 sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.4
+typing_extensions==4.2.0
