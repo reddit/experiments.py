@@ -1,4 +1,6 @@
-``reddit_experiments``
+ .. _reddit_decider:
+
+``reddit_decider``
 ===============================
 
 .. automodule:: reddit_decider
@@ -51,6 +53,17 @@ Setup :code:`reddit-experiments` in your application's configuration file:
 
 Integrate :code:`reddit-experiments` into Baseplate service
 -----------------------------------------------------------
+
+Upgrade or integrate reddit-experiments package:
+
+.. code-block:: python
+
+    # import latest reddit-experiments package in service requirements.txt
+    reddit-experiments>=1.3.7
+
+Initialize :code:`decider` instance on Baseplate context
+--------------------------------------------------------
+
 In your service's initialization process, add a :code:`decider` instance to baseplate's context:
 (Note the use of the :code:`ExperimentLogger`, which is used to publish exposure V2 events,
 an example can be seen `here <https://github.snooguts.net/reddit/reddit-service-graphql/blob/3734b51732c29d07eef32aced86677cce5064dbb/graphql-py/graphql_api/events/utils.py#L205>`_)
@@ -68,7 +81,7 @@ an example can be seen `here <https://github.snooguts.net/reddit/reddit-service-
     def make_wsgi_app(app_config):
         baseplate = Baseplate(app_config)
         decider_factory = decider_client_from_config(app_config=app_config,
-                                                     event_logger=ExperimentLogger,
+                                                     event_logger=ExperimentLogger(),
                                                      prefix="experiments.",
                                                      request_field_extractor=my_field_extractor)  # this is optional, can be `None` if edge_context contains all the fields you need
         baseplate.add_to_context("decider", decider_factory)
@@ -143,7 +156,7 @@ Configuration Class
 
 .. autoclass:: DeciderClient
 
-Configuration function
+Configuration Function
 ----------------------
 
 .. autofunction:: decider_client_from_config
@@ -153,3 +166,10 @@ Configuration Context Factory
 -----------------------------
 
 .. autoclass:: DeciderContextFactory
+
+Legacy API docs:
+----------------
+
+.. toctree::
+
+  legacy/index
