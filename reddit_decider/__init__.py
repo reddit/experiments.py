@@ -782,30 +782,75 @@ class Decider:
         return res.val()
 
     def get_bool(self, feature_name: str, default: bool = False) -> bool:
+        """Fetch a Dynamic Configuration of boolean type.
+
+        :param feature_name: Name of the dynamic config you want a value for.
+
+        :param default: what is returned if dynamic config is not active
+            (:code:`False` unless overriden).
+
+        :return: the boolean value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
+        """
         decider = self._get_decider()
         if not decider:
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_bool, default)
 
     def get_int(self, feature_name: str, default: int = 0) -> int:
+        """Fetch a Dynamic Configuration of int type.
+
+        :param feature_name: Name of the dynamic config you want a value for.
+
+        :param default: what is returned if dynamic config is not active
+            (:code:`0` unless overriden).
+
+        :return: the int value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
+        """
         decider = self._get_decider()
         if not decider:
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_int, default)
 
     def get_float(self, feature_name: str, default: float = 0.0) -> float:
+        """Fetch a Dynamic Configuration of float type.
+
+        :param feature_name: Name of the dynamic config you want a value for.
+
+        :param default: what is returned if dynamic config is not active
+            (:code:`0.0` unless overriden).
+
+        :return: the float value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
+        """
         decider = self._get_decider()
         if not decider:
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_float, default)
 
     def get_string(self, feature_name: str, default: str = "") -> str:
+        """Fetch a Dynamic Configuration of string type.
+
+        :param feature_name: Name of the dynamic config you want a value for.
+
+        :param default: what is returned if dynamic config is not active
+            (:code:`""` unless overriden).
+
+        :return: the string value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
+        """
         decider = self._get_decider()
         if not decider:
             return default
         return self._get_dynamic_config_value(feature_name, decider.get_string, default)
 
     def get_map(self, feature_name: str, default: Optional[dict] = None) -> Optional[dict]:
+        """Fetch a Dynamic Configuration of map type.
+
+        :param feature_name: Name of the dynamic config you want a value for.
+
+        :param default: what is returned if dynamic config is not active
+            (:code:`None` unless overriden).
+
+        :return: the map value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
+        """
         decider = self._get_decider()
         if not decider:
             return default
