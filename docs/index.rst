@@ -59,7 +59,7 @@ Upgrade or integrate reddit-experiments package:
 .. code-block:: python
 
     # import latest reddit-experiments package in service requirements.txt
-    reddit-experiments>=1.3.7
+    reddit-experiments>=1.3.8
 
 Initialize :code:`decider` instance on Baseplate context
 --------------------------------------------------------
@@ -117,7 +117,7 @@ Make sure :code:`EdgeContext` is accessible on :code:`request` object like so:
     #   - locale
     #   - origin_service
     #   - is_employee
-    #   - loid_created_ms
+    #   - loid_created_ms (>=1.3.8)
 
     # Customized fields can be defined below to be extracted from a baseplate request
     # and will override above edge_context fields.
@@ -144,6 +144,11 @@ or optionally, if manual exposure is necessary, use::
         ...
         request.decider.expose(experiment_name='experiment_name', variant_name=variant)
 
+and this is an example of using a dynamic configuration::
+
+    def my_method(request):
+        if request.decider.get_bool("foo") == True:
+            ...
 
 Decider API
 -----------
@@ -171,5 +176,6 @@ Legacy API docs:
 ----------------
 
 .. toctree::
+  :maxdepth: 1
 
   legacy/index
