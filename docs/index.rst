@@ -22,7 +22,7 @@ Prerequisite packages
 Prerequisite infrastructure
 ---------------------------
 Set up your service to pull down & synchronize experiment configurations from Zookeeper via the Baseplate `live-data watcher sidecar
-<https://baseplate.readthedocs.io/en/stable/api/baseplate/lib/live_data.html?highlight=sidecar#watcher-daemon>`_ (minimum v2.4.13).
+<https://baseplate.readthedocs.io/en/stable/api/baseplate/lib/live_data.html?highlight=sidecar#watcher-daemon>`_ (minimum v2.5.4).
 You'll have to make sure that your service is authorized to fetch the appropriate secret from Vault.
 
 Prerequisite configuration
