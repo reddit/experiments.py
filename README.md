@@ -17,7 +17,7 @@ Add the client to your application's Baseplate context:
 
 ```python
  from reddit_decider import decider_client_from_config
- 
+
  decider = decider_client_from_config(
      app_config=app_config,
      event_logger=ExperimentLogger(),
@@ -34,7 +34,8 @@ def my_method(request):
        pass
 ```
 
-See [the documentation] for more information.
+See [the documentation] for more information (documentation builds can be found [here](https://readthedocs.org/projects/reddit-experiments/builds/))
+.
 
 [the documentation]: https://reddit-experiments.readthedocs.io/
 
