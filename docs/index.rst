@@ -75,7 +75,7 @@ Initialize :code:`decider` instance on Baseplate context
 
 In your service's initialization process, add a :code:`decider` instance to baseplate's context:
 (Note the use of the :code:`ExperimentLogger`, which is used to publish exposure V2 events,
-an example can be seen `here <https://github.snooguts.net/reddit/reddit-service-graphql/blob/3734b51732c29d07eef32aced86677cce5064dbb/graphql-py/graphql_api/events/utils.py#L205>`_)
+an example can be seen `here <https://github.snooguts.net/reddit/reddit-service-graphql/blob/master/graphql-py/graphql_api/events/utils.py>`_)
 
 .. code-block:: python
 
