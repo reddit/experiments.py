@@ -12,6 +12,9 @@ from typing import List
 from typing import Optional
 from typing import Union
 
+import rust_decider  # type: ignore
+from rust_decider import Decider as RustDecider
+
 from baseplate import RequestContext
 from baseplate import Span
 from baseplate.clients import ContextFactory
