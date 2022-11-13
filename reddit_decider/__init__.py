@@ -348,17 +348,20 @@ class Decider:
             logger.info(exc)
             return None
 
-        event_context_fields = self._decider_context.to_event_dict()
-        event_context_fields.update(exposure_kwargs or {})
+        if decision is not None:
+            event_context_fields = self._decider_context.to_event_dict()
+            event_context_fields.update(exposure_kwargs or {})
 
-        for event in decision.get("events", []):
-            self._send_expose(event=event, exposure_fields=event_context_fields)
+            for event in decision.get("events", []):
+                self._send_expose(event=event, exposure_fields=event_context_fields)
 
-        try:
-            return decision["variant"]
-        except KeyError:
-            logger.error("Field 'variant' not found in choose() return value")
-            return None
+            try:
+                return decision["variant"]
+            except KeyError:
+                logger.error("Field 'variant' not found in choose() return value")
+                return None
+
+        return None
 
     def get_variant_without_expose(self, experiment_name: str) -> Optional[str]:
         """Return a bucketing variant, if any, without emitting exposure event.
