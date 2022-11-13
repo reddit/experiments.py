@@ -613,46 +613,41 @@ class Decider:
 
         :return: list of experiment dicts with non-:code:`None` variants.
         """
-        decider = self._get_decider()
-        if decider is None:
+        if self._rs_decider is None:
+            logger.error("rs_decider is None--did not initialize.")
             return []
 
-        ctx = self._get_ctx()
-        ctx_err = ctx.err()
-        if ctx_err is not None:
-            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+        ctx = self._decider_context.to_dict()
+
+        try:
+            all_decisions = self._rs_decider.choose_all(ctx)
+        except ValueError as exc:
+            logger.info(exc)
             return []
 
-        all_decisions_result = decider.choose_all(ctx)
-
-        error = all_decisions_result.err()
-        if error:
-            logger.info(f"Encountered error in decider.choose_all(): {error}")
-            return []
-
-        all_decisions = all_decisions_result.decisions()
         parsed_choices = []
 
         event_context_fields = self._decider_context.to_event_dict()
 
-        for exp_name, decision in all_decisions.items():
-            decision_error = decision.err()
-            if decision_error:
-                logger.info(
-                    f"Encountered error for experiment: {exp_name} in decider.choose_all(): {decision_error}"
-                )
-                continue
-
-            decision_dict = decision.decision_dict()
-
+        for decision_dict in all_decisions:
             if decision_dict:
-                parsed_choices.append(self._format_decision(decision_dict))
+                parsed_choices.append(self._transform_decision(decision_dict))
 
             # expose Holdout if the experiment is part of one
-            for event in decision.events():
+            for event in decision_dict.get("events", []):
+                print(decision_dict)
                 self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
 
         return parsed_choices
+
+
+    def _transform_decision(self, decision_dict: Dict[str, str]) -> Dict[str, Any]:
+        return {
+            "name": decision_dict.get("variant"),
+            "id": decision_dict.get("experiment_id"),
+            "version": str(decision_dict.get("experiment_version")),
+            "experimentName": decision_dict.get("experiment_name"),
+        }
 
     def get_all_variants_for_identifier_without_expose(
         self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
