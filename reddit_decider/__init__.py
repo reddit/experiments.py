@@ -631,12 +631,13 @@ class Decider:
 
         for decision_dict in all_decisions:
             if decision_dict:
-                parsed_choices.append(self._transform_decision(decision_dict))
+                variant = decision_dict.get("variant")
+                if variant:
+                    parsed_choices.append(self._transform_decision(decision_dict))
 
-            # expose Holdout if the experiment is part of one
-            for event in decision_dict.get("events", []):
-                print(decision_dict)
-                self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
+                # expose Holdout if the experiment is part of one
+                for event in decision_dict.get("events", []):
+                    self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
 
         return parsed_choices
 
