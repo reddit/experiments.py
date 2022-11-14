@@ -348,7 +348,7 @@ class Decider:
             logger.info(exc)
             return None
 
-        if decision is not None:
+        if decision:
             event_context_fields = self._decider_context.to_event_dict()
             event_context_fields.update(exposure_kwargs or {})
 
@@ -378,32 +378,31 @@ class Decider:
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
-        decider = self._get_decider()
-        if decider is None:
+        if self._rs_decider is None:
+            logger.error("rs_decider is None--did not initialize.")
             return None
 
-        ctx = self._get_ctx()
-        ctx_err = ctx.err()
-        if ctx_err is not None:
-            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+        ctx = self._decider_context.to_dict()
+
+        try:
+            decision = self._rs_decider.choose(experiment_name, ctx)
+        except ValueError as exc:
+            logger.info(exc)
             return None
 
-        choice = decider.choose(experiment_name, ctx)
-        error = choice.err()
+        if decision:
+            event_context_fields = self._decider_context.to_event_dict()
 
-        if error:
-            logger.info(f"Encountered error in decider.choose(): {error}")
-            return None
+            for event in decision.get("events", []):
+                self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
 
-        variant = choice.decision()
+            try:
+                return decision["variant"]
+            except KeyError:
+                logger.error("Field 'variant' not found in choose() return value")
+                return None
 
-        event_context_fields = self._decider_context.to_event_dict()
-
-        # expose Holdout if the experiment is part of one
-        for event in choice.events():
-            self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
-
-        return variant
+        return None
 
     def expose(
         self, experiment_name: str, variant_name: str, **exposure_kwargs: Optional[Dict[str, Any]]
