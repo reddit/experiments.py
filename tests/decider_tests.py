@@ -749,6 +749,24 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 experiment_name="exp_1", variant=variant, event_fields=event_fields
             )
 
+    def test_expose_without_variant_name(self):
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = self.setup_decider(f.name, self.dc)
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = "variant_4"
+            with self.assertLogs() as captured:
+                decider.expose("exp_1", None)
+
+                assert any(
+                    '`variant_name` not provided in expose() call for experiment: exp_1'
+                    in x.getMessage()
+                    for x in captured.records
+                )
+
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
     def test_get_variant_for_identifier_without_expose_user_id(self):
         identifier = USER_ID
         bucket_val = "user_id"
