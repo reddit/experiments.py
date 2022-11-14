@@ -392,7 +392,7 @@ class Decider:
         if decider is None:
             return
 
-        if variant_name is None or variant_name is "":
+        if variant_name is None or variant_name == "":
             logger.warning(
                 f"`variant_name` not provided in expose() call for experiment: {experiment_name}"
             )
