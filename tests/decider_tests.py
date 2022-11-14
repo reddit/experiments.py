@@ -759,7 +759,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 decider.expose("exp_1", None)
 
                 assert any(
-                    '`variant_name` not provided in expose() call for experiment: exp_1'
+                    "`variant_name` not provided in expose() call for experiment: exp_1"
                     in x.getMessage()
                     for x in captured.records
                 )
