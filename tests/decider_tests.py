@@ -1264,7 +1264,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(experiment.owner, cfg["owner"])
 
     def test_get_variant_without_expose_with_HG_as_control_1_and_child_returns_none_does_expose(
-        self
+        self,
     ):
         self.exp_base_config["exp_1"].update({"parent_hg_name": "hg"})
         # force child "exp_1" to return `None`
@@ -1275,8 +1275,8 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.parent_hg_config)
         # force "hg" to bucket "control_1"
         self.exp_base_config["hg"]["experiment"]["variants"] = [
-          {"name": "control_1", "size": 1.00, "range_end": 1.0, "range_start": 0},
-          {"name": "holdout", "size": 0.00, "range_end": 0.0, "range_start": 0.00},
+            {"name": "control_1", "size": 1.00, "range_end": 1.0, "range_start": 0},
+            {"name": "holdout", "size": 0.00, "range_end": 0.0, "range_start": 0.00},
         ]
 
         with create_temp_config_file(self.exp_base_config) as f:
