@@ -469,6 +469,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "experiment": {
                     "id": 1,
                     "name": "test",
+                    "experiment_version": 1,
                     "variants": [
                         {"range_start": 0.0, "range_end": 0.2, "name": "active"},
                         {"range_start": 0.2, "range_end": 0.4, "name": "control_1"},
