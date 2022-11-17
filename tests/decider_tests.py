@@ -469,6 +469,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "experiment": {
                     "id": 1,
                     "name": "test",
+                    "experiment_version": 1,
                     "variants": [
                         {"range_start": 0.0, "range_end": 0.2, "name": "active"},
                         {"range_start": 0.2, "range_end": 0.4, "name": "control_1"},
@@ -1262,6 +1263,39 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(experiment.start_ts, cfg["start_ts"])
             self.assertEqual(experiment.stop_ts, cfg["stop_ts"])
             self.assertEqual(experiment.owner, cfg["owner"])
+
+    def test_get_variant_without_expose_with_HG_as_control_1_and_child_returns_none_does_expose(
+        self,
+    ):
+        self.exp_base_config["exp_1"].update({"parent_hg_name": "hg"})
+        # force child "exp_1" to return `None`
+        self.exp_base_config["exp_1"]["experiment"]["variants"] = [
+            {"name": "control_1", "size": 0.0, "range_end": 0.0, "range_start": 0.0},
+        ]
+
+        self.exp_base_config.update(self.parent_hg_config)
+        # force "hg" to bucket "control_1"
+        self.exp_base_config["hg"]["experiment"]["variants"] = [
+            {"name": "control_1", "size": 1.00, "range_end": 1.0, "range_start": 0},
+            {"name": "holdout", "size": 0.00, "range_end": 0.0, "range_start": 0.00},
+        ]
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = self.setup_decider(f.name, self.dc)
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant_without_expose("exp_1")
+
+            assert variant == None
+
+            # exposure from control_1 of "hg"
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+
+            # `variant == None` for child but event will fire with `variant == "control_1"` for analysis
+            self.assert_exposure_event_fields(
+                experiment_name="hg", variant="control_1", event_fields=event_fields
+            )
 
 
 class TestDeciderGetDynamicConfig(unittest.TestCase):
