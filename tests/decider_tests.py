@@ -489,8 +489,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
                 self.assertEqual(variant, None)
                 self.assertEqual(self.event_logger.log.call_count, 0)
-                print([x.getMessage()
-                for x in captured.records])
+
                 assert any(
                     'rust_decider.init() has error: Decider initialization failed: Json error: "invalid type: string \\"1\\", expected u32".'
                     in x.getMessage()
@@ -1551,7 +1550,6 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         # missing "value_type" field
         experiments_cfg.update(missing_value_type_cfg)
 
-        print(experiments_cfg)
         with create_temp_config_file(experiments_cfg) as f:
             decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
