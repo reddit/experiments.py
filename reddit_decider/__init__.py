@@ -13,8 +13,8 @@ from typing import Union
 
 import rust_decider  # type: ignore
 from rust_decider import Decider as RustDecider
-from rust_decider import DeciderInitError
-from rust_decider import DeciderError
+from rust_decider import DeciderInitException
+from rust_decider import DeciderException
 
 from baseplate import RequestContext
 from baseplate import Span
@@ -346,7 +346,7 @@ class Decider:
 
         try:
             decision = self._rs_decider.choose(experiment_name, ctx)
-        except DeciderError as exc:
+        except DeciderException as exc:
             logger.info(exc)
             return None
 
@@ -381,7 +381,7 @@ class Decider:
 
         try:
             decision = self._rs_decider.choose(experiment_name, ctx)
-        except DeciderError as exc:
+        except DeciderException as exc:
             logger.info(exc)
             return None
 
@@ -1013,7 +1013,7 @@ class DeciderContextFactory(ContextFactory):
             rs_decider = self._filewatcher.get_data()
         except WatchedFileNotAvailableError as exc:
             logger.error(f"Experiment config file unavailable: {exc}")
-        except DeciderInitError as exc:
+        except DeciderInitException as exc:
             logger.error(f"Could not load experiment config: {exc}")
 
         if span is None:
