@@ -12,12 +12,6 @@ from typing import List
 from typing import Optional
 from typing import Union
 
-import rust_decider  # type: ignore
-from rust_decider import Decider as RustDecider
-from rust_decider import DeciderFeatureNotFoundException
-from rust_decider import DeciderInitException
-from rust_decider import DeciderException
-
 from baseplate import RequestContext
 from baseplate import Span
 from baseplate.clients import ContextFactory
@@ -28,6 +22,11 @@ from baseplate.lib.file_watcher import FileWatcher
 from baseplate.lib.file_watcher import T
 from baseplate.lib.file_watcher import WatchedFileNotAvailableError
 from reddit_edgecontext import ValidatedAuthenticationToken
+from rust_decider import Decider as RustDecider
+from rust_decider import DeciderException
+from rust_decider import DeciderFeatureNotFoundException
+from rust_decider import DeciderInitException
+from rust_decider import make_ctx
 from typing_extensions import Literal
 
 
@@ -189,7 +188,7 @@ class Decider:
 
     def _get_ctx(self) -> Any:
         context_fields = self._decider_context.to_dict()
-        return rust_decider.make_ctx(context_fields)
+        return make_ctx(context_fields)
 
     def _get_ctx_with_set_identifier(
         self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
@@ -197,7 +196,7 @@ class Decider:
         context_fields = self._decider_context.to_dict()
         context_fields[identifier_type] = identifier
 
-        return rust_decider.make_ctx(context_fields)
+        return make_ctx(context_fields)
 
     def _format_decision(self, decision_dict: Dict[str, str]) -> Dict[str, Any]:
         out = {}
@@ -1005,7 +1004,11 @@ class DeciderContextFactory(ContextFactory):
         return parsed_extracted_fields
 
     def _minimal_decider(
-        self, rs_decider: Optional[RustDecider], name: str, span: Span, parsed_extracted_fields: Optional[Dict] = None
+        self,
+        rs_decider: Optional[RustDecider],
+        name: str,
+        span: Span,
+        parsed_extracted_fields: Optional[Dict] = None,
     ) -> Decider:
         return Decider(
             decider_context=DeciderContext(extracted_fields=parsed_extracted_fields),
@@ -1049,21 +1052,30 @@ class DeciderContextFactory(ContextFactory):
             # if `edge_context` is inaccessible, bail early
             if request is None:
                 return self._minimal_decider(
-                    rs_decider=rs_decider, name=name, span=span, parsed_extracted_fields=parsed_extracted_fields
+                    rs_decider=rs_decider,
+                    name=name,
+                    span=span,
+                    parsed_extracted_fields=parsed_extracted_fields,
                 )
 
             ec = request.edge_context
 
             if ec is None:
                 return self._minimal_decider(
-                    rs_decider=rs_decider, name=name, span=span, parsed_extracted_fields=parsed_extracted_fields
+                    rs_decider=rs_decider,
+                    name=name,
+                    span=span,
+                    parsed_extracted_fields=parsed_extracted_fields,
                 )
         except Exception as exc:
             logger.info(
                 f"Unable to access `request.edge_context` in `make_object_for_context()`. details: {exc}"
             )
             return self._minimal_decider(
-                rs_decider=rs_decider, name=name, span=span, parsed_extracted_fields=parsed_extracted_fields
+                rs_decider=rs_decider,
+                name=name,
+                span=span,
+                parsed_extracted_fields=parsed_extracted_fields,
             )
 
         # All fields below are derived from `edge_context`

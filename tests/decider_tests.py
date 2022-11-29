@@ -58,6 +58,7 @@ def decider_field_extractor(_request: RequestContext):
         "canonical_url": CANONICAL_URL,
     }
 
+
 def setup_decider(file_name, decider_context, mock_span, event_logger):
     try:
         rs_decider = init_decider_parser(file_name)
@@ -72,6 +73,7 @@ def setup_decider(file_name, decider_context, mock_span, event_logger):
         context_name="test",
         event_logger=event_logger,
     )
+
 
 def first_occurrence_of_key_in(array, dict_key, name):
     return next((v for v in array if v[dict_key] == name), None)
@@ -485,7 +487,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         }
         with create_temp_config_file(config) as f:
             with self.assertLogs() as captured:
-                decider = setup_decider(f, self.minimal_decider_context, self.mock_span, self.event_logger)
+                decider = setup_decider(
+                    f, self.minimal_decider_context, self.mock_span, self.event_logger
+                )
                 variant = decider.get_variant("test")
 
                 self.assertEqual(variant, None)
@@ -510,7 +514,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             }
         }
         with create_temp_config_file(config) as f:
-            decider = setup_decider(f, self.minimal_decider_context, self.mock_span, self.event_logger)
+            decider = setup_decider(
+                f, self.minimal_decider_context, self.mock_span, self.event_logger
+            )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant("test")
@@ -518,7 +524,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_none_returned_on_get_variant_call_with_experiment_not_found(self):
         with create_temp_config_file({}) as f:
-            decider = setup_decider(f, self.minimal_decider_context, self.mock_span, self.event_logger)
+            decider = setup_decider(
+                f, self.minimal_decider_context, self.mock_span, self.event_logger
+            )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             with warnings.catch_warnings(record=True) as captured:
@@ -527,11 +535,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 # can't test warning log only shows up only once if `decider.get_variant("anything")`
                 # is called again due to bug in `catch_warnings` contextmanager
                 # see https://github.com/python/cpython/issues/73858
-                assert any(
-                    'Feature "anything" not found.'
-                    in str(x.message)
-                    for x in captured
-                )
+                assert any('Feature "anything" not found.' in str(x.message) for x in captured)
             self.assertEqual(variant, None)
 
             # no exposures should be triggered
@@ -571,7 +575,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_none_returned_on_get_variant_without_expose_call_with_experiment_not_found(self):
         with create_temp_config_file({}) as f:
-            decider = setup_decider(f, self.minimal_decider_context, self.mock_span, self.event_logger)
+            decider = setup_decider(
+                f, self.minimal_decider_context, self.mock_span, self.event_logger
+            )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             with warnings.catch_warnings(record=True) as captured:
@@ -580,11 +586,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 # can't test warning log only shows up only once if `decider.get_variant("anything")`
                 # is called again due to bug in `catch_warnings` contextmanager
                 # see https://github.com/python/cpython/issues/73858
-                assert any(
-                    'Feature "anything" not found.'
-                    in str(x.message)
-                    for x in captured
-                )
+                assert any('Feature "anything" not found.' in str(x.message) for x in captured)
             self.assertEqual(variant, None)
 
             # no exposures should be triggered
@@ -703,7 +705,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         identifier_type = "blah"
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = setup_decider(f, self.minimal_decider_context, self.mock_span, self.event_logger)
+            decider = setup_decider(
+                f, self.minimal_decider_context, self.mock_span, self.event_logger
+            )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             with self.assertLogs() as captured:
@@ -977,7 +981,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": "device_id"})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = setup_decider(f, self.minimal_decider_context, self.mock_span, self.event_logger)
+            decider = setup_decider(
+                f, self.minimal_decider_context, self.mock_span, self.event_logger
+            )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
 
