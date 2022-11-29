@@ -3,6 +3,7 @@ import json
 import logging
 import tempfile
 import unittest
+import warnings
 
 from unittest import mock
 
@@ -149,7 +150,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
         with self.assertLogs(logger, logging.WARN) as captured:
             # ensure no warnings are printed except for the dummy one
             # https://stackoverflow.com/a/61381576/4260179
-            logger.warn("Dummy warning")
+            logger.warning("Dummy warning")
             decider = decider_ctx_factory.make_object_for_context(name="test", span=self.mock_span)
             assert len(captured.records) == 1
             self.assertEqual(["WARNING:root:Dummy warning"], captured.output)
@@ -226,7 +227,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
         with self.assertLogs(logger, logging.WARN) as captured:
             # ensure no warnings are printed except for the dummy one
             # https://stackoverflow.com/a/61381576/4260179
-            logger.warn("Dummy warning")
+            logger.warning("Dummy warning")
 
             decider = decider_ctx_factory.make_object_for_context(name="test", span=None)
             assert len(captured.records) == 1
@@ -520,8 +521,21 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             decider = setup_decider(f, self.minimal_decider_context, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant("anything")
+            with warnings.catch_warnings(record=True) as captured:
+                variant = decider.get_variant("anything")
+
+                # can't test warning log only shows up only once if `decider.get_variant("anything")`
+                # is called again due to bug in `catch_warnings` contextmanager
+                # see https://github.com/python/cpython/issues/73858
+                assert any(
+                    'Feature "anything" not found.'
+                    in str(x.message)
+                    for x in captured
+                )
             self.assertEqual(variant, None)
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
 
     def test_get_variant_without_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:

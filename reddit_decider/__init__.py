@@ -1,4 +1,5 @@
 import logging
+import warnings
 
 from copy import deepcopy
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from typing import Union
 
 import rust_decider  # type: ignore
 from rust_decider import Decider as RustDecider
+from rust_decider import DeciderFeatureNotFoundException
 from rust_decider import DeciderInitException
 from rust_decider import DeciderException
 
@@ -346,6 +348,9 @@ class Decider:
 
         try:
             decision = self._rs_decider.choose(experiment_name, ctx)
+        except DeciderFeatureNotFoundException as exc:
+            warnings.warn(exc)
+            return None
         except DeciderException as exc:
             logger.info(exc)
             return None
