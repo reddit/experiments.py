@@ -569,6 +569,27 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 experiment_name="hg", variant="holdout", event_fields=event_fields
             )
 
+    def test_none_returned_on_get_variant_without_expose_call_with_experiment_not_found(self):
+        with create_temp_config_file({}) as f:
+            decider = setup_decider(f, self.minimal_decider_context, self.mock_span, self.event_logger)
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            with warnings.catch_warnings(record=True) as captured:
+                variant = decider.get_variant_without_expose("anything")
+
+                # can't test warning log only shows up only once if `decider.get_variant("anything")`
+                # is called again due to bug in `catch_warnings` contextmanager
+                # see https://github.com/python/cpython/issues/73858
+                assert any(
+                    'Feature "anything" not found.'
+                    in str(x.message)
+                    for x in captured
+                )
+            self.assertEqual(variant, None)
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
     def test_get_variant_for_identifier_user_id(self):
         identifier = USER_ID
         bucket_val = "user_id"

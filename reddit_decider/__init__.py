@@ -386,6 +386,9 @@ class Decider:
 
         try:
             decision = self._rs_decider.choose(experiment_name, ctx)
+        except DeciderFeatureNotFoundException as exc:
+            warnings.warn(exc)
+            return None
         except DeciderException as exc:
             logger.info(exc)
             return None
