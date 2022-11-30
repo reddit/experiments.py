@@ -388,14 +388,14 @@ class Decider:
             to :code:`events_logger` (keys must be part of v2 event schema,
             use dicts for nested fields) under :code:`inputs` and as :code:`kwargs`
         """
-        decider = self._get_decider()
-        if decider is None:
+        if variant_name is None or variant_name == "":
+            logger.info(
+                f"`variant_name` arg not provided in reddit_decider.expose() call for experiment: {experiment_name}"
+            )
             return
 
-        if variant_name is None or variant_name == "":
-            logger.warning(
-                f"`variant_name` not provided in expose() call for experiment: {experiment_name}"
-            )
+        decider = self._get_decider()
+        if decider is None:
             return
 
         experiment = decider.get_experiment(experiment_name)

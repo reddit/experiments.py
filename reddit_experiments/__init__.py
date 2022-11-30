@@ -301,6 +301,12 @@ class Experiments:
         :param kwargs: Additional arguments that will be passed to logger.
 
         """
+        if variant_name is None or variant_name == "":
+            logger.info(
+                f"`variant_name` arg not provided in reddit_experiments.expose() call for experiment: {experiment_name}"
+            )
+            return
+
         experiment = self._get_experiment(experiment_name)
 
         if experiment is None:
