@@ -259,6 +259,45 @@ class TestExperiments(unittest.TestCase):
         self.assertEqual(getattr(event_fields["experiment"], "owner"), "test_owner")
         self.assertEqual(getattr(event_fields["experiment"], "version"), "1")
 
+    def test_expose_without_variant_name(self):
+        cfg_data = {
+            "test": {
+                "id": 1,
+                "name": "test",
+                "owner": "test_owner",
+                "type": "r2",
+                "version": "1",
+                "start_ts": time.time() - THIRTY_DAYS,
+                "stop_ts": time.time() + THIRTY_DAYS,
+                "experiment": {
+                    "id": 1,
+                    "name": "test",
+                    "variants": {"active": 10, "control_1": 10, "control_2": 10},
+                },
+            }
+        }
+        experiments = Experiments(
+            config_watcher=self.mock_filewatcher,
+            server_span=self.mock_span,
+            context_name="test",
+            cfg_data=cfg_data,
+            global_cache={},
+            event_logger=self.event_logger,
+        )
+
+        self.assertEqual(self.event_logger.log.call_count, 0)
+
+        with self.assertLogs() as captured:
+            experiments.expose("test", variant_name=None, user=self.user, app_name="r2")
+
+            assert any(
+                "`variant_name` arg not provided in reddit_experiments.expose() call for experiment: test"
+                in x.getMessage()
+                for x in captured.records
+            )
+
+        self.assertEqual(self.event_logger.log.call_count, 0)
+
     def test_that_override_true_has_no_effect_with_cfg_data(self):
         cfg_data = {
             "test": {

@@ -754,12 +754,12 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             decider = self.setup_decider(f.name, self.dc)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = "variant_4"
+
             with self.assertLogs() as captured:
                 decider.expose("exp_1", None)
 
                 assert any(
-                    "`variant_name` not provided in expose() call for experiment: exp_1"
+                    "`variant_name` arg not provided in reddit_decider.expose() call for experiment: exp_1"
                     in x.getMessage()
                     for x in captured.records
                 )
