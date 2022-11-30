@@ -1182,7 +1182,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         # add 2 more experiments
         self.exp_base_config.update(self.additional_two_exp)
 
-        for exp_name in self.exp_base_config.keys():
+        # update 2 of 3 experiments to have bucket_val: 'canonical_url'
+        # so that the 3rd one is filtered out
+        for exp_name in list(self.exp_base_config.keys())[0:2]:
             self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
@@ -1193,7 +1195,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 identifier=identifier, identifier_type=bucket_val
             )
 
-            self.assertEqual(len(variant_arr), len(self.exp_base_config))
+            self.assertEqual(len(variant_arr), 2)
             self.assertEqual(
                 first_occurrence_of_key_in(variant_arr, "experimentName", "exp_1"),
                 {"id": 1, "name": "variant_3", "version": "2", "experimentName": "exp_1"},
@@ -1201,10 +1203,6 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(
                 first_occurrence_of_key_in(variant_arr, "experimentName", "e1"),
                 {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
-            )
-            self.assertEqual(
-                first_occurrence_of_key_in(variant_arr, "experimentName", "e2"),
-                {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
             )
 
             # no exposures should be triggered
