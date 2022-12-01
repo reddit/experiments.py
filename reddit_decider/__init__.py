@@ -626,7 +626,7 @@ class Decider:
 
         event_context_fields = self._decider_context.to_event_dict()
 
-        for decision in all_decisions:
+        for decision in all_decisions.values():
             if decision.variant:
                 parsed_choices.append(self._transform_decision(decision))
 
@@ -702,7 +702,7 @@ class Decider:
 
         event_context_fields = self._decider_context.to_event_dict()
 
-        for decision in all_decisions:
+        for decision in all_decisions.values():
             if decision.variant:
                 parsed_choices.append(self._transform_decision(decision))
 
