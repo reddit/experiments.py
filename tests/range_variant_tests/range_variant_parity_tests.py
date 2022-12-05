@@ -26,6 +26,7 @@ class TestExperiments(unittest.TestCase):
         with open(ORIGINAL_ZK_CONFIG_FILE, "r") as f:
             self.original_zk_config = json.load(f)
         with open(RANGE_VARIANT_ZK_CONFIG_FILE, "r") as f:
+            self.range_variant_zk_file = f
             self.range_variant_zk_config = json.load(f)
         self.mock_filewatcher = mock.Mock(spec=FileWatcher)
         self.mock_span = mock.MagicMock(spec=ServerSpan)
@@ -50,9 +51,7 @@ class TestExperiments(unittest.TestCase):
             cfg_data=self.range_variant_zk_config,
         )
 
-        filewatcher = FileWatcher(
-            path=RANGE_VARIANT_ZK_CONFIG_FILE, parser=init_decider_parser, timeout=2, backoff=2
-        )
+        rs_decider = init_decider_parser(self.range_variant_zk_file)
         extracted_fields = {"app_name": "", "build_number": 0}
 
         # results = {}
@@ -86,7 +85,7 @@ class TestExperiments(unittest.TestCase):
 
                 decider = Decider(
                     decider_context=decider_context,
-                    config_watcher=filewatcher,
+                    rs_decider=rs_decider,
                     server_span=self.mock_span,
                     context_name="test",
                     event_logger=self.event_logger,
