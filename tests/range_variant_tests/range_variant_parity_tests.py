@@ -85,7 +85,7 @@ class TestExperiments(unittest.TestCase):
 
                 decider = Decider(
                     decider_context=decider_context,
-                    rs_decider=rs_decider,
+                    internal=rs_decider,
                     server_span=self.mock_span,
                     context_name="test",
                     event_logger=self.event_logger,

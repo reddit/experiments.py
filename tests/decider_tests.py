@@ -68,7 +68,7 @@ def setup_decider(file_name, decider_context, mock_span, event_logger):
 
     return Decider(
         decider_context=decider_context,
-        rs_decider=rs_decider,
+        internal=rs_decider,
         server_span=mock_span,
         context_name="test",
         event_logger=event_logger,
@@ -496,7 +496,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(self.event_logger.log.call_count, 0)
 
                 assert any(
-                    'rust_decider.init() has error: Decider initialization failed: Json error: "invalid type: string \\"1\\", expected u32".'
+                    'rust_decider.init() has error: Decider initialization failed: Partially loaded decider: 1 features failed to load.'
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -695,7 +695,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(self.event_logger.log.call_count, 0)
 
                 assert any(
-                    'Requested identifier_type: "canonical_url" is incompatible with experiment\'s bucket_val = device_id.'
+                    'Encountered error in decider.choose(): Requested identifier_type "canonical_url" is incompatible with experiment\'s bucket_val = device_id'
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -806,7 +806,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(variant, None)
 
                 assert any(
-                    'Encountered error in decider.choose(): Requested identifier_type: "canonical_url" is incompatible with experiment\'s bucket_val = device_id.'
+                    'Encountered error in decider.choose(): Requested identifier_type "canonical_url" is incompatible with experiment\'s bucket_val = device_id'
                     in x.getMessage()
                     for x in captured.records
                 )
