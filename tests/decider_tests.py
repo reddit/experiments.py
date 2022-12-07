@@ -496,7 +496,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(self.event_logger.log.call_count, 0)
 
                 assert any(
-                    'rust_decider.init() has error: Decider initialization failed: Partially loaded decider: 1 features failed to load.'
+                    "rust_decider.init() has error: Decider initialization failed: Partially loaded decider: 1 features failed to load."
                     in x.getMessage()
                     for x in captured.records
                 )
