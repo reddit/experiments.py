@@ -25,7 +25,6 @@ from reddit_edgecontext import ValidatedAuthenticationToken
 from rust_decider import Decider as RustDecider
 from rust_decider import DeciderException
 from rust_decider import FeatureNotFoundException
-from rust_decider import DeciderInitException
 from rust_decider import make_ctx
 from typing_extensions import Literal
 
