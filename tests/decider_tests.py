@@ -462,7 +462,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 experiment_name="exp_1", variant=variant, event_fields=event_fields
             )
 
-    def test_none_returned_on_variant_call_with_bad_id(self):
+    def test_none_returned_on_get_variant_call_with_bad_id(self):
         config = {
             "test": {
                 "id": "1",
@@ -496,7 +496,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(self.event_logger.log.call_count, 0)
 
                 assert any(
-                    "rust_decider.init() has error: Decider initialization failed: Partially loaded decider: 1 features failed to load."
+                    "Partially loaded Decider: 1 features failed to load: {\'test\': \'invalid type: string \"1\", expected u32\'}"
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -521,6 +521,41 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant("test")
             self.assertEqual(variant, None)
+
+    def test_get_variant_calls_with_partial_data(self):
+        config = {
+            "test": {
+                "id": 1,
+                "name": "test",
+                "owner": "test_owner",
+                "type": "dynamic_config",
+                "version": "1",
+                "start_ts": 0,
+                "stop_ts": 0,
+            }
+        }
+        self.exp_base_config.update(config)
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(
+                f, self.dc, self.mock_span, self.event_logger
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
+            # get_variant_for_identifier()
+            variant = decider.get_variant_for_identifier("test", USER_ID, "user_id")
+            self.assertEqual(variant, None)
+
+            variant = decider.get_variant_for_identifier("exp_1", USER_ID, "user_id")
+            self.assertEqual(variant, "variant_4")
+
+            # get_variant()
+            variant = decider.get_variant("test")
+            self.assertEqual(variant, None)
+
+            variant = decider.get_variant("exp_1")
+            self.assertEqual(variant, "variant_4")
 
     def test_none_returned_on_get_variant_call_with_experiment_not_found(self):
         with create_temp_config_file({}) as f:
