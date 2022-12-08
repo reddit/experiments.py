@@ -3,6 +3,7 @@ import json
 import logging
 import tempfile
 import unittest
+import warnings
 
 from unittest import mock
 
@@ -56,6 +57,22 @@ def decider_field_extractor(_request: RequestContext):
         "build_number": BUILD_NUMBER,
         "canonical_url": CANONICAL_URL,
     }
+
+
+def setup_decider(file_name, decider_context, mock_span, event_logger):
+    try:
+        rs_decider = init_decider_parser(file_name)
+    except Exception as e:
+        print(e)
+        rs_decider = None
+
+    return Decider(
+        decider_context=decider_context,
+        internal=rs_decider,
+        server_span=mock_span,
+        context_name="test",
+        event_logger=event_logger,
+    )
 
 
 def first_occurrence_of_key_in(array, dict_key, name):
@@ -135,7 +152,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
         with self.assertLogs(logger, logging.WARN) as captured:
             # ensure no warnings are printed except for the dummy one
             # https://stackoverflow.com/a/61381576/4260179
-            logger.warn("Dummy warning")
+            logger.warning("Dummy warning")
             decider = decider_ctx_factory.make_object_for_context(name="test", span=self.mock_span)
             assert len(captured.records) == 1
             self.assertEqual(["WARNING:root:Dummy warning"], captured.output)
@@ -212,7 +229,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
         with self.assertLogs(logger, logging.WARN) as captured:
             # ensure no warnings are printed except for the dummy one
             # https://stackoverflow.com/a/61381576/4260179
-            logger.warn("Dummy warning")
+            logger.warning("Dummy warning")
 
             decider = decider_ctx_factory.make_object_for_context(name="test", span=None)
             assert len(captured.records) == 1
@@ -384,17 +401,6 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             extracted_fields=decider_field_extractor(_request=None),
         )
 
-    def setup_decider(self, file_name, decider_context):
-        filewatcher = FileWatcher(path=file_name, parser=init_decider_parser, timeout=2, backoff=2)
-
-        return Decider(
-            decider_context=decider_context,
-            config_watcher=filewatcher,
-            server_span=self.mock_span,
-            context_name="test",
-            event_logger=self.event_logger,
-        )
-
     def assert_exposure_event_fields(
         self,
         experiment_name: str,
@@ -443,7 +449,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_get_variant(self):
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant(experiment_name="exp_1")
@@ -456,7 +462,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 experiment_name="exp_1", variant=variant, event_fields=event_fields
             )
 
-    def test_none_returned_on_variant_call_with_bad_id(self):
+    def test_none_returned_on_get_variant_call_with_bad_id(self):
         config = {
             "test": {
                 "id": "1",
@@ -480,16 +486,17 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             }
         }
         with create_temp_config_file(config) as f:
-            decider = self.setup_decider(f.name, self.minimal_decider_context)
-
             with self.assertLogs() as captured:
+                decider = setup_decider(
+                    f, self.minimal_decider_context, self.mock_span, self.event_logger
+                )
                 variant = decider.get_variant("test")
 
                 self.assertEqual(variant, None)
                 self.assertEqual(self.event_logger.log.call_count, 0)
 
                 assert any(
-                    'Rust decider has initialization error: Decider initialization failed: Json error: "invalid type: string \\"1\\"'
+                    "Partially loaded Decider: 1 features failed to load: {'test': 'invalid type: string \"1\", expected u32'}"
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -500,30 +507,76 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "id": 1,
                 "name": "test",
                 "owner": "test_owner",
-                "type": "r2",
+                "type": "dynamic_config",
                 "version": "1",
                 "start_ts": 0,
                 "stop_ts": 0,
             }
         }
         with create_temp_config_file(config) as f:
-            decider = self.setup_decider(f.name, self.minimal_decider_context)
+            decider = setup_decider(
+                f, self.minimal_decider_context, self.mock_span, self.event_logger
+            )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant("test")
             self.assertEqual(variant, None)
 
-    def test_none_returned_on_get_variant_call_with_experiment_not_found(self):
-        with create_temp_config_file({}) as f:
-            decider = self.setup_decider(f.name, self.minimal_decider_context)
+    def test_get_variant_calls_with_partial_data(self):
+        config = {
+            "test": {
+                "id": 1,
+                "name": "test",
+                "owner": "test_owner",
+                "type": "dynamic_config",
+                "version": "1",
+                "start_ts": 0,
+                "stop_ts": 0,
+            }
+        }
+        self.exp_base_config.update(config)
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            variant = decider.get_variant("anything")
+
+            # get_variant_for_identifier()
+            variant = decider.get_variant_for_identifier("test", USER_ID, "user_id")
             self.assertEqual(variant, None)
+
+            variant = decider.get_variant_for_identifier("exp_1", USER_ID, "user_id")
+            self.assertEqual(variant, "variant_4")
+
+            # get_variant()
+            variant = decider.get_variant("test")
+            self.assertEqual(variant, None)
+
+            variant = decider.get_variant("exp_1")
+            self.assertEqual(variant, "variant_4")
+
+    def test_none_returned_on_get_variant_call_with_experiment_not_found(self):
+        with create_temp_config_file({}) as f:
+            decider = setup_decider(
+                f, self.minimal_decider_context, self.mock_span, self.event_logger
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            with warnings.catch_warnings(record=True) as captured:
+                variant = decider.get_variant("anything")
+
+                # can't test warning log only shows up only once if `decider.get_variant("anything")`
+                # is called again due to bug in `catch_warnings` contextmanager
+                # see https://github.com/python/cpython/issues/73858
+                assert any('Feature "anything" not found.' in str(x.message) for x in captured)
+            self.assertEqual(variant, None)
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
 
     def test_get_variant_without_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_without_expose(experiment_name="exp_1")
@@ -537,7 +590,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.parent_hg_config)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_without_expose(experiment_name="exp_1")
@@ -553,13 +606,32 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 experiment_name="hg", variant="holdout", event_fields=event_fields
             )
 
+    def test_none_returned_on_get_variant_without_expose_call_with_experiment_not_found(self):
+        with create_temp_config_file({}) as f:
+            decider = setup_decider(
+                f, self.minimal_decider_context, self.mock_span, self.event_logger
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            with warnings.catch_warnings(record=True) as captured:
+                variant = decider.get_variant_without_expose("anything")
+
+                # can't test warning log only shows up only once if `decider.get_variant("anything")`
+                # is called again due to bug in `catch_warnings` contextmanager
+                # see https://github.com/python/cpython/issues/73858
+                assert any('Feature "anything" not found.' in str(x.message) for x in captured)
+            self.assertEqual(variant, None)
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
     def test_get_variant_for_identifier_user_id(self):
         identifier = USER_ID
         bucket_val = "user_id"
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier(
@@ -586,7 +658,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier(
@@ -614,7 +686,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier(
@@ -642,7 +714,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             with self.assertLogs() as captured:
@@ -656,7 +728,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(self.event_logger.log.call_count, 0)
 
                 assert any(
-                    'Requested identifier_type: "canonical_url" is incompatible with experiment\'s bucket_val = device_id.'
+                    'Encountered error in decider.choose(): Requested identifier_type "canonical_url" is incompatible with experiment\'s bucket_val = device_id'
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -666,7 +738,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         identifier_type = "blah"
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.minimal_decider_context)
+            decider = setup_decider(
+                f, self.minimal_decider_context, self.mock_span, self.event_logger
+            )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             with self.assertLogs() as captured:
@@ -687,7 +761,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = "variant_4"
@@ -705,7 +779,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         bucket_val = "user_id"
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier_without_expose(
@@ -724,7 +798,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.parent_hg_config)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier_without_expose(
@@ -752,7 +826,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.parent_hg_config)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             # `identifier_type="canonical_url"`, which doesn't match `bucket_val` of `device_id`
@@ -765,7 +839,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(variant, None)
 
                 assert any(
-                    'Encountered error in decider.choose(): Requested identifier_type: "canonical_url" is incompatible with experiment\'s bucket_val = device_id.'
+                    'Encountered error in decider.choose(): Requested identifier_type "canonical_url" is incompatible with experiment\'s bucket_val = device_id'
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -778,7 +852,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier_without_expose(
@@ -795,7 +869,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_for_identifier_without_expose(
@@ -811,7 +885,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         identifier_type = "blah"
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             with self.assertLogs() as captured:
@@ -835,7 +909,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.additional_two_exp)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_without_expose()
@@ -866,7 +940,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.additional_two_exp)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_without_expose()
@@ -906,7 +980,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.additional_two_exp)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -940,7 +1014,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": "device_id"})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.minimal_decider_context)
+            decider = setup_decider(
+                f, self.minimal_decider_context, self.mock_span, self.event_logger
+            )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
 
@@ -977,7 +1053,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.additional_two_exp)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1022,7 +1098,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1061,7 +1137,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1110,7 +1186,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1149,7 +1225,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.exp_base_config[exp_name]["experiment"].update({"bucket_val": bucket_val})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant_arr = decider.get_all_variants_for_identifier_without_expose(
@@ -1193,7 +1269,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         identifier_type = "blah"
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
 
@@ -1215,7 +1291,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_get_variant_with_exposure_kwargs(self):
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             exp_kwargs = {"foo": "test_1", "bar": "test_2"}
             self.assertEqual(self.event_logger.log.call_count, 0)
@@ -1240,7 +1316,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config["exp_1"].update({"enabled": False})
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant(experiment_name="exp_1")
@@ -1251,7 +1327,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_get_experiment(self):
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             experiment = decider.get_experiment("exp_1")
 
@@ -1281,7 +1357,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         ]
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_without_expose("exp_1")
@@ -1333,22 +1409,11 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             loid_created_timestamp=LOID_CREATED_TIMESTAMP,
         )
 
-    def setup_decider(self, file_name, decider_context):
-        filewatcher = FileWatcher(path=file_name, parser=init_decider_parser, timeout=2, backoff=2)
-
-        return Decider(
-            decider_context=decider_context,
-            config_watcher=filewatcher,
-            server_span=self.mock_span,
-            context_name="test",
-            event_logger=self.event_logger,
-        )
-
     def test_get_bool(self):
         self.dc_base_config["dc_1"].update({"value_type": "Boolean", "value": True})
 
         with create_temp_config_file(self.dc_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             res = decider.get_bool("dc_1")
             self.assertEqual(res, True)
@@ -1359,7 +1424,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         self.dc_base_config["dc_1"].update({"value_type": "Integer", "value": 7})
 
         with create_temp_config_file(self.dc_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             res = decider.get_int("dc_1")
             self.assertEqual(res, 7)
@@ -1370,7 +1435,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         self.dc_base_config["dc_1"].update({"value_type": "Float", "value": 4.20})
 
         with create_temp_config_file(self.dc_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             res = decider.get_float("dc_1")
             self.assertEqual(res, 4.20)
@@ -1381,7 +1446,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         self.dc_base_config["dc_1"].update({"value_type": "Text", "value": "helloworld!"})
 
         with create_temp_config_file(self.dc_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             res = decider.get_string("dc_1")
             self.assertEqual(res, "helloworld!")
@@ -1394,7 +1459,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         )
 
         with create_temp_config_file(self.dc_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             res = decider.get_map("dc_1")
             self.assertEqual(res, dict({"key": "value", "another_key": "another_value"}))
@@ -1559,9 +1624,8 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
         # missing "value_type" field
         experiments_cfg.update(missing_value_type_cfg)
 
-        print(experiments_cfg)
         with create_temp_config_file(experiments_cfg) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
 
             configs = decider.get_all_dynamic_configs()
 

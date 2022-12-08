@@ -1,4 +1,5 @@
 import logging
+import warnings
 
 from copy import deepcopy
 from dataclasses import dataclass
@@ -11,8 +12,6 @@ from typing import List
 from typing import Optional
 from typing import Union
 
-import rust_decider  # type: ignore
-
 from baseplate import RequestContext
 from baseplate import Span
 from baseplate.clients import ContextFactory
@@ -23,6 +22,10 @@ from baseplate.lib.file_watcher import FileWatcher
 from baseplate.lib.file_watcher import T
 from baseplate.lib.file_watcher import WatchedFileNotAvailableError
 from reddit_edgecontext import ValidatedAuthenticationToken
+from rust_decider import Decider as RustDecider
+from rust_decider import DeciderException
+from rust_decider import FeatureNotFoundException
+from rust_decider import make_ctx
 from typing_extensions import Literal
 
 
@@ -148,19 +151,7 @@ class DeciderContext:
 
 
 def init_decider_parser(file: IO) -> Any:
-    return rust_decider.init(
-        "darkmode overrides targeting holdout mutex_group fractional_availability value", file.name
-    )
-
-
-def validate_decider(decider: Optional[Any]) -> None:
-    if decider is None:
-        logger.error("Rust decider is None--did not initialize.")
-
-    if decider:
-        decider_err = decider.err()
-        if decider_err:
-            logger.error(f"Rust decider has initialization error: {decider_err}")
+    return RustDecider(file.name)
 
 
 class Decider:
@@ -174,13 +165,13 @@ class Decider:
     def __init__(
         self,
         decider_context: DeciderContext,
-        config_watcher: FileWatcher,
+        internal: Optional[RustDecider],
         server_span: Span,
         context_name: str,
         event_logger: Optional[EventLogger] = None,
     ):
         self._decider_context = decider_context
-        self._config_watcher = config_watcher
+        self._internal = internal
         self._span = server_span
         self._context_name = context_name
         if event_logger:
@@ -189,19 +180,14 @@ class Decider:
             self._event_logger = DebugLogger()
 
     def _get_decider(self) -> Optional[T]:
-        try:
-            decider = self._config_watcher.get_data()
-            validate_decider(decider)
-            return decider
-        except WatchedFileNotAvailableError as exc:
-            logger.error("Experiment config file unavailable: %s", str(exc))
-        except TypeError as exc:
-            logger.error("Could not load experiment config: %s", str(exc))
+        if self._internal is not None:
+            return self._internal.get_decider()
+
         return None
 
     def _get_ctx(self) -> Any:
         context_fields = self._decider_context.to_dict()
-        return rust_decider.make_ctx(context_fields)
+        return make_ctx(context_fields)
 
     def _get_ctx_with_set_identifier(
         self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
@@ -209,7 +195,7 @@ class Decider:
         context_fields = self._decider_context.to_dict()
         context_fields[identifier_type] = identifier
 
-        return rust_decider.make_ctx(context_fields)
+        return make_ctx(context_fields)
 
     def _format_decision(self, decision_dict: Dict[str, str]) -> Dict[str, Any]:
         out = {}
@@ -352,32 +338,28 @@ class Decider:
 
         :return: Variant name if a variant is assigned, :code:`None` otherwise.
         """
-        decider = self._get_decider()
-        if decider is None:
+        if self._internal is None:
+            logger.error("RustDecider is None--did not initialize.")
             return None
 
-        ctx = self._get_ctx()
-        ctx_err = ctx.err()
-        if ctx_err is not None:
-            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+        ctx = self._decider_context.to_dict()
+
+        try:
+            decision = self._internal.choose(experiment_name, ctx)
+        except FeatureNotFoundException as exc:
+            warnings.warn(exc)
             return None
-
-        choice = decider.choose(experiment_name, ctx)
-        error = choice.err()
-
-        if error:
-            logger.info(f"Encountered error in decider.choose(): {error}")
+        except DeciderException as exc:
+            logger.info(exc)
             return None
-
-        variant = choice.decision()
 
         event_context_fields = self._decider_context.to_event_dict()
         event_context_fields.update(exposure_kwargs or {})
 
-        for event in choice.events():
+        for event in decision.events:
             self._send_expose(event=event, exposure_fields=event_context_fields)
 
-        return variant
+        return decision.variant
 
     def get_variant_without_expose(self, experiment_name: str) -> Optional[str]:
         """Return a bucketing variant, if any, without emitting exposure event.
@@ -394,32 +376,27 @@ class Decider:
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
-        decider = self._get_decider()
-        if decider is None:
+        if self._internal is None:
+            logger.error("RustDecider is None--did not initialize.")
             return None
 
-        ctx = self._get_ctx()
-        ctx_err = ctx.err()
-        if ctx_err is not None:
-            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+        ctx = self._decider_context.to_dict()
+
+        try:
+            decision = self._internal.choose(experiment_name, ctx)
+        except FeatureNotFoundException as exc:
+            warnings.warn(exc)
             return None
-
-        choice = decider.choose(experiment_name, ctx)
-        error = choice.err()
-
-        if error:
-            logger.info(f"Encountered error in decider.choose(): {error}")
+        except DeciderException as exc:
+            logger.info(exc)
             return None
-
-        variant = choice.decision()
 
         event_context_fields = self._decider_context.to_event_dict()
 
-        # expose Holdout if the experiment is part of one
-        for event in choice.events():
+        for event in decision.events:
             self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
 
-        return variant
+        return decision.variant
 
     def expose(
         self, experiment_name: str, variant_name: str, **exposure_kwargs: Optional[Dict[str, Any]]
@@ -1026,30 +1003,30 @@ class DeciderContextFactory(ContextFactory):
         return parsed_extracted_fields
 
     def _minimal_decider(
-        self, name: str, span: Span, parsed_extracted_fields: Optional[Dict] = None
+        self,
+        internal: Optional[RustDecider],
+        name: str,
+        span: Span,
+        parsed_extracted_fields: Optional[Dict] = None,
     ) -> Decider:
         return Decider(
             decider_context=DeciderContext(extracted_fields=parsed_extracted_fields),
-            config_watcher=self._filewatcher,
+            internal=internal,
             server_span=span,
             context_name=name,
             event_logger=self._event_logger,
         )
 
     def make_object_for_context(self, name: str, span: Span) -> Decider:
-        decider = None
+        rs_decider = None
         try:
-            decider = self._filewatcher.get_data()
+            rs_decider = self._filewatcher.get_data()
         except WatchedFileNotAvailableError as exc:
-            logger.error("Experiment config file unavailable: %s", str(exc))
-        except TypeError as exc:
-            logger.error("Could not load experiment config: %s", str(exc))
-
-        validate_decider(decider)
+            logger.error(f"Experiment config file unavailable: {exc}")
 
         if span is None:
             logger.debug("`span` is `None` in reddit_decider `make_object_for_context()`.")
-            return self._minimal_decider(name=name, span=span)
+            return self._minimal_decider(internal=rs_decider, name=name, span=span)
 
         request = None
         parsed_extracted_fields = None
@@ -1072,21 +1049,30 @@ class DeciderContextFactory(ContextFactory):
             # if `edge_context` is inaccessible, bail early
             if request is None:
                 return self._minimal_decider(
-                    name=name, span=span, parsed_extracted_fields=parsed_extracted_fields
+                    internal=rs_decider,
+                    name=name,
+                    span=span,
+                    parsed_extracted_fields=parsed_extracted_fields,
                 )
 
             ec = request.edge_context
 
             if ec is None:
                 return self._minimal_decider(
-                    name=name, span=span, parsed_extracted_fields=parsed_extracted_fields
+                    internal=rs_decider,
+                    name=name,
+                    span=span,
+                    parsed_extracted_fields=parsed_extracted_fields,
                 )
         except Exception as exc:
             logger.info(
                 f"Unable to access `request.edge_context` in `make_object_for_context()`. details: {exc}"
             )
             return self._minimal_decider(
-                name=name, span=span, parsed_extracted_fields=parsed_extracted_fields
+                internal=rs_decider,
+                name=name,
+                span=span,
+                parsed_extracted_fields=parsed_extracted_fields,
             )
 
         # All fields below are derived from `edge_context`
@@ -1189,7 +1175,7 @@ class DeciderContextFactory(ContextFactory):
 
         return Decider(
             decider_context=decider_context,
-            config_watcher=self._filewatcher,
+            internal=rs_decider,
             server_span=span,
             context_name=name,
             event_logger=self._event_logger,
