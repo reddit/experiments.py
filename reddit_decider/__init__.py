@@ -347,10 +347,10 @@ class Decider:
         try:
             decision = self._internal.choose(experiment_name, ctx)
         except FeatureNotFoundException as exc:
-            warnings.warn(exc)
+            warnings.warn(str(exc))
             return None
         except DeciderException as exc:
-            logger.info(exc)
+            logger.info(str(exc))
             return None
 
         event_context_fields = self._decider_context.to_event_dict()
@@ -385,10 +385,10 @@ class Decider:
         try:
             decision = self._internal.choose(experiment_name, ctx)
         except FeatureNotFoundException as exc:
-            warnings.warn(exc)
+            warnings.warn(str(exc))
             return None
         except DeciderException as exc:
-            logger.info(exc)
+            logger.info(str(exc))
             return None
 
         event_context_fields = self._decider_context.to_event_dict()
