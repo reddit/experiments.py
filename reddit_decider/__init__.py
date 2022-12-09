@@ -24,6 +24,7 @@ from baseplate.lib.file_watcher import WatchedFileNotAvailableError
 from reddit_edgecontext import ValidatedAuthenticationToken
 from rust_decider import Decider as RustDecider
 from rust_decider import DeciderException
+from rust_decider import Decision
 from rust_decider import FeatureNotFoundException
 from rust_decider import make_ctx
 from typing_extensions import Literal
@@ -610,16 +611,16 @@ class Decider:
 
         :return: list of experiment dicts with non-:code:`None` variants.
         """
-        if self._rs_decider is None:
+        if self._internal is None:
             logger.error("rs_decider is None--did not initialize.")
             return []
 
         ctx = self._decider_context.to_dict()
 
         try:
-            all_decisions = self._rs_decider.choose_all(ctx)
+            all_decisions = self._internal.choose_all(ctx)
         except DeciderException as exc:
-            logger.info(exc)
+            logger.info(str(exc))
             return []
 
         parsed_choices = []
@@ -685,7 +686,7 @@ class Decider:
             )
             return []
 
-        if self._rs_decider is None:
+        if self._internal is None:
             logger.error("rs_decider is None--did not initialize.")
             return []
 
@@ -693,7 +694,7 @@ class Decider:
         ctx[identifier_type] = identifier
 
         try:
-            all_decisions = self._rs_decider.choose_all(context=ctx, bucketing_field_filter=identifier_type)
+            all_decisions = self._internal.choose_all(context=ctx, bucketing_field_filter=identifier_type)
         except DeciderException as exc:
             logger.info(exc)
             return []

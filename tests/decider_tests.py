@@ -972,6 +972,37 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 experiment_name="hg", variant="holdout", event_fields=event_fields
             )
 
+    def test_get_all_variants_without_expose_ctx_missing_bucketing_key_exception(self):
+        # no device_id in ctx
+        dc = DeciderContext(user_id=USER_ID)
+
+        self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": "device_id"})
+        self.exp_base_config.update(self.additional_two_exp)
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(
+                f, dc, self.mock_span, self.event_logger
+            )
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
+            decision_arr = decider.get_all_variants_without_expose()
+
+            self.assertEqual(len(decision_arr), 2)
+
+            self.assertEqual(
+                first_occurrence_of_key_in(decision_arr, "experimentName", "e1"),
+                {"id": 6, "name": "e1treat", "version": "4", "experimentName": "e1"},
+            )
+            self.assertEqual(
+                first_occurrence_of_key_in(decision_arr, "experimentName", "e2"),
+                {"id": 7, "name": "e2treat", "version": "5", "experimentName": "e2"},
+            )
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
+
     def test_get_all_variants_for_identifier_without_expose_user_id(self):
         identifier = USER_ID
         bucket_val = "user_id"
