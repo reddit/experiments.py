@@ -637,7 +637,6 @@ class Decider:
 
         return parsed_choices
 
-
     def _transform_decision(self, decision: Decision) -> Dict[str, Any]:
         return {
             "name": decision.variant,
@@ -694,7 +693,9 @@ class Decider:
         ctx[identifier_type] = identifier
 
         try:
-            all_decisions = self._internal.choose_all(context=ctx, bucketing_field_filter=identifier_type)
+            all_decisions = self._internal.choose_all(
+                context=ctx, bucketing_field_filter=identifier_type
+            )
         except DeciderException as exc:
             logger.info(exc)
             return []

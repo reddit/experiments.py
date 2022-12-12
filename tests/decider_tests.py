@@ -980,9 +980,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         self.exp_base_config.update(self.additional_two_exp)
 
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = setup_decider(
-                f, dc, self.mock_span, self.event_logger
-            )
+            decider = setup_decider(f, dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
 
@@ -1003,7 +1001,6 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             # no exposures should be triggered
             self.assertEqual(self.event_logger.log.call_count, 0)
-
 
     def test_get_all_variants_for_identifier_without_expose_user_id(self):
         identifier = USER_ID
