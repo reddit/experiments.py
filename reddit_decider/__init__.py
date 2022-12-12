@@ -212,9 +212,7 @@ class Decider:
 
         return out
 
-    def _send_expose(
-        self, event: str, exposure_fields: dict, overwrite_identifier: bool = False
-    ) -> None:
+    def _send_expose(self, event: str, exposure_fields: dict) -> None:
         event_fields = deepcopy(exposure_fields)
         try:
             (
@@ -245,8 +243,7 @@ class Decider:
             owner=owner,
         )
 
-        if overwrite_identifier:
-            event_fields = {**event_fields, **{bucket_val: bucketing_value}}
+        event_fields = {**event_fields, **{bucket_val: bucketing_value}}
 
         self._event_logger.log(
             experiment=experiment,
@@ -258,9 +255,7 @@ class Decider:
         )
         return
 
-    def _send_expose_if_holdout(
-        self, event: str, exposure_fields: dict, overwrite_identifier: bool = False
-    ) -> None:
+    def _send_expose_if_holdout(self, event: str, exposure_fields: dict) -> None:
         event_fields = deepcopy(exposure_fields)
         try:
             (
@@ -296,8 +291,7 @@ class Decider:
                 owner=owner,
             )
 
-            if overwrite_identifier:
-                event_fields = {**event_fields, **{bucket_val: bucketing_value}}
+            event_fields = {**event_fields, **{bucket_val: bucketing_value}}
 
             self._event_logger.log(
                 experiment=experiment,
@@ -459,6 +453,14 @@ class Decider:
     ) -> Optional[str]:
         """Return a bucketing variant, if any, with auto-exposure for a given :code:`identifier`.
 
+        Note: If the experiment's :code:`bucket_val` (e.g. "user_id", "device_id", "canonical_url")
+            does not match the :code:`identifier_type` param,
+            the :code:`identifier` will be ignored and not used to bucket (:code:`{identifier_type: identifier}` is
+            added to internal :code:`DeciderContext` instance, but doesn't act like a bucketing override).
+
+            If the :code:`bucket_val` field exists on the :code:`DeciderContext` instance,
+            that field will be used to bucket, since it corresponds to the experiment's config.
+
         Since calling :code:`get_variant_for_identifier()` will fire an exposure event, it
         is best to call it when you are sure the user will be exposed to the experiment.
 
@@ -467,8 +469,11 @@ class Decider:
         :param identifier: an arbitary string used to bucket the experiment by
             being set on :code:`DeciderContext`'s :code:`identifier_type` field.
 
-        :param identifier_type: Sets :code:`{identifier_type: identifier}` on DeciderContext and
-            should match an experiment's :code:`bucket_val` to get a variant.
+        :param identifier_type: Sets :code:`{identifier_type: identifier}` on :code:`DeciderContext`.
+            The experiment's :code:`bucket_val` will be looked up in :code:`DeciderContext` and be used to bucket.
+            If the experiment's :code:`bucket_val` field does not match :code:`identifier_type` param,
+            :code:`identifier` will be ignored, and the field corresponding :code:`bucket_val` will be looked up
+            from :code:`DeciderContext` for bucketing.
 
         :param exposure_kwargs: Additional arguments that will be passed
             to :code:`events_logger` (keys must be part of v2 event schema,
@@ -483,38 +488,29 @@ class Decider:
             )
             return None
 
-        decider = self._get_decider()
-        if decider is None:
+        if self._internal is None:
+            logger.error("RustDecider is None--did not initialize.")
             return None
 
-        ctx = self._get_ctx_with_set_identifier(
-            identifier=identifier, identifier_type=identifier_type
-        )
-        ctx_err = ctx.err()
-        if ctx_err is not None:
-            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+        ctx = self._decider_context.to_dict()
+        ctx[identifier_type] = identifier
+
+        try:
+            decision = self._internal.choose(experiment_name, ctx)
+        except FeatureNotFoundException as exc:
+            warnings.warn(str(exc))
             return None
-
-        choice = decider.choose(
-            feature_name=experiment_name, ctx=ctx, identifier_type=identifier_type
-        )
-        error = choice.err()
-
-        if error:
-            logger.info(f"Encountered error in decider.choose(): {error}")
+        except DeciderException as exc:
+            logger.info(str(exc))
             return None
-
-        variant = choice.decision()
 
         event_context_fields = self._decider_context.to_event_dict()
         event_context_fields.update(exposure_kwargs or {})
 
-        for event in choice.events():
-            self._send_expose(
-                event=event, exposure_fields=event_context_fields, overwrite_identifier=True
-            )
+        for event in decision.events:
+            self._send_expose(event=event, exposure_fields=event_context_fields)
 
-        return variant
+        return decision.variant
 
     def get_variant_for_identifier_without_expose(
         self,
@@ -523,6 +519,14 @@ class Decider:
         identifier_type: Literal["user_id", "device_id", "canonical_url"],
     ) -> Optional[str]:
         """Return a bucketing variant, if any, without emitting exposure event for a given :code:`identifier`.
+
+        Note: If the experiment's :code:`bucket_val` (e.g. "user_id", "device_id", "canonical_url")
+            does not match the :code:`identifier_type` param,
+            the :code:`identifier` will be ignored and not used to bucket (:code:`{identifier_type: identifier}` is
+            added to internal :code:`DeciderContext` instance, but doesn't act like a bucketing override).
+
+            If the :code:`bucket_val` field exists on the :code:`DeciderContext` instance,
+            that field will be used to bucket, since it corresponds to the experiment's config.
 
         The :code:`expose()` function is available to be manually called afterward to emit
         exposure event.
@@ -538,8 +542,11 @@ class Decider:
         :param identifier: an arbitary string used to bucket the experiment by
             being set on :code:`DeciderContext`'s :code:`identifier_type` field.
 
-        :param identifier_type: Sets :code:`{identifier_type: identifier}` on DeciderContext and
-            should match an experiment's :code:`bucket_val` to get a variant.
+        :param identifier_type: Sets :code:`{identifier_type: identifier}` on :code:`DeciderContext`.
+            The experiment's :code:`bucket_val` will be looked up in :code:`DeciderContext` and be used to bucket.
+            If the experiment's :code:`bucket_val` field does not match :code:`identifier_type` param,
+            :code:`identifier` will be ignored and the field corresponding :code:`bucket_val` will be looked up
+            from :code:`DeciderContext` for bucketing.
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
@@ -549,37 +556,29 @@ class Decider:
             )
             return None
 
-        decider = self._get_decider()
-        if decider is None:
+        if self._internal is None:
+            logger.error("RustDecider is None--did not initialize.")
             return None
 
-        ctx = self._get_ctx_with_set_identifier(
-            identifier=identifier, identifier_type=identifier_type
-        )
-        ctx_err = ctx.err()
-        if ctx_err is not None:
-            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
-            return None
+        ctx = self._decider_context.to_dict()
+        ctx[identifier_type] = identifier
 
-        choice = decider.choose(
-            feature_name=experiment_name, ctx=ctx, identifier_type=identifier_type
-        )
-        error = choice.err()
-        if error:
-            logger.info(f"Encountered error in decider.choose(): {error}")
+        try:
+            decision = self._internal.choose(experiment_name, ctx)
+        except FeatureNotFoundException as exc:
+            warnings.warn(str(exc))
             return None
-
-        variant = choice.decision()
+        except DeciderException as exc:
+            logger.info(str(exc))
+            return None
 
         event_context_fields = self._decider_context.to_event_dict()
 
         # expose Holdout if the experiment is part of one
-        for event in choice.events():
-            self._send_expose_if_holdout(
-                event=event, exposure_fields=event_context_fields, overwrite_identifier=True
-            )
+        for event in decision.events:
+            self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
 
-        return variant
+        return decision.variant
 
     def get_all_variants_without_expose(self) -> List[Dict[str, Union[str, int]]]:
         """Return a list of experiment dicts in this format:
@@ -648,7 +647,8 @@ class Decider:
     def get_all_variants_for_identifier_without_expose(
         self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
     ) -> List[Dict[str, Union[str, int]]]:
-        """Return a list of experiment dicts for a given :code:`identifier` in this format:
+        """Return a list of experiment dicts for experiments having :code:`bucket_val` match
+        :code:`identifier_type`, for a given :code:`identifier`, in this format:
 
                 .. code-block:: json
 
@@ -675,7 +675,7 @@ class Decider:
             being set on :code:`DeciderContext`'s :code:`identifier_type` field.
 
         :param identifier_type: Sets :code:`{identifier_type: identifier}` on DeciderContext and
-            should match an experiment's :code:`bucket_val` to get a variant.
+            buckets all experiment with matching :code:`bucket_val`.
 
         :return: list of experiment dicts with non-:code:`None` variants.
         """

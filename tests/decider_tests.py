@@ -708,31 +708,6 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["device_id"], identifier)
 
-    def test_get_variant_for_identifier_wrong_bucket_val(self):
-        identifier = USER_ID
-        bucket_val = "device_id"
-        self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
-
-        with create_temp_config_file(self.exp_base_config) as f:
-            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
-
-            self.assertEqual(self.event_logger.log.call_count, 0)
-            with self.assertLogs() as captured:
-                # `identifier_type="canonical_url"`, which doesn't match `bucket_val` of `device_id`
-                variant = decider.get_variant_for_identifier(
-                    experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url"
-                )
-                # `None` is returned since `identifier_type` doesn't match `bucket_val` in experiment-config json
-                self.assertEqual(variant, None)
-                # exposure isn't emitted either
-                self.assertEqual(self.event_logger.log.call_count, 0)
-
-                assert any(
-                    'Encountered error in decider.choose(): Requested identifier_type "canonical_url" is incompatible with experiment\'s bucket_val = device_id'
-                    in x.getMessage()
-                    for x in captured.records
-                )
-
     def test_get_variant_for_identifier_bogus_identifier_type(self):
         identifier = "anything"
         identifier_type = "blah"
@@ -815,36 +790,6 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assert_minimal_exposure_event_fields(
                 experiment_name="hg", variant="holdout", event_fields=event_fields
             )
-
-    def test_get_variant_for_identifier_without_expose_for_holdout_exposure_wrong_bucket_val(self):
-        identifier = DEVICE_ID
-        bucket_val = "device_id"
-        self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
-
-        self.exp_base_config["exp_1"].update({"parent_hg_name": "hg"})
-        self.parent_hg_config["hg"]["experiment"].update({"bucket_val": bucket_val})
-        self.exp_base_config.update(self.parent_hg_config)
-
-        with create_temp_config_file(self.exp_base_config) as f:
-            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
-
-            self.assertEqual(self.event_logger.log.call_count, 0)
-            # `identifier_type="canonical_url"`, which doesn't match `bucket_val` of `device_id`
-            self.assertEqual(self.event_logger.log.call_count, 0)
-            with self.assertLogs() as captured:
-                variant = decider.get_variant_for_identifier_without_expose(
-                    experiment_name="exp_1", identifier=identifier, identifier_type="canonical_url"
-                )
-                # `None` is returned since `identifier_type` doesn't match `bucket_val` in experiment-config json
-                self.assertEqual(variant, None)
-
-                assert any(
-                    'Encountered error in decider.choose(): Requested identifier_type "canonical_url" is incompatible with experiment\'s bucket_val = device_id'
-                    in x.getMessage()
-                    for x in captured.records
-                )
-
-            self.assertEqual(self.event_logger.log.call_count, 0)
 
     def test_get_variant_for_identifier_without_expose_canonical_url(self):
         identifier = CANONICAL_URL
