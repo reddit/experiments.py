@@ -629,7 +629,7 @@ class Decider:
 
         for decision in all_decisions.values():
             if decision.variant:
-                parsed_choices.append(self._transform_decision(decision))
+                parsed_choices.append(self._decision_to_dict(decision))
 
             # expose Holdout if the experiment is part of one
             for event in decision.events:
@@ -637,7 +637,7 @@ class Decider:
 
         return parsed_choices
 
-    def _transform_decision(self, decision: Decision) -> Dict[str, Any]:
+    def _decision_to_dict(self, decision: Decision) -> Dict[str, Any]:
         return {
             "name": decision.variant,
             "id": decision.feature_id,
@@ -706,7 +706,7 @@ class Decider:
 
         for decision in all_decisions.values():
             if decision.variant:
-                parsed_choices.append(self._transform_decision(decision))
+                parsed_choices.append(self._decision_to_dict(decision))
 
             # expose Holdout if the experiment is part of one
             for event in decision.events:
