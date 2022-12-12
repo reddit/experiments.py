@@ -190,28 +190,6 @@ class Decider:
         context_fields = self._decider_context.to_dict()
         return make_ctx(context_fields)
 
-    def _get_ctx_with_set_identifier(
-        self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
-    ) -> Dict[str, Any]:
-        context_fields = self._decider_context.to_dict()
-        context_fields[identifier_type] = identifier
-
-        return make_ctx(context_fields)
-
-    def _format_decision(self, decision_dict: Dict[str, str]) -> Dict[str, Any]:
-        out = {}
-        # cast id to int
-        for k, v in decision_dict.items():
-            if k == "id":
-                try:
-                    out[k] = int(v)
-                except ValueError:
-                    out[k] = v  # type: ignore
-            else:
-                out[k] = v  # type: ignore
-
-        return out
-
     def _send_expose(self, event: str, exposure_fields: dict) -> None:
         event_fields = deepcopy(exposure_fields)
         try:
