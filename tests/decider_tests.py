@@ -972,7 +972,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 experiment_name="hg", variant="holdout", event_fields=event_fields
             )
 
-    def test_get_all_variants_without_expose_ctx_missing_bucketing_key_exception(self):
+    def test_get_all_variants_without_expose_ctx_missing_device_id(self):
         # no device_id in ctx
         dc = DeciderContext(user_id=USER_ID)
 
@@ -988,6 +988,8 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             decision_arr = decider.get_all_variants_without_expose()
 
+            # device_id experiment not bucketed since
+            # device_id is missing in ctx
             self.assertEqual(len(decision_arr), 2)
 
             self.assertEqual(
@@ -1226,6 +1228,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 identifier=identifier, identifier_type=bucket_val
             )
 
+            # non-canonical_url experiment is not included in result
             self.assertEqual(len(variant_arr), 2)
             self.assertEqual(
                 first_occurrence_of_key_in(variant_arr, "experimentName", "exp_1"),
