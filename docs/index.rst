@@ -68,7 +68,7 @@ Upgrade or integrate reddit-experiments package:
 .. code-block:: python
 
     # import latest reddit-experiments package in service requirements.txt
-    reddit-experiments>=1.3.9
+    reddit-experiments>=1.3.11
 
 Initialize :code:`decider` instance on Baseplate context
 --------------------------------------------------------
@@ -126,7 +126,7 @@ Make sure :code:`EdgeContext` is accessible on :code:`request` object like so:
     #   - locale
     #   - origin_service
     #   - is_employee
-    #   - loid_created_ms (>=1.3.9)
+    #   - loid_created_ms (>=1.3.11)
 
     # Customized fields can be defined below to be extracted from a baseplate request
     # and will override above edge_context fields.

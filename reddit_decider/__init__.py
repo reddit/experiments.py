@@ -24,6 +24,7 @@ from baseplate.lib.file_watcher import WatchedFileNotAvailableError
 from reddit_edgecontext import ValidatedAuthenticationToken
 from rust_decider import Decider as RustDecider
 from rust_decider import DeciderException
+from rust_decider import Decision
 from rust_decider import FeatureNotFoundException
 from rust_decider import make_ctx
 from typing_extensions import Literal
@@ -610,46 +611,39 @@ class Decider:
 
         :return: list of experiment dicts with non-:code:`None` variants.
         """
-        decider = self._get_decider()
-        if decider is None:
+        if self._internal is None:
+            logger.error("rs_decider is None--did not initialize.")
             return []
 
-        ctx = self._get_ctx()
-        ctx_err = ctx.err()
-        if ctx_err is not None:
-            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+        ctx = self._decider_context.to_dict()
+
+        try:
+            all_decisions = self._internal.choose_all(ctx)
+        except DeciderException as exc:
+            logger.info(str(exc))
             return []
 
-        all_decisions_result = decider.choose_all(ctx)
-
-        error = all_decisions_result.err()
-        if error:
-            logger.info(f"Encountered error in decider.choose_all(): {error}")
-            return []
-
-        all_decisions = all_decisions_result.decisions()
         parsed_choices = []
 
         event_context_fields = self._decider_context.to_event_dict()
 
-        for exp_name, decision in all_decisions.items():
-            decision_error = decision.err()
-            if decision_error:
-                logger.info(
-                    f"Encountered error for experiment: {exp_name} in decider.choose_all(): {decision_error}"
-                )
-                continue
-
-            decision_dict = decision.decision_dict()
-
-            if decision_dict:
-                parsed_choices.append(self._format_decision(decision_dict))
+        for decision in all_decisions.values():
+            if decision.variant:
+                parsed_choices.append(self._decision_to_dict(decision))
 
             # expose Holdout if the experiment is part of one
-            for event in decision.events():
+            for event in decision.events:
                 self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
 
         return parsed_choices
+
+    def _decision_to_dict(self, decision: Decision) -> Dict[str, Any]:
+        return {
+            "name": decision.variant,
+            "id": decision.feature_id,
+            "version": str(decision.feature_version),
+            "experimentName": decision.feature_name,
+        }
 
     def get_all_variants_for_identifier_without_expose(
         self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
@@ -691,48 +685,32 @@ class Decider:
             )
             return []
 
-        decider = self._get_decider()
-        if decider is None:
+        if self._internal is None:
+            logger.error("rs_decider is None--did not initialize.")
             return []
 
-        ctx = self._get_ctx_with_set_identifier(
-            identifier=identifier, identifier_type=identifier_type
-        )
-        ctx_err = ctx.err()
-        if ctx_err is not None:
-            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+        ctx = self._decider_context.to_dict()
+        ctx[identifier_type] = identifier
+
+        try:
+            all_decisions = self._internal.choose_all(
+                context=ctx, bucketing_field_filter=identifier_type
+            )
+        except DeciderException as exc:
+            logger.info(exc)
             return []
 
-        all_decisions_result = decider.choose_all(ctx=ctx, identifier_type=identifier_type)
-
-        error = all_decisions_result.err()
-        if error:
-            logger.info(f"Encountered error in decider.choose_all(): {error}")
-            return []
-
-        all_decisions = all_decisions_result.decisions()
         parsed_choices = []
 
         event_context_fields = self._decider_context.to_event_dict()
 
-        for exp_name, decision in all_decisions.items():
-            decision_error = decision.err()
-            if decision_error:
-                logger.info(
-                    f"Encountered error for experiment: {exp_name} in decider.choose_all(): {decision_error}"
-                )
-                continue
-
-            decision_dict = decision.decision_dict()
-
-            if decision_dict:
-                parsed_choices.append(self._format_decision(decision_dict))
+        for decision in all_decisions.values():
+            if decision.variant:
+                parsed_choices.append(self._decision_to_dict(decision))
 
             # expose Holdout if the experiment is part of one
-            for event in decision.events():
-                self._send_expose_if_holdout(
-                    event=event, exposure_fields=event_context_fields, overwrite_identifier=True
-                )
+            for event in decision.events:
+                self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
 
         return parsed_choices
 
