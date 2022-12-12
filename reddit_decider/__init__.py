@@ -212,9 +212,7 @@ class Decider:
 
         return out
 
-    def _send_expose(
-        self, event: str, exposure_fields: dict, overwrite_identifier: bool = False
-    ) -> None:
+    def _send_expose(self, event: str, exposure_fields: dict) -> None:
         event_fields = deepcopy(exposure_fields)
         try:
             (
@@ -245,8 +243,7 @@ class Decider:
             owner=owner,
         )
 
-        if overwrite_identifier:
-            event_fields = {**event_fields, **{bucket_val: bucketing_value}}
+        event_fields = {**event_fields, **{bucket_val: bucketing_value}}
 
         self._event_logger.log(
             experiment=experiment,
@@ -258,9 +255,7 @@ class Decider:
         )
         return
 
-    def _send_expose_if_holdout(
-        self, event: str, exposure_fields: dict, overwrite_identifier: bool = False
-    ) -> None:
+    def _send_expose_if_holdout(self, event: str, exposure_fields: dict) -> None:
         event_fields = deepcopy(exposure_fields)
         try:
             (
@@ -296,8 +291,7 @@ class Decider:
                 owner=owner,
             )
 
-            if overwrite_identifier:
-                event_fields = {**event_fields, **{bucket_val: bucketing_value}}
+            event_fields = {**event_fields, **{bucket_val: bucketing_value}}
 
             self._event_logger.log(
                 experiment=experiment,
@@ -503,9 +497,7 @@ class Decider:
         event_context_fields.update(exposure_kwargs or {})
 
         for event in decision.events:
-            self._send_expose(
-                event=event, exposure_fields=event_context_fields, overwrite_identifier=True
-            )
+            self._send_expose(event=event, exposure_fields=event_context_fields)
 
         return decision.variant
 
@@ -562,9 +554,7 @@ class Decider:
 
         # expose Holdout if the experiment is part of one
         for event in decision.events:
-            self._send_expose_if_holdout(
-                event=event, exposure_fields=event_context_fields, overwrite_identifier=True
-            )
+            self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
 
         return decision.variant
 
