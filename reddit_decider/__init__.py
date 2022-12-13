@@ -865,12 +865,12 @@ class Decider:
         return parsed_configs
 
     def get_experiment(self, experiment_name: str) -> Optional[ExperimentConfig]:
-        """Get an :py:class:`~reddit_decider.ExperimentConfig` `dataclass <https://github.com/reddit/experiments.py/blob/728a9501faceab7072f9d62f4e391fa4c34a68b1/reddit_decider/__init__.py#L39-L47>`_
+        """Get an :py:class:`~reddit_decider.ExperimentConfig` `dataclass <https://github.com/reddit/experiments.py/blob/develop/reddit_decider/__init__.py#L44>`_
         representation of an experiment or :code:`None` if not found.
 
         :param experiment_name: Name of the experiment to be fetched.
 
-        :return: an :py:class:`~reddit_decider.ExperimentConfig` `dataclass <https://github.com/reddit/experiments.py/blob/728a9501faceab7072f9d62f4e391fa4c34a68b1/reddit_decider/__init__.py#L39-L47>`_
+        :return: an :py:class:`~reddit_decider.ExperimentConfig` `dataclass <https://github.com/reddit/experiments.py/blob/develop/reddit_decider/__init__.py#L44>`_
             representation of an experiment if found, else :code:`None`.
         """
         decider = self._get_decider()
