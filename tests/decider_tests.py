@@ -1313,6 +1313,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(experiment.start_ts, cfg["start_ts"])
             self.assertEqual(experiment.stop_ts, cfg["stop_ts"])
             self.assertEqual(experiment.owner, cfg["owner"])
+            self.assertEqual(experiment.emit_event, True)
 
     def test_get_variant_without_expose_with_HG_as_control_1_and_child_returns_none_does_expose(
         self,

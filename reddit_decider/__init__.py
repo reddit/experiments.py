@@ -49,6 +49,7 @@ class ExperimentConfig:
     start_ts: int
     stop_ts: int
     owner: str
+    emit_event: Optional[bool] = None
 
 
 class DeciderContext:
@@ -890,6 +891,7 @@ class Decider:
             start_ts=exp_dict.get("variant_set", {}).get("start_ts"),
             stop_ts=exp_dict.get("variant_set", {}).get("stop_ts"),
             owner=exp_dict.get("owner"),
+            emit_event=bool(exp_dict.get("emit_event")),
         )
 
 
