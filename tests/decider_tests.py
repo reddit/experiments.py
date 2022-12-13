@@ -751,7 +751,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     def test_expose_without_variant_name(self):
         with create_temp_config_file(self.exp_base_config) as f:
-            decider = self.setup_decider(f.name, self.dc)
+            decider = setup_decider(f.name, self.dc, self.mock_span, self.event_logger)
 
             self.assertEqual(self.event_logger.log.call_count, 0)
 
