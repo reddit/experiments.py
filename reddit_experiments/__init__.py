@@ -301,6 +301,9 @@ class Experiments:
         :param kwargs: Additional arguments that will be passed to logger.
 
         """
+        if variant_name is None or variant_name == "":
+            return
+
         experiment = self._get_experiment(experiment_name)
 
         if experiment is None:
