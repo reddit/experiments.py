@@ -287,14 +287,7 @@ class TestExperiments(unittest.TestCase):
 
         self.assertEqual(self.event_logger.log.call_count, 0)
 
-        with self.assertLogs() as captured:
-            experiments.expose("test", variant_name=None, user=self.user, app_name="r2")
-
-            assert any(
-                "`variant_name` arg not provided in reddit_experiments.expose() call for experiment: test"
-                in x.getMessage()
-                for x in captured.records
-            )
+        experiments.expose("test", variant_name=None, user=self.user, app_name="r2")
 
         self.assertEqual(self.event_logger.log.call_count, 0)
 

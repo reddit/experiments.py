@@ -389,9 +389,6 @@ class Decider:
             use dicts for nested fields) under :code:`inputs` and as :code:`kwargs`
         """
         if variant_name is None or variant_name == "":
-            logger.info(
-                f"`variant_name` arg not provided in reddit_decider.expose() call for experiment: {experiment_name}"
-            )
             return
 
         decider = self._get_decider()
