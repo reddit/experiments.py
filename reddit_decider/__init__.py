@@ -676,7 +676,7 @@ class Decider:
                 context=ctx, bucketing_field_filter=identifier_type
             )
         except DeciderException as exc:
-            logger.info(exc)
+            logger.info(str(exc))
             return []
 
         parsed_choices = []
@@ -1126,8 +1126,7 @@ class DeciderContextFactory(ContextFactory):
             )
         except Exception as exc:
             logger.warning(
-                "Could not create full DeciderContext() (defaulting to empty DeciderContext()): %s",
-                str(exc),
+                f"Could not create full DeciderContext() (defaulting to empty DeciderContext()): {exc}"
             )
             decider_context = DeciderContext()
 
