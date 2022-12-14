@@ -696,32 +696,6 @@ class Decider:
 
         return parsed_choices
 
-    def _get_dynamic_config_value(
-        self,
-        feature_name: str,
-        default: Any,
-        dc_types: List[str],
-    ) -> Any:
-        if self._internal is None:
-            logger.error("rs_decider is None--did not initialize.")
-            return default
-
-        ctx = self._decider_context.to_dict()
-
-        try:
-            decision = self._internal.choose(feature_name=feature_name, context=ctx)
-        except FeatureNotFoundException as exc:
-            warnings.warn(str(exc))
-            return default
-        except DeciderException as exc:
-            logger.info(str(exc))
-            return default
-
-        if decision.value_type not in dc_types:
-            return default
-
-        return decision.value
-
     def get_bool(self, feature_name: str, default: bool = False) -> bool:
         """Fetch a Dynamic Configuration of boolean type.
 
@@ -833,6 +807,32 @@ class Decider:
             parsed_configs.append(self._decision_to_dc_dict(decision))
 
         return parsed_configs
+
+    def _get_dynamic_config_value(
+        self,
+        feature_name: str,
+        default: Any,
+        dc_types: List[str],
+    ) -> Any:
+        if self._internal is None:
+            logger.error("rs_decider is None--did not initialize.")
+            return default
+
+        ctx = self._decider_context.to_dict()
+
+        try:
+            decision = self._internal.choose(feature_name=feature_name, context=ctx)
+        except FeatureNotFoundException as exc:
+            warnings.warn(str(exc))
+            return default
+        except DeciderException as exc:
+            logger.info(str(exc))
+            return default
+
+        if decision.value_type not in dc_types:
+            return default
+
+        return decision.value
 
     def _decision_to_dc_dict(self, decision: Decision) -> Dict[str, Any]:
         return {
