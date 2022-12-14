@@ -700,7 +700,7 @@ class Decider:
         self,
         feature_name: str,
         default: Any,
-    ) -> Optional[Any]:
+    ) -> Decision:
         if self._internal is None:
             logger.error("rs_decider is None--did not initialize.")
             return default
