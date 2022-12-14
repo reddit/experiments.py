@@ -699,24 +699,24 @@ class Decider:
     def _get_dynamic_config_value(
         self,
         feature_name: str,
-        decider_func: Callable[[str, DeciderContext], Any],
         default: Any,
     ) -> Optional[Any]:
-        ctx = self._get_ctx()
-        ctx_err = ctx.err()
-        if ctx_err is not None:
-            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+        if self._internal is None:
+            logger.error("rs_decider is None--did not initialize.")
+            return default
+
+        ctx = self._decider_context.to_dict()
+
+        try:
+            decision = self._internal.choose(feature_name=feature_name, context=ctx)
+        except FeatureNotFoundException as exc:
+            warnings.warn(str(exc))
             return None
-
-        res = decider_func(feature_name, ctx)
-        if res is None:
-            return default
-        error = res.err()
-        if error:
-            logger.warning(f"Encountered error {decider_func.__name__}: {error}")
+        except DeciderException as exc:
+            logger.info(str(exc))
             return default
 
-        return res.val()
+        return decision
 
     def get_bool(self, feature_name: str, default: bool = False) -> bool:
         """Fetch a Dynamic Configuration of boolean type.
@@ -728,10 +728,10 @@ class Decider:
 
         :return: the boolean value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decider = self._get_decider()
-        if not decider:
+        decision = self._get_dynamic_config_value(feature_name, default)
+        if decision.value_type != "boolean":
             return default
-        return self._get_dynamic_config_value(feature_name, decider.get_bool, default)
+        return decision.value
 
     def get_int(self, feature_name: str, default: int = 0) -> int:
         """Fetch a Dynamic Configuration of int type.
@@ -743,10 +743,12 @@ class Decider:
 
         :return: the int value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decider = self._get_decider()
-        if not decider:
+        decision = self._get_dynamic_config_value(feature_name, default)
+
+        if decision.value_type != "integer":
             return default
-        return self._get_dynamic_config_value(feature_name, decider.get_int, default)
+
+        return decision.value
 
     def get_float(self, feature_name: str, default: float = 0.0) -> float:
         """Fetch a Dynamic Configuration of float type.
@@ -758,10 +760,12 @@ class Decider:
 
         :return: the float value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decider = self._get_decider()
-        if not decider:
+        decision = self._get_dynamic_config_value(feature_name, default)
+
+        if decision.value_type != "float" and decision.value_type != "integer":
             return default
-        return self._get_dynamic_config_value(feature_name, decider.get_float, default)
+
+        return decision.value
 
     def get_string(self, feature_name: str, default: str = "") -> str:
         """Fetch a Dynamic Configuration of string type.
@@ -773,10 +777,12 @@ class Decider:
 
         :return: the string value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decider = self._get_decider()
-        if not decider:
+        decision = self._get_dynamic_config_value(feature_name, default)
+
+        if decision.value_type != "string" and decision.value_type != "Text":
             return default
-        return self._get_dynamic_config_value(feature_name, decider.get_string, default)
+
+        return decision.value
 
     def get_map(self, feature_name: str, default: Optional[dict] = None) -> Optional[dict]:
         """Fetch a Dynamic Configuration of map type.
@@ -788,10 +794,12 @@ class Decider:
 
         :return: the map value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decider = self._get_decider()
-        if not decider:
+        decision = self._get_dynamic_config_value(feature_name, default)
+
+        if decision.value_type != "map":
             return default
-        return self._get_dynamic_config_value(feature_name, decider.get_map, default)
+
+        return decision.value
 
     def get_all_dynamic_configs(self) -> List[Dict[str, Any]]:
         """Return a list of dynamic configuration dicts in this format:
@@ -826,40 +834,31 @@ class Decider:
 
         :return: list of all active dynamic config dicts.
         """
-        decider = self._get_decider()
-        if not decider:
+        if self._internal is None:
+            logger.error("rs_decider is None--did not initialize.")
             return []
 
-        ctx = self._get_ctx()
-        ctx_err = ctx.err()
-        if ctx_err is not None:
-            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+        ctx = self._decider_context.to_dict()
+
+        try:
+            all_decisions = self._internal.all_values(ctx)
+        except DeciderException as exc:
+            logger.info(str(exc))
             return []
 
-        all_decisions_result = decider.get_all_values(ctx)
-
-        error = all_decisions_result.err()
-        if error:
-            logger.info(f"Encountered error in decider.choose_all(): {error}")
-            return []
-
-        all_decisions = all_decisions_result.decisions()
         parsed_configs = []
 
-        for dc_name, decision in all_decisions.items():
-            decision_error = decision.err()
-            if decision_error:
-                logger.info(
-                    f"Encountered error for dynamic config: {dc_name} in decider.get_all_values(): {decision_error}"
-                )
-                continue
-
-            value_dict = decision.value_dict()
-
-            if value_dict:
-                parsed_configs.append(value_dict)
+        for decision in all_decisions.values():
+            parsed_configs.append(self._decision_to_dc_dict(decision))
 
         return parsed_configs
+
+    def _decision_to_dc_dict(self, decision: Decision) -> Dict[str, Any]:
+        return {
+            "name": decision.feature_name,
+            "value": decision.value,
+            "type": decision.value_type or "",
+        }
 
     def get_experiment(self, experiment_name: str) -> Optional[ExperimentConfig]:
         """Get an :py:class:`~reddit_decider.ExperimentConfig` `dataclass <https://github.com/reddit/experiments.py/blob/develop/reddit_decider/__init__.py#L44>`_
