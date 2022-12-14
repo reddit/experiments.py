@@ -700,7 +700,8 @@ class Decider:
         self,
         feature_name: str,
         default: Any,
-    ) -> Decision:
+        dc_types: List[str],
+    ) -> Any:
         if self._internal is None:
             logger.error("rs_decider is None--did not initialize.")
             return default
@@ -711,12 +712,15 @@ class Decider:
             decision = self._internal.choose(feature_name=feature_name, context=ctx)
         except FeatureNotFoundException as exc:
             warnings.warn(str(exc))
-            return None
+            return default
         except DeciderException as exc:
             logger.info(str(exc))
             return default
 
-        return decision
+        if decision.value_type not in dc_types:
+            return default
+
+        return decision.value
 
     def get_bool(self, feature_name: str, default: bool = False) -> bool:
         """Fetch a Dynamic Configuration of boolean type.
@@ -728,10 +732,7 @@ class Decider:
 
         :return: the boolean value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decision = self._get_dynamic_config_value(feature_name, default)
-        if decision.value_type != "boolean":
-            return default
-        return decision.value
+        return self._get_dynamic_config_value(feature_name, default, ["boolean"])
 
     def get_int(self, feature_name: str, default: int = 0) -> int:
         """Fetch a Dynamic Configuration of int type.
@@ -743,12 +744,7 @@ class Decider:
 
         :return: the int value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decision = self._get_dynamic_config_value(feature_name, default)
-
-        if decision.value_type != "integer":
-            return default
-
-        return decision.value
+        return self._get_dynamic_config_value(feature_name, default, ["integer"])
 
     def get_float(self, feature_name: str, default: float = 0.0) -> float:
         """Fetch a Dynamic Configuration of float type.
@@ -760,12 +756,7 @@ class Decider:
 
         :return: the float value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decision = self._get_dynamic_config_value(feature_name, default)
-
-        if decision.value_type != "float" and decision.value_type != "integer":
-            return default
-
-        return decision.value
+        return self._get_dynamic_config_value(feature_name, default, ["float", "integer"])
 
     def get_string(self, feature_name: str, default: str = "") -> str:
         """Fetch a Dynamic Configuration of string type.
@@ -777,12 +768,7 @@ class Decider:
 
         :return: the string value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decision = self._get_dynamic_config_value(feature_name, default)
-
-        if decision.value_type != "string" and decision.value_type != "Text":
-            return default
-
-        return decision.value
+        return self._get_dynamic_config_value(feature_name, default, ["string"])
 
     def get_map(self, feature_name: str, default: Optional[dict] = None) -> Optional[dict]:
         """Fetch a Dynamic Configuration of map type.
@@ -794,12 +780,7 @@ class Decider:
 
         :return: the map value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decision = self._get_dynamic_config_value(feature_name, default)
-
-        if decision.value_type != "map":
-            return default
-
-        return decision.value
+        return self._get_dynamic_config_value(feature_name, default, ["map"])
 
     def get_all_dynamic_configs(self) -> List[Dict[str, Any]]:
         """Return a list of dynamic configuration dicts in this format:
