@@ -1696,11 +1696,10 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
                 {"name": "dc_missing_map", "value": {}, "type": "map"},
             )
 
-            # set "type" to empty string if "value_type" is missing on cfg
             missing_map_val_res = first_occurrence_of_key_in(
                 configs, "name", "dc_missing_value_type"
             )
             self.assertEqual(
                 missing_map_val_res,
-                {"name": "dc_missing_value_type", "value": False, "type": ""},
+                {"name": "dc_missing_value_type", "value": False, "type": "boolean"},
             )

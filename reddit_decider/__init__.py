@@ -34,7 +34,13 @@ logger = logging.getLogger(__name__)
 
 EMPLOYEE_ROLES = ["employee", "contractor"]
 IDENTIFIERS = ["user_id", "device_id", "canonical_url"]
-
+TYPE_STR_LOOKUP = {
+    bool: "boolean",
+    int: "integer",
+    float: "float",
+    str: "string",
+    dict: "map"
+}
 
 class EventType(Enum):
     EXPOSE = "expose"
@@ -706,7 +712,7 @@ class Decider:
 
         :return: the boolean value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        return self._get_dynamic_config_value(feature_name, default, ["boolean"])
+        return self._get_dynamic_config_value(feature_name, default, [bool])
 
     def get_int(self, feature_name: str, default: int = 0) -> int:
         """Fetch a Dynamic Configuration of int type.
@@ -718,7 +724,7 @@ class Decider:
 
         :return: the int value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        return self._get_dynamic_config_value(feature_name, default, ["integer"])
+        return self._get_dynamic_config_value(feature_name, default, [int])
 
     def get_float(self, feature_name: str, default: float = 0.0) -> float:
         """Fetch a Dynamic Configuration of float type.
@@ -730,7 +736,7 @@ class Decider:
 
         :return: the float value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        return self._get_dynamic_config_value(feature_name, default, ["float", "integer"])
+        return self._get_dynamic_config_value(feature_name, default, [float, int])
 
     def get_string(self, feature_name: str, default: str = "") -> str:
         """Fetch a Dynamic Configuration of string type.
@@ -742,7 +748,7 @@ class Decider:
 
         :return: the string value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        return self._get_dynamic_config_value(feature_name, default, ["string"])
+        return self._get_dynamic_config_value(feature_name, default, [str])
 
     def get_map(self, feature_name: str, default: Optional[dict] = None) -> Optional[dict]:
         """Fetch a Dynamic Configuration of map type.
@@ -754,7 +760,7 @@ class Decider:
 
         :return: the map value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        return self._get_dynamic_config_value(feature_name, default, ["map"])
+        return self._get_dynamic_config_value(feature_name, default, [dict])
 
     def get_all_dynamic_configs(self) -> List[Dict[str, Any]]:
         """Return a list of dynamic configuration dicts in this format:
@@ -796,15 +802,15 @@ class Decider:
         ctx = self._decider_context.to_dict()
 
         try:
-            all_decisions = self._internal.all_values(ctx)
+            values = self._internal.all_values(ctx)
         except DeciderException as exc:
             logger.info(str(exc))
             return []
 
         parsed_configs = []
 
-        for decision in all_decisions.values():
-            parsed_configs.append(self._decision_to_dc_dict(decision))
+        for feature_name, val in values.items():
+            parsed_configs.append(self._value_to_dc_dict(feature_name, val))
 
         return parsed_configs
 
@@ -812,7 +818,7 @@ class Decider:
         self,
         feature_name: str,
         default: Any,
-        dc_types: List[str],
+        dc_types: List[type],
     ) -> Any:
         if self._internal is None:
             logger.error("rs_decider is None--did not initialize.")
@@ -829,16 +835,18 @@ class Decider:
             logger.info(str(exc))
             return default
 
-        if decision.value_type not in dc_types:
+        value = decision.value
+
+        if type(value) not in dc_types:
             return default
 
-        return decision.value
+        return value
 
-    def _decision_to_dc_dict(self, decision: Decision) -> Dict[str, Any]:
+    def _value_to_dc_dict(self, feature_name: str, value: Optional[Any]) -> Dict[str, Any]:
         return {
-            "name": decision.feature_name,
-            "value": decision.value,
-            "type": decision.value_type or "",
+            "name": feature_name,
+            "value": value,
+            "type": "" if value is None else TYPE_STR_LOOKUP[type(value)],
         }
 
     def get_experiment(self, experiment_name: str) -> Optional[ExperimentConfig]:
