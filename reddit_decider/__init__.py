@@ -10,6 +10,8 @@ from typing import Dict
 from typing import IO
 from typing import List
 from typing import Optional
+from typing import Type
+from typing import TypeVar
 from typing import Union
 
 from baseplate import RequestContext
@@ -27,6 +29,7 @@ from rust_decider import DeciderException
 from rust_decider import Decision
 from rust_decider import FeatureNotFoundException
 from rust_decider import make_ctx
+from rust_decider import ValueTypeMismatchException
 from typing_extensions import Literal
 
 
@@ -34,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 EMPLOYEE_ROLES = ["employee", "contractor"]
 IDENTIFIERS = ["user_id", "device_id", "canonical_url"]
+TYPE_STR_LOOKUP = {bool: "boolean", int: "integer", float: "float", str: "string", dict: "map"}
 
 
 class EventType(Enum):
@@ -57,6 +61,8 @@ class DeciderContext:
     bucketing, targeting, and overrides.
     :code:`DeciderContext()` is populated in :code:`make_object_for_context()`.
     """
+
+    T = TypeVar("T")
 
     def __init__(
         self,
@@ -173,7 +179,7 @@ class Decider:
         event_logger: Optional[EventLogger] = None,
     ):
         self._decider_context = decider_context
-        self._internal = internal
+        self._internal: RustDecider = internal
         self._span = server_span
         self._context_name = context_name
         if event_logger:
@@ -696,28 +702,6 @@ class Decider:
 
         return parsed_choices
 
-    def _get_dynamic_config_value(
-        self,
-        feature_name: str,
-        decider_func: Callable[[str, DeciderContext], Any],
-        default: Any,
-    ) -> Optional[Any]:
-        ctx = self._get_ctx()
-        ctx_err = ctx.err()
-        if ctx_err is not None:
-            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
-            return None
-
-        res = decider_func(feature_name, ctx)
-        if res is None:
-            return default
-        error = res.err()
-        if error:
-            logger.warning(f"Encountered error {decider_func.__name__}: {error}")
-            return default
-
-        return res.val()
-
     def get_bool(self, feature_name: str, default: bool = False) -> bool:
         """Fetch a Dynamic Configuration of boolean type.
 
@@ -728,10 +712,7 @@ class Decider:
 
         :return: the boolean value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decider = self._get_decider()
-        if not decider:
-            return default
-        return self._get_dynamic_config_value(feature_name, decider.get_bool, default)
+        return self._get_dynamic_config_value(feature_name, default, bool, self._internal.get_bool)
 
     def get_int(self, feature_name: str, default: int = 0) -> int:
         """Fetch a Dynamic Configuration of int type.
@@ -743,10 +724,7 @@ class Decider:
 
         :return: the int value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decider = self._get_decider()
-        if not decider:
-            return default
-        return self._get_dynamic_config_value(feature_name, decider.get_int, default)
+        return self._get_dynamic_config_value(feature_name, default, int, self._internal.get_int)
 
     def get_float(self, feature_name: str, default: float = 0.0) -> float:
         """Fetch a Dynamic Configuration of float type.
@@ -758,10 +736,9 @@ class Decider:
 
         :return: the float value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decider = self._get_decider()
-        if not decider:
-            return default
-        return self._get_dynamic_config_value(feature_name, decider.get_float, default)
+        return self._get_dynamic_config_value(
+            feature_name, default, float, self._internal.get_float
+        )
 
     def get_string(self, feature_name: str, default: str = "") -> str:
         """Fetch a Dynamic Configuration of string type.
@@ -773,10 +750,7 @@ class Decider:
 
         :return: the string value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decider = self._get_decider()
-        if not decider:
-            return default
-        return self._get_dynamic_config_value(feature_name, decider.get_string, default)
+        return self._get_dynamic_config_value(feature_name, default, str, self._internal.get_string)
 
     def get_map(self, feature_name: str, default: Optional[dict] = None) -> Optional[dict]:
         """Fetch a Dynamic Configuration of map type.
@@ -788,10 +762,7 @@ class Decider:
 
         :return: the map value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        decider = self._get_decider()
-        if not decider:
-            return default
-        return self._get_dynamic_config_value(feature_name, decider.get_map, default)
+        return self._get_dynamic_config_value(feature_name, default, dict, self._internal.get_map)
 
     def get_all_dynamic_configs(self) -> List[Dict[str, Any]]:
         """Return a list of dynamic configuration dicts in this format:
@@ -826,40 +797,61 @@ class Decider:
 
         :return: list of all active dynamic config dicts.
         """
-        decider = self._get_decider()
-        if not decider:
+        if self._internal is None:
+            logger.error("rs_decider is None--did not initialize.")
             return []
 
-        ctx = self._get_ctx()
-        ctx_err = ctx.err()
-        if ctx_err is not None:
-            logger.info(f"Encountered error in rust_decider.make_ctx(): {ctx_err}")
+        ctx = self._decider_context.to_dict()
+
+        try:
+            values = self._internal.all_values(ctx)
+        except DeciderException as exc:
+            logger.info(str(exc))
             return []
 
-        all_decisions_result = decider.get_all_values(ctx)
-
-        error = all_decisions_result.err()
-        if error:
-            logger.info(f"Encountered error in decider.choose_all(): {error}")
-            return []
-
-        all_decisions = all_decisions_result.decisions()
         parsed_configs = []
 
-        for dc_name, decision in all_decisions.items():
-            decision_error = decision.err()
-            if decision_error:
-                logger.info(
-                    f"Encountered error for dynamic config: {dc_name} in decider.get_all_values(): {decision_error}"
-                )
-                continue
-
-            value_dict = decision.value_dict()
-
-            if value_dict:
-                parsed_configs.append(value_dict)
+        for feature_name, val in values.items():
+            parsed_configs.append(self._value_to_dc_dict(feature_name, val))
 
         return parsed_configs
+
+    def _get_dynamic_config_value(
+        self,
+        feature_name: str,
+        default: Any,
+        dc_type: Type[T],
+        get_fn: Callable[..., Type[T]],
+    ) -> T:
+        if self._internal is None:
+            logger.error("rs_decider is None--did not initialize.")
+            return default
+
+        ctx = self._decider_context.to_dict()
+
+        try:
+            value = get_fn(feature_name=feature_name, context=ctx)
+        except FeatureNotFoundException as exc:
+            warnings.warn(str(exc))
+            return default
+        except ValueTypeMismatchException as exc:
+            logger.info(str(exc))
+            return default
+        except DeciderException as exc:
+            logger.info(str(exc))
+            return default
+
+        try:
+            return dc_type(value)  # type: ignore [call-arg]
+        except TypeError:
+            return default
+
+    def _value_to_dc_dict(self, feature_name: str, value: Optional[Any]) -> Dict[str, Any]:
+        return {
+            "name": feature_name,
+            "value": value,
+            "type": "" if value is None else TYPE_STR_LOOKUP[type(value)],
+        }
 
     def get_experiment(self, experiment_name: str) -> Optional[ExperimentConfig]:
         """Get an :py:class:`~reddit_decider.ExperimentConfig` `dataclass <https://github.com/reddit/experiments.py/blob/develop/reddit_decider/__init__.py#L44>`_
