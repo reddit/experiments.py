@@ -736,7 +736,9 @@ class Decider:
 
         :return: the float value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
-        return self._get_dynamic_config_value(feature_name, default, float, self._internal.get_float)
+        return self._get_dynamic_config_value(
+            feature_name, default, float, self._internal.get_float
+        )
 
     def get_string(self, feature_name: str, default: str = "") -> str:
         """Fetch a Dynamic Configuration of string type.
