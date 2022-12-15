@@ -318,19 +318,10 @@ class Decider:
 
         :return: Variant name if a variant is assigned, :code:`None` otherwise.
         """
-        if self._internal is None:
-            logger.error("RustDecider is None--did not initialize.")
-            return None
-
         ctx = self._decider_context.to_dict()
+        decision = self._get_decision(experiment_name, ctx)
 
-        try:
-            decision = self._internal.choose(experiment_name, ctx)
-        except FeatureNotFoundException as exc:
-            warnings.warn(str(exc))
-            return None
-        except DeciderException as exc:
-            logger.info(str(exc))
+        if decision is None:
             return None
 
         event_context_fields = self._decider_context.to_event_dict()
@@ -356,19 +347,10 @@ class Decider:
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
-        if self._internal is None:
-            logger.error("RustDecider is None--did not initialize.")
-            return None
-
         ctx = self._decider_context.to_dict()
+        decision = self._get_decision(experiment_name, ctx)
 
-        try:
-            decision = self._internal.choose(experiment_name, ctx)
-        except FeatureNotFoundException as exc:
-            warnings.warn(str(exc))
-            return None
-        except DeciderException as exc:
-            logger.info(str(exc))
+        if decision is None:
             return None
 
         event_context_fields = self._decider_context.to_event_dict()
@@ -476,20 +458,12 @@ class Decider:
             )
             return None
 
-        if self._internal is None:
-            logger.error("RustDecider is None--did not initialize.")
-            return None
-
         ctx = self._decider_context.to_dict()
         ctx[identifier_type] = identifier
 
-        try:
-            decision = self._internal.choose(experiment_name, ctx)
-        except FeatureNotFoundException as exc:
-            warnings.warn(str(exc))
-            return None
-        except DeciderException as exc:
-            logger.info(str(exc))
+        decision = self._get_decision(experiment_name, ctx)
+
+        if decision is None:
             return None
 
         event_context_fields = self._decider_context.to_event_dict()
@@ -544,20 +518,12 @@ class Decider:
             )
             return None
 
-        if self._internal is None:
-            logger.error("RustDecider is None--did not initialize.")
-            return None
-
         ctx = self._decider_context.to_dict()
         ctx[identifier_type] = identifier
 
-        try:
-            decision = self._internal.choose(experiment_name, ctx)
-        except FeatureNotFoundException as exc:
-            warnings.warn(str(exc))
-            return None
-        except DeciderException as exc:
-            logger.info(str(exc))
+        decision = self._get_decision(experiment_name, ctx)
+
+        if decision is None:
             return None
 
         event_context_fields = self._decider_context.to_event_dict()
@@ -598,16 +564,11 @@ class Decider:
 
         :return: list of experiment dicts with non-:code:`None` variants.
         """
-        if self._internal is None:
-            logger.error("rs_decider is None--did not initialize.")
-            return []
-
         ctx = self._decider_context.to_dict()
 
-        try:
-            all_decisions = self._internal.choose_all(ctx)
-        except DeciderException as exc:
-            logger.info(str(exc))
+        all_decisions = self._get_all_decisions(ctx)
+
+        if all_decisions is None:
             return []
 
         parsed_choices = []
@@ -673,19 +634,12 @@ class Decider:
             )
             return []
 
-        if self._internal is None:
-            logger.error("rs_decider is None--did not initialize.")
-            return []
-
         ctx = self._decider_context.to_dict()
         ctx[identifier_type] = identifier
 
-        try:
-            all_decisions = self._internal.choose_all(
-                context=ctx, bucketing_field_filter=identifier_type
-            )
-        except DeciderException as exc:
-            logger.info(str(exc))
+        all_decisions = self._get_all_decisions(ctx=ctx, bucketing_field_filter=identifier_type)
+
+        if all_decisions is None:
             return []
 
         parsed_choices = []
@@ -815,6 +769,37 @@ class Decider:
             parsed_configs.append(self._value_to_dc_dict(feature_name, val))
 
         return parsed_configs
+
+    def _get_decision(
+        self,
+        experiment_name: str,
+        ctx: Dict[str, Any],
+    ) -> Optional[Decision]:
+        if self._internal is None:
+            logger.error("RustDecider is None--did not initialize.")
+            return None
+
+        try:
+            return self._internal.choose(experiment_name, ctx)
+        except FeatureNotFoundException as exc:
+            warnings.warn(str(exc))
+            return None
+        except DeciderException as exc:
+            logger.info(str(exc))
+            return None
+
+    def _get_all_decisions(
+        self, ctx: Dict[str, Any], bucketing_field_filter: Optional[str] = None
+    ) -> Optional[Dict[str, Decision]]:
+        if self._internal is None:
+            logger.error("RustDecider is None--did not initialize.")
+            return None
+
+        try:
+            return self._internal.choose_all(ctx, bucketing_field_filter)
+        except DeciderException as exc:
+            logger.info(str(exc))
+            return None
 
     def _get_dynamic_config_value(
         self,
