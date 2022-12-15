@@ -39,6 +39,7 @@ EMPLOYEE_ROLES = ["employee", "contractor"]
 IDENTIFIERS = ["user_id", "device_id", "canonical_url"]
 TYPE_STR_LOOKUP = {bool: "boolean", int: "integer", float: "float", str: "string", dict: "map"}
 
+
 class EventType(Enum):
     EXPOSE = "expose"
 
