@@ -179,7 +179,7 @@ class Decider:
         event_logger: Optional[EventLogger] = None,
     ):
         self._decider_context = decider_context
-        self._internal = internal
+        self._internal: RustDecider = internal
         self._span = server_span
         self._context_name = context_name
         if event_logger:
@@ -821,7 +821,7 @@ class Decider:
         feature_name: str,
         default: Any,
         dc_type: Type[T],
-        get_fn: Callable,
+        get_fn: Callable[..., Type[T]],
     ) -> T:
         if self._internal is None:
             logger.error("rs_decider is None--did not initialize.")
