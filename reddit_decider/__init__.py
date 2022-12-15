@@ -37,13 +37,7 @@ logger = logging.getLogger(__name__)
 
 EMPLOYEE_ROLES = ["employee", "contractor"]
 IDENTIFIERS = ["user_id", "device_id", "canonical_url"]
-TYPE_STR_LOOKUP = {
-    bool: "boolean",
-    int: "integer",
-    float: "float",
-    str: "string",
-    dict: "map"
-}
+TYPE_STR_LOOKUP = {bool: "boolean", int: "integer", float: "float", str: "string", dict: "map"}
 
 class EventType(Enum):
     EXPOSE = "expose"
@@ -66,6 +60,7 @@ class DeciderContext:
     bucketing, targeting, and overrides.
     :code:`DeciderContext()` is populated in :code:`make_object_for_context()`.
     """
+
     T = TypeVar("T")
 
     def __init__(
@@ -831,7 +826,9 @@ class Decider:
         ctx = self._decider_context.to_dict()
 
         try:
-            value = eval(f"self._internal.get_{dc_type.__name__}")(feature_name=feature_name, context=ctx)
+            value = eval(f"self._internal.get_{dc_type.__name__}")(
+                feature_name=feature_name, context=ctx
+            )
         except FeatureNotFoundException as exc:
             warnings.warn(str(exc))
             return default
