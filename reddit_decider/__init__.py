@@ -789,9 +789,7 @@ class Decider:
             return None
 
     def _get_all_decisions(
-        self,
-        ctx: Dict[str, Any],
-        bucketing_field_filter: Optional[str] = None
+        self, ctx: Dict[str, Any], bucketing_field_filter: Optional[str] = None
     ) -> Optional[Dict[str, Decision]]:
         if self._internal is None:
             logger.error("RustDecider is None--did not initialize.")
