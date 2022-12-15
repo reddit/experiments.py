@@ -10,6 +10,8 @@ from typing import Dict
 from typing import IO
 from typing import List
 from typing import Optional
+from typing import Type
+from typing import TypeVar
 from typing import Union
 
 from baseplate import RequestContext
@@ -64,6 +66,7 @@ class DeciderContext:
     bucketing, targeting, and overrides.
     :code:`DeciderContext()` is populated in :code:`make_object_for_context()`.
     """
+    T = TypeVar("T")
 
     def __init__(
         self,
@@ -819,8 +822,8 @@ class Decider:
         self,
         feature_name: str,
         default: Any,
-        dc_type: Any,
-    ) -> Any:
+        dc_type: Type[T],
+    ) -> T:
         if self._internal is None:
             logger.error("rs_decider is None--did not initialize.")
             return default
@@ -840,7 +843,7 @@ class Decider:
             return default
 
         try:
-            return dc_type(value)
+            return dc_type(value)  # type: ignore [call-arg]
         except TypeError:
             return default
 
