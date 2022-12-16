@@ -187,16 +187,6 @@ class Decider:
         else:
             self._event_logger = DebugLogger()
 
-    def _get_decider(self) -> Optional[T]:
-        if self._internal is not None:
-            return self._internal.get_decider()
-
-        return None
-
-    def _get_ctx(self) -> Any:
-        context_fields = self._decider_context.to_dict()
-        return make_ctx(context_fields)
-
     def _send_expose(self, event: str, exposure_fields: dict) -> None:
         event_fields = deepcopy(exposure_fields)
         try:
@@ -379,30 +369,31 @@ class Decider:
         if variant_name is None or variant_name == "":
             return
 
-        decider = self._get_decider()
-        if decider is None:
+        if self._internal is None:
+            logger.error("RustDecider is None--did not initialize.")
             return
 
-        experiment = decider.get_experiment(experiment_name)
-        error = experiment.err()
-        if error:
-            logger.warning(f"Encountered error in decider.get_experiment(): {error}")
+        try:
+            feature = self._internal.get_feature(experiment_name)
+        except FeatureNotFoundException as exc:
+            warnings.warn(str(exc))
+            return
+        except DeciderException as exc:
+            logger.info(str(exc))
             return
 
         event_context_fields = self._decider_context.to_event_dict()
         event_context_fields.update(exposure_kwargs or {})
         event_fields = deepcopy(event_context_fields)
 
-        exp_dict = experiment.val()
-
         experiment = ExperimentConfig(
-            id=int(exp_dict.get("id", 0)),
-            name=exp_dict.get("name"),
-            version=str(exp_dict.get("version")),
-            bucket_val=exp_dict.get("variant_set", {}).get("bucket_val"),
-            start_ts=exp_dict.get("variant_set", {}).get("start_ts"),
-            stop_ts=exp_dict.get("variant_set", {}).get("stop_ts"),
-            owner=exp_dict.get("owner"),
+            id=feature.id,
+            name=feature.name,
+            version=str(feature.version),
+            bucket_val=feature.bucket_val,
+            start_ts=feature.start_ts,
+            stop_ts=feature.stop_ts,
+            owner=feature.owner,
         )
 
         self._event_logger.log(
@@ -847,31 +838,28 @@ class Decider:
         :return: an :py:class:`~reddit_decider.ExperimentConfig` `dataclass <https://github.com/reddit/experiments.py/blob/develop/reddit_decider/__init__.py#L44>`_
             representation of an experiment if found, else :code:`None`.
         """
-        decider = self._get_decider()
-        if decider is None:
+        if self._internal is None:
+            logger.error("RustDecider is None--did not initialize.")
             return None
 
-        experiment = decider.get_experiment(experiment_name)
-        error = experiment.err()
-        if error:
-            # sending to debug logger to avoid printing "Feature x not found." logs
-            logger.debug(f"Encountered error in decider.get_experiment(): {error}")
+        try:
+            feature = self._internal.get_feature(experiment_name)
+        except FeatureNotFoundException as exc:
+            warnings.warn(str(exc))
             return None
-
-        exp_dict = experiment.val()
-
-        if exp_dict is None:
+        except DeciderException as exc:
+            logger.info(str(exc))
             return None
 
         return ExperimentConfig(
-            id=int(exp_dict.get("id", 0)),
-            name=exp_dict.get("name"),
-            version=str(exp_dict.get("version")),
-            bucket_val=exp_dict.get("variant_set", {}).get("bucket_val"),
-            start_ts=exp_dict.get("variant_set", {}).get("start_ts"),
-            stop_ts=exp_dict.get("variant_set", {}).get("stop_ts"),
-            owner=exp_dict.get("owner"),
-            emit_event=bool(exp_dict.get("emit_event")),
+            id=feature.id,
+            name=feature.name,
+            version=str(feature.version),
+            bucket_val=feature.bucket_val,
+            start_ts=feature.start_ts,
+            stop_ts=feature.stop_ts,
+            owner=feature.owner,
+            emit_event=feature.emit_event,
         )
 
 
