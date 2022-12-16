@@ -28,7 +28,6 @@ from rust_decider import Decider as RustDecider
 from rust_decider import DeciderException
 from rust_decider import Decision
 from rust_decider import FeatureNotFoundException
-from rust_decider import make_ctx
 from rust_decider import ValueTypeMismatchException
 from typing_extensions import Literal
 
