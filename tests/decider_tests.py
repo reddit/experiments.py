@@ -565,7 +565,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             with self.assertLogs(logger, logging.DEBUG) as captured:
                 variant = decider.get_variant("anything")
 
-                assert any('Feature "anything" not found.' in x.getMessage() for x in captured.records)
+                assert any(
+                    'Feature "anything" not found.' in x.getMessage() for x in captured.records
+                )
             self.assertEqual(variant, None)
 
             # no exposures should be triggered
@@ -613,7 +615,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             with self.assertLogs(logger, logging.DEBUG) as captured:
                 variant = decider.get_variant_without_expose("anything")
 
-                assert any('Feature "anything" not found.' in x.getMessage() for x in captured.records)
+                assert any(
+                    'Feature "anything" not found.' in x.getMessage() for x in captured.records
+                )
             self.assertEqual(variant, None)
 
             # no exposures should be triggered
