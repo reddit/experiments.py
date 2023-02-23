@@ -562,13 +562,12 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            with warnings.catch_warnings(record=True) as captured:
+            with self.assertLogs(logger, logging.DEBUG) as captured:
                 variant = decider.get_variant("anything")
 
-                # can't test warning log only shows up only once if `decider.get_variant("anything")`
-                # is called again due to bug in `catch_warnings` contextmanager
-                # see https://github.com/python/cpython/issues/73858
-                assert any('Feature "anything" not found.' in str(x.message) for x in captured)
+                assert any(
+                    'Feature "anything" not found.' in x.getMessage() for x in captured.records
+                )
             self.assertEqual(variant, None)
 
             # no exposures should be triggered
@@ -613,13 +612,12 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             )
 
             self.assertEqual(self.event_logger.log.call_count, 0)
-            with warnings.catch_warnings(record=True) as captured:
+            with self.assertLogs(logger, logging.DEBUG) as captured:
                 variant = decider.get_variant_without_expose("anything")
 
-                # can't test warning log only shows up only once if `decider.get_variant("anything")`
-                # is called again due to bug in `catch_warnings` contextmanager
-                # see https://github.com/python/cpython/issues/73858
-                assert any('Feature "anything" not found.' in str(x.message) for x in captured)
+                assert any(
+                    'Feature "anything" not found.' in x.getMessage() for x in captured.records
+                )
             self.assertEqual(variant, None)
 
             # no exposures should be triggered

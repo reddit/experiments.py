@@ -1,5 +1,4 @@
 import logging
-import warnings
 
 from copy import deepcopy
 from dataclasses import dataclass
@@ -375,7 +374,7 @@ class Decider:
         try:
             feature = self._internal.get_feature(experiment_name)
         except FeatureNotFoundException as exc:
-            warnings.warn(str(exc))
+            logger.debug(str(exc))
             return
         except DeciderException as exc:
             logger.info(str(exc))
@@ -772,7 +771,7 @@ class Decider:
         try:
             return self._internal.choose(experiment_name, ctx)
         except FeatureNotFoundException as exc:
-            warnings.warn(str(exc))
+            logger.debug(str(exc))
             return None
         except DeciderException as exc:
             logger.info(str(exc))
@@ -807,7 +806,7 @@ class Decider:
         try:
             value = get_fn(feature_name=feature_name, context=ctx)
         except FeatureNotFoundException as exc:
-            warnings.warn(str(exc))
+            logger.debug(str(exc))
             return default
         except ValueTypeMismatchException as exc:
             logger.info(str(exc))
@@ -844,7 +843,7 @@ class Decider:
         try:
             feature = self._internal.get_feature(experiment_name)
         except FeatureNotFoundException as exc:
-            warnings.warn(str(exc))
+            logger.debug(str(exc))
             return None
         except DeciderException as exc:
             logger.info(str(exc))
