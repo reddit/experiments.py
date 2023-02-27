@@ -1164,7 +1164,7 @@ def decider_client_from_config(
             experiment configuration fetcher daemon.
         ``timeout`` (optional)
             The time that we should wait for the file specified by ``path`` to
-            exist.  Defaults to `None` which is `infinite`.
+            exist.  Defaults to `None` which is not blocking.
         ``backoff`` (optional)
             The base amount of time for exponential backoff when trying to find the
             experiments config file. Defaults to no backoff between tries.
