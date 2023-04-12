@@ -22,7 +22,7 @@ setup(
         "reddit-decider~=1.2.31",
         "typing_extensions>=3.10.0.0,<5.0",
     ],
-    package_data={"reddit_experiments": ["py.typed"]},
+    package_data={"reddit_experiments": ["py.typed"], "reddit_decider": ["py.typed"]},
     zip_safe=True,
     classifiers=[
         "Development Status :: 5 - Production/Stable",

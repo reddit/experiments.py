@@ -14,10 +14,7 @@ Prerequisite packages
 
     reddit-edgecontext>=1.0.0
 
-    # upgrade or integrate latest reddit-v2-events package
-    # or manually update thrift schemas
-    # to allow event fields to be populated in exposures
-    reddit-v2-events
+    reddit-v2-events>=2.6.0
 
 Prerequisite infrastructure
 ---------------------------
@@ -68,18 +65,17 @@ Upgrade or integrate reddit-experiments package:
 .. code-block:: python
 
     # import latest reddit-experiments package in service requirements.txt
-    reddit-experiments>=1.3.11
+    reddit-experiments>=1.3.14
 
 Initialize :code:`decider` instance on Baseplate context
 --------------------------------------------------------
 
 In your service's initialization process, add a :code:`decider` instance to baseplate's context:
-(Note the use of the :code:`ExperimentLogger`, which is used to publish exposure V2 events,
-an example can be seen `here <https://github.snooguts.net/reddit/reddit-service-graphql/blob/master/graphql-py/graphql_api/events/utils.py>`_)
 
 .. code-block:: python
 
     # application code
+    from event_utils.v2_event_utils import ExperimentLogger
     from reddit_decider import decider_client_from_config
     from reddit_decider import DeciderClient
 
@@ -100,7 +96,7 @@ an example can be seen `here <https://github.snooguts.net/reddit/reddit-service-
         baseplate.configure_context({
             "decider": DeciderClient(
                 prefix="experiments.",
-                event_logger=ExperimentLogger,
+                event_logger=ExperimentLogger()),
                 request_field_extractor=my_field_extractor  # optional
         })
 
