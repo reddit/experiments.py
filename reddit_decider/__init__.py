@@ -380,6 +380,10 @@ class Decider:
             logger.info(str(exc))
             return
 
+        # drop exposure for feature rollouts
+        if not feature.emit_event:
+            return
+
         event_context_fields = self._decider_context.to_event_dict()
         event_context_fields.update(exposure_kwargs or {})
         event_fields = deepcopy(event_context_fields)

@@ -747,6 +747,19 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 experiment_name="exp_1", variant=variant, event_fields=event_fields
             )
 
+    def test_feature_rollout_does_not_expose(self):
+        self.exp_base_config["exp_1"].update({"emit_event": False})
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = "variant_4"
+            decider.expose("exp_1", variant)
+
+            # exposure not fired
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
     def test_expose_without_variant_name(self):
         with create_temp_config_file(self.exp_base_config) as f:
             decider = setup_decider(f.name, self.dc, self.mock_span, self.event_logger)
