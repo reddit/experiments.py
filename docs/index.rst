@@ -14,7 +14,7 @@ Prerequisite packages
 
     reddit-edgecontext>=1.0.0
 
-    reddit-v2-events>=2.5.3
+    reddit-v2-events>=2.6.0
 
 Prerequisite infrastructure
 ---------------------------
@@ -65,7 +65,7 @@ Upgrade or integrate reddit-experiments package:
 .. code-block:: python
 
     # import latest reddit-experiments package in service requirements.txt
-    reddit-experiments>=1.3.13
+    reddit-experiments>=1.3.14
 
 Initialize :code:`decider` instance on Baseplate context
 --------------------------------------------------------
