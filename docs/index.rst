@@ -14,7 +14,7 @@ Prerequisite packages
 
     reddit-edgecontext>=1.0.0
 
-    reddit-v2-events>=2.6.0
+    reddit-v2-events>=2.8.2
 
 Prerequisite infrastructure
 ---------------------------
