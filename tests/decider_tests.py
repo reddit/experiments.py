@@ -40,6 +40,8 @@ EVENT_FIELDS = {
     "logged_in": IS_LOGGED_IN,
     "cookie_created_timestamp": COOKIE_CREATED_TIMESTAMP,
 }
+AD_ACCOUNT_ID = "t2_4321"
+SUBREDDIT_ID = "t5_123abc"
 
 
 @contextlib.contextmanager
@@ -706,6 +708,62 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["device_id"], identifier)
 
+    def test_get_variant_for_identifier_subreddit_id(self):
+        identifier = SUBREDDIT_ID
+        bucket_val = "subreddit_id"
+        self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant_for_identifier(
+                experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val
+            )
+            self.assertEqual(variant, "control_1")
+
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+            self.assert_minimal_exposure_event_fields(
+                experiment_name="exp_1",
+                variant=variant,
+                event_fields=event_fields,
+                bucket_val=bucket_val,
+                identifier=identifier,
+            )
+
+            # `identifier` passed to correct event field of experiment's `bucket_val` config
+            self.assertEqual(event_fields["subreddit_id"], identifier)
+
+    def test_get_variant_for_identifier_ad_account_id(self):
+        identifier = AD_ACCOUNT_ID
+        bucket_val = "ad_account_id"
+        self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant_for_identifier(
+                experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val
+            )
+            self.assertEqual(variant, "variant_2")
+
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+            self.assert_minimal_exposure_event_fields(
+                experiment_name="exp_1",
+                variant=variant,
+                event_fields=event_fields,
+                bucket_val=bucket_val,
+                identifier=identifier,
+            )
+
+            # `identifier` passed to correct event field of experiment's `bucket_val` config
+            self.assertEqual(event_fields["ad_account_id"], identifier)
+
     def test_get_variant_for_identifier_bogus_identifier_type(self):
         identifier = "anything"
         identifier_type = "blah"
@@ -724,7 +782,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(variant, None)
 
                 assert any(
-                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url']."
+                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url', 'subreddit_id', 'ad_account_id']."
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -847,6 +905,40 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # no exposures should be triggered
             self.assertEqual(self.event_logger.log.call_count, 0)
 
+    def test_get_variant_for_identifier_without_expose_subreddit_id(self):
+        identifier = SUBREDDIT_ID
+        bucket_val = "subreddit_id"
+        self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant_for_identifier_without_expose(
+                experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val
+            )
+            self.assertEqual(variant, "control_1")
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
+    def test_get_variant_for_identifier_without_expose_ad_account_id(self):
+        identifier = AD_ACCOUNT_ID
+        bucket_val = "ad_account_id"
+        self.exp_base_config["exp_1"]["experiment"].update({"bucket_val": bucket_val})
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant_for_identifier_without_expose(
+                experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val
+            )
+            self.assertEqual(variant, "variant_2")
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
     def test_get_variant_for_identifier_without_expose_bogus_identifier_type(self):
         identifier = "anything"
         identifier_type = "blah"
@@ -863,7 +955,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(variant, None)
 
                 assert any(
-                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url']."
+                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url', 'subreddit_id', 'ad_account_id']."
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -1277,7 +1369,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(len(variant_arr), 0)
 
                 assert any(
-                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url']."
+                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url', 'subreddit_id', 'ad_account_id']."
                     in x.getMessage()
                     for x in captured.records
                 )

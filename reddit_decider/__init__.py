@@ -34,7 +34,7 @@ from typing_extensions import Literal
 logger = logging.getLogger(__name__)
 
 EMPLOYEE_ROLES = ["employee", "contractor"]
-IDENTIFIERS = ["user_id", "device_id", "canonical_url"]
+IDENTIFIERS = ["user_id", "device_id", "canonical_url", "subreddit_id", "ad_account_id"]
 TYPE_STR_LOOKUP = {bool: "boolean", int: "integer", float: "float", str: "string", dict: "map"}
 
 
@@ -177,7 +177,7 @@ class Decider:
         event_logger: Optional[EventLogger] = None,
     ):
         self._decider_context = decider_context
-        self._internal: RustDecider = internal
+        self._internal = internal
         self._span = server_span
         self._context_name = context_name
         if event_logger:
@@ -411,7 +411,7 @@ class Decider:
         self,
         experiment_name: str,
         identifier: str,
-        identifier_type: Literal["user_id", "device_id", "canonical_url"],
+        identifier_type: Literal["user_id", "device_id", "canonical_url", "subreddit_id", "ad_account_id"],
         **exposure_kwargs: Optional[Dict[str, Any]],
     ) -> Optional[str]:
         """Return a bucketing variant, if any, with auto-exposure for a given :code:`identifier`.
@@ -471,7 +471,7 @@ class Decider:
         self,
         experiment_name: str,
         identifier: str,
-        identifier_type: Literal["user_id", "device_id", "canonical_url"],
+        identifier_type: Literal["user_id", "device_id", "canonical_url", "subreddit_id", "ad_account_id"],
     ) -> Optional[str]:
         """Return a bucketing variant, if any, without emitting exposure event for a given :code:`identifier`.
 
@@ -587,7 +587,9 @@ class Decider:
         }
 
     def get_all_variants_for_identifier_without_expose(
-        self, identifier: str, identifier_type: Literal["user_id", "device_id", "canonical_url"]
+        self,
+        identifier: str,
+        identifier_type: Literal["user_id", "device_id", "canonical_url", "subreddit_id", "ad_account_id"]
     ) -> List[Dict[str, Union[str, int]]]:
         """Return a list of experiment dicts for experiments having :code:`bucket_val` match
         :code:`identifier_type`, for a given :code:`identifier`, in this format:
