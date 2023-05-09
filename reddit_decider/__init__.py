@@ -184,7 +184,7 @@ class Decider:
         event_logger: Optional[EventLogger] = None,
     ):
         self._decider_context = decider_context
-        self._internal = internal
+        self._internal: RustDecider = internal
         self._span = server_span
         self._context_name = context_name
         if event_logger:
