@@ -34,7 +34,7 @@ from typing_extensions import Literal
 logger = logging.getLogger(__name__)
 
 EMPLOYEE_ROLES = ["employee", "contractor"]
-IDENTIFIERS = ["user_id", "device_id", "canonical_url", "subreddit_id", "ad_account_id"]
+IDENTIFIERS = ["user_id", "device_id", "canonical_url", "subreddit_id", "ad_account_id", "business_id"]
 TYPE_STR_LOOKUP = {bool: "boolean", int: "integer", float: "float", str: "string", dict: "map"}
 
 
