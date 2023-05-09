@@ -63,7 +63,7 @@ class TestExperiments(unittest.TestCase):
                 self.mock_authentication_token.subject = uuid
                 user = User(
                     authentication_token=self.mock_authentication_token,
-                    loid=uuid,
+                    loid_=uuid,
                     cookie_created_ms=10000,
                 )
 
