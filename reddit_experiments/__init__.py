@@ -1,3 +1,7 @@
+# DEPRECATED: please migrate to `reddit_decider` module.
+#
+# see docs for upgrade instructions:
+#   https://reddit-experiments.readthedocs.io/en/latest/#integrate-reddit-experiments-into-baseplate-service
 import json
 import logging
 import warnings
@@ -125,6 +129,11 @@ class Experiments:
         return {}
 
     def _get_experiment(self, name: str) -> Optional[Experiment]:
+        warn_deprecated(
+            "`_get_experiment()` in `reddit_experiments` module is deprecated, "
+            "use `get_experiment()` from `reddit_decider` module instead."
+        )
+
         if name in self._global_cache:
             return self._global_cache[name]
 
@@ -155,12 +164,18 @@ class Experiments:
         return experiment_names
 
     def is_valid_experiment(self, name: str) -> bool:
-        """Return true if the provided experiment name is a valid experiment.
+        """DEPRECATED.
+
+        Return true if the provided experiment name is a valid experiment.
 
         :param name: Name of the experiment you want to check.
 
         :return: Whether or not a particular experiment is valid.
         """
+        warn_deprecated(
+            "`is_valid_experiment()` in `reddit_experiments` module is deprecated, "
+            "use `get_experiment()` from `reddit_decider` module instead."
+        )
         return self._get_experiment(name) is not None
 
     @overload
@@ -193,7 +208,9 @@ class Experiments:
         name: Optional[str] = None,  # DEPRECATED
         **kwargs: str,
     ) -> Optional[str]:
-        r"""Return which variant, if any, is active.
+        r"""DEPRECATED.
+
+        Return which variant, if any, is active.
 
         If a variant is active, a bucketing event will be logged to the event
         pipeline unless any one of the following conditions are met:
@@ -235,6 +252,11 @@ class Experiments:
         :return: Variant name if a variant is active, None otherwise.
 
         """
+        warn_deprecated(
+            "`variant()` in `reddit_experiments` module is deprecated, "
+            "use `get_variant*()` API from `reddit_decider` module instead."
+        )
+
         experiment_name = experiment_name or name
         assert experiment_name
         if name:
@@ -291,7 +313,9 @@ class Experiments:
     def expose(
         self, experiment_name: str, variant_name: str, user: Optional[User] = None, **kwargs: str
     ) -> None:
-        """Log an event to indicate that a user has been exposed to an experimental treatment.
+        """DEPRECATED.
+
+        Log an event to indicate that a user has been exposed to an experimental treatment.
 
         :param experiment_name: Name of the experiment that was exposed.
         :param variant_name: Name of the variant that was exposed.
@@ -301,6 +325,12 @@ class Experiments:
         :param kwargs: Additional arguments that will be passed to logger.
 
         """
+        warn_deprecated(
+            "`expose()` in `reddit_experiments` module is deprecated, "
+            "for manual exposure use `expose()` API from `reddit_decider` module instead "
+            "(or use auto-exposure provided in `get_variant()`)."
+        )
+
         if variant_name is None or variant_name == "":
             return
 
@@ -328,7 +358,9 @@ class Experiments:
 
 
 class ExperimentsClient(config.Parser):
-    """Configure an experiments client.
+    """DEPRECATED.
+
+    Configure an experiments client.
 
     This is meant to be used with
     :py:meth:`baseplate.Baseplate.configure_context`.
@@ -340,6 +372,10 @@ class ExperimentsClient(config.Parser):
     """
 
     def __init__(self, event_logger: EventLogger):
+        warn_deprecated(
+            "`ExperimentsClient` class in `reddit_experiments` module is deprecated, "
+            "use `DeciderClient` class from `reddit_decider` module instead."
+        )
         self.event_logger = event_logger
 
     def parse(self, key_path: str, raw_config: config.RawConfig) -> ExperimentsContextFactory:
@@ -349,7 +385,9 @@ class ExperimentsClient(config.Parser):
 def experiments_client_from_config(
     app_config: config.RawConfig, event_logger: EventLogger, prefix: str = "experiments."
 ) -> ExperimentsContextFactory:
-    """Configure and return an :py:class:`ExperimentsContextFactory` object.
+    """DEPRECATED.
+
+    Configure and return an :py:class:`ExperimentsContextFactory` object.
 
     The keys used in your app's :code:`some_config.ini` file should be prefixed, e.g.
     ``experiments.path``, etc.
@@ -372,6 +410,11 @@ def experiments_client_from_config(
     :param prefix: the prefix used to filter keys (defaults to "experiments.").
 
     """
+    warn_deprecated(
+        "`experiments_client_from_config()` in `reddit_experiments` module is deprecated, "
+        "use `decider_client_from_config()` class from `reddit_decider` module instead."
+    )
+
     assert prefix.endswith(".")
     config_prefix = prefix[:-1]
 
