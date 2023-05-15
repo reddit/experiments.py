@@ -425,7 +425,8 @@ class Decider:
     ) -> Optional[str]:
         """Return a bucketing variant, if any, with auto-exposure for a given :code:`identifier`.
 
-        Note: If the experiment's :code:`bucket_val` (e.g. "user_id", "device_id", "canonical_url")
+        Note: If the experiment's :code:`bucket_val`
+            (e.g. "user_id", "device_id", "canonical_url", "subreddit_id", "ad_account_id", "business_id")
             does not match the :code:`identifier_type` param,
             the :code:`identifier` will be ignored and not used to bucket (:code:`{identifier_type: identifier}` is
             added to internal :code:`DeciderContext` instance, but doesn't act like a bucketing override).
@@ -486,7 +487,8 @@ class Decider:
     ) -> Optional[str]:
         """Return a bucketing variant, if any, without emitting exposure event for a given :code:`identifier`.
 
-        Note: If the experiment's :code:`bucket_val` (e.g. "user_id", "device_id", "canonical_url")
+        Note: If the experiment's :code:`bucket_val`
+            (e.g. "user_id", "device_id", "canonical_url", "subreddit_id", "ad_account_id", "business_id")
             does not match the :code:`identifier_type` param,
             the :code:`identifier` will be ignored and not used to bucket (:code:`{identifier_type: identifier}` is
             added to internal :code:`DeciderContext` instance, but doesn't act like a bucketing override).
