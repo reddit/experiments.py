@@ -20,16 +20,13 @@ Prerequisite infrastructure
 ---------------------------
 **Zookeeper live-data sidecar**:
 
-Set up your service to pull down & synchronize experiment configurations from Zookeeper via the Baseplate `live-data watcher sidecar
-<https://baseplate.readthedocs.io/en/stable/api/baseplate/lib/live_data.html?highlight=sidecar#watcher-daemon>`_ (minimum v2.5.4).
-You'll have to make sure that your service is authorized to fetch the appropriate secret from Vault.
-See example setup `here
-<https://reddit.atlassian.net/wiki/spaces/EX/pages/343212125/Running+Experiments+at+Reddit#Live-Data-Sidecar>`__.
+Define a **live-data sidecar** in the manifest file to fetch the experiment configuration, see example setup `here
+<https://reddit.atlassian.net/wiki/spaces/EX/pages/343212125/Running+Experiments+at+Reddit#Live-Data-Sidecar>`__
+(make sure that your service is authorized to fetch the appropriate secret from Vault).
 
 **Event publisher sidecar**:
 
-Set up your service to be able to publish v2 exposure events via an `events sidecar <https://baseplate.readthedocs.io/en/stable/api/baseplate/lib/events.html?highlight=sidecar#publishing-events>`_
-. See example setup `here <https://reddit.atlassian.net/wiki/spaces/EX/pages/343212125/Running+Experiments+at+Reddit#Event-Publisher-Sidecar>`__.
+Set up your service to be able to publish v2 exposure events via an **event publisher sidecar**, see example setup `here <https://reddit.atlassian.net/wiki/spaces/EX/pages/343212125/Running+Experiments+at+Reddit#Event-Publisher-Sidecar>`__.
 
 Prerequisite configuration
 ---------------------------
@@ -65,7 +62,7 @@ Upgrade or integrate reddit-experiments package:
 .. code-block:: python
 
     # import latest reddit-experiments package in service requirements.txt
-    reddit-experiments>=1.3.14
+    reddit-experiments>=1.4.0
 
 Initialize :code:`decider` instance on Baseplate context
 --------------------------------------------------------
