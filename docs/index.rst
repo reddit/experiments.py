@@ -22,7 +22,7 @@ Prerequisite infrastructure
 
 Define a **live-data sidecar** in the manifest file to fetch the experiment configuration, see example setup `here
 <https://reddit.atlassian.net/wiki/spaces/EX/pages/343212125/Running+Experiments+at+Reddit#Live-Data-Sidecar>`__
-(you'll have to make sure that your service is authorized to fetch the appropriate secret from Vault).
+(make sure that your service is authorized to fetch the appropriate secret from Vault).
 
 **Event publisher sidecar**:
 
