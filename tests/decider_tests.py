@@ -3,14 +3,12 @@ import json
 import logging
 import tempfile
 import unittest
-import warnings
 
 from unittest import mock
 
 from baseplate import RequestContext
 from baseplate import ServerSpan
 from baseplate.lib.events import DebugLogger
-from baseplate.lib.file_watcher import FileWatcher
 from reddit_edgecontext import ValidatedAuthenticationToken
 
 from reddit_decider import Decider
@@ -1409,7 +1407,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             with self.assertLogs() as captured:
                 variant_arr = decider.get_all_variants_for_identifier_without_expose(
-                    identifier=identifier, identifier_type="blah"
+                    identifier=identifier, identifier_type=identifier_type
                 )
 
                 self.assertEqual(len(variant_arr), 0)
@@ -1497,7 +1495,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_without_expose("exp_1")
 
-            assert variant == None
+            assert variant is None
 
             # exposure from control_1 of "hg"
             self.assertEqual(self.event_logger.log.call_count, 1)

@@ -20,7 +20,6 @@ from baseplate.lib import config
 from baseplate.lib.events import DebugLogger
 from baseplate.lib.events import EventLogger
 from baseplate.lib.file_watcher import FileWatcher
-from baseplate.lib.file_watcher import T
 from baseplate.lib.file_watcher import WatchedFileNotAvailableError
 from reddit_edgecontext import ValidatedAuthenticationToken
 from rust_decider import Decider as RustDecider
@@ -62,21 +61,38 @@ class ExperimentConfig:
 
 
 class DeciderContext:
-    """DeciderContext() is used to contain all fields necessary for
+    """:code:`DeciderContext` is used to contain all fields necessary for
     bucketing, targeting, and overrides.
-    :code:`DeciderContext()` is populated in :code:`make_object_for_context()`.
-    """
+    :code:`DeciderContext` is populated in :code:`make_object_for_context()`
 
-    T = TypeVar("T")
+    :param user_id: user's t2 id
+    :param device_id: device installation uuid
+    :param canonical_url: an url string
+    :param subreddit_id: subreddit link's t3 identifier
+    :param ad_account_id: an ad_account id string identifier
+    :param business_id: business id identifier used by ads
+    :param country_code: 2-letter country codes
+    :param locale: ISO 639-1 primary language subtag and an optional ISO 3166-1 alpha-2 region subtag
+    :param user_is_employee:
+    :param logged_in: is user logged in
+    :param oauth_client_id: OAuth Client ID
+    :param origin_service: Service where request originated
+    :param cookie_created_timestamp: When the authentication cookie was created
+    :param loid_created_timestamp: Epoch milliseconds when the current LoID cookie was created
+    :param extracted_fields: Optional dict of additional fields, e.g. app_name & build_number
+    """
 
     def __init__(
         self,
         user_id: Optional[str] = None,
+        device_id: Optional[str] = None,
+        subreddit_id: Optional[str] = None,
+        ad_account_id: Optional[str] = None,
+        business_id: Optional[str] = None,
         country_code: Optional[str] = None,
         locale: Optional[str] = None,
         user_is_employee: Optional[bool] = None,
         logged_in: Optional[bool] = None,
-        device_id: Optional[str] = None,
         oauth_client_id: Optional[str] = None,
         origin_service: Optional[str] = None,
         cookie_created_timestamp: Optional[float] = None,
@@ -84,11 +100,14 @@ class DeciderContext:
         extracted_fields: Optional[dict] = None,
     ):
         self._user_id = user_id
+        self._device_id = device_id
+        self._subreddit_id = subreddit_id
+        self._ad_account_id = ad_account_id
+        self._business_id = business_id
         self._country_code = country_code
         self._locale = locale
         self._user_is_employee = user_is_employee
         self._logged_in = logged_in
-        self._device_id = device_id
         self._oauth_client_id = oauth_client_id
         self._origin_service = origin_service
         self._cookie_created_timestamp = cookie_created_timestamp
@@ -100,11 +119,14 @@ class DeciderContext:
 
         return {
             "user_id": self._user_id,
+            "device_id": self._device_id,
+            "subreddit_id": self._subreddit_id,
+            "ad_account_id": self._ad_account_id,
+            "business_id": self._business_id,
             "country_code": self._country_code,
             "locale": self._locale,
             "user_is_employee": self._user_is_employee,
             "logged_in": self._logged_in,
-            "device_id": self._device_id,
             "oauth_client_id": self._oauth_client_id,
             "origin_service": self._origin_service,
             "cookie_created_timestamp": self._cookie_created_timestamp,
@@ -145,6 +167,10 @@ class DeciderContext:
         if self._device_id:
             platform_fields["device_id"] = self._device_id
 
+        subreddit_fields = {}
+        if self._subreddit_id:
+            subreddit_fields["id"] = self._subreddit_id
+
         return {
             "user_id": self._user_id,
             "country_code": self._country_code,
@@ -159,6 +185,7 @@ class DeciderContext:
             "geo": geo_fields,
             "request": request_fields,
             "platform": platform_fields,
+            "subreddit": subreddit_fields,
             **ef,
         }
 
@@ -174,6 +201,8 @@ class Decider:
     the experiment configuration fetcher daemon.
     It will automatically reload the cache when changed.
     """
+
+    T = TypeVar("T")
 
     def __init__(
         self,
