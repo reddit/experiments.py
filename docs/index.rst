@@ -158,6 +158,11 @@ Decider API
 .. autoclass:: Decider
    :members:
 
+DeciderContext
+-------------------
+
+.. autoclass:: DeciderContext
+
 Configuration Class
 -------------------
 

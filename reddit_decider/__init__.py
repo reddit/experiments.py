@@ -20,7 +20,6 @@ from baseplate.lib import config
 from baseplate.lib.events import DebugLogger
 from baseplate.lib.events import EventLogger
 from baseplate.lib.file_watcher import FileWatcher
-from baseplate.lib.file_watcher import T
 from baseplate.lib.file_watcher import WatchedFileNotAvailableError
 from reddit_edgecontext import ValidatedAuthenticationToken
 from rust_decider import Decider as RustDecider
@@ -62,12 +61,23 @@ class ExperimentConfig:
 
 
 class DeciderContext:
-    """DeciderContext() is used to contain all fields necessary for
+    """DeciderContext is used to contain all fields necessary for
     bucketing, targeting, and overrides.
-    :code:`DeciderContext()` is populated in :code:`make_object_for_context()`.
-    """
+    :code:`DeciderContext()` is populated in :code:`make_object_for_context()`
+    or used with :code:`get_variant_with_context()`/:code:`get_variant_with_context_without_expose()`.
 
-    T = TypeVar("T")
+    :param user_id: user's t2 id
+    :param country_code: 2-letter country codes
+    :param locale: ISO 639-1 primary language subtag and an optional ISO 3166-1 alpha-2 region subtag
+    :param user_is_employee:
+    :param logged_in: is user logged in
+    :param device_id: device installation uuid
+    :param oauth_client_id: OAuth Client ID
+    :param origin_service: Service where request originated
+    :param cookie_created_timestamp: When the authentication cookie was created
+    :param loid_created_timestamp: Epoch milliseconds when the current LoID cookie was created
+    :param extracted_fields: Optional dict of additional fields, e.g. app_name & build_number
+    """
 
     def __init__(
         self,
@@ -174,6 +184,8 @@ class Decider:
     the experiment configuration fetcher daemon.
     It will automatically reload the cache when changed.
     """
+
+    T = TypeVar("T")
 
     def __init__(
         self,
@@ -533,6 +545,91 @@ class Decider:
             return None
 
         event_context_fields = self._decider_context.to_event_dict()
+
+        # expose Holdout if the experiment is part of one
+        for event in decision.events:
+            self._send_expose_if_holdout(event=event, exposure_fields=event_context_fields)
+
+        return decision.variant
+
+    def get_variant_with_context(
+        self,
+        experiment_name: str,
+        decider_context: DeciderContext,
+        **exposure_kwargs: Optional[Dict[str, Any]],
+    ) -> Optional[str]:
+        """Return a bucketing variant, if any, with auto-exposure. Takes an instance of DeciderContext for targeting/bucketing.
+
+        Since calling :code:`get_variant_with_context()` will fire an exposure event, it
+        is best to call it when you are sure the user will be exposed to the experiment.
+
+        If you absolutely must check the status of an experiment
+        before the user will be exposed to the experiment,
+        use :code:`get_variant_with_context_without_expose()` to disable exposure events
+        and call :code:`expose()` manually later.
+
+        :param experiment_name: Name of the experiment you want a variant for.
+
+        :param decider_context: DeciderContext instance used for targeting/bucketing.
+
+        :param exposure_kwargs:  Additional arguments that will be passed
+            to :code:`events_logger` (keys must be part of v2 event schema,
+            use dicts for nested fields) under :code:`inputs` and as :code:`kwargs`
+
+        :return: Variant name if a variant is assigned, :code:`None` otherwise.
+        """
+        if decider_context is None:
+            logger.warning('Missing "decider_context" param.')
+            return None
+
+        ctx = decider_context.to_dict()
+        decision = self._get_decision(experiment_name, ctx)
+
+        if decision is None:
+            return None
+
+        event_context_fields = decider_context.to_event_dict()
+        event_context_fields.update(exposure_kwargs or {})
+
+        for event in decision.events:
+            self._send_expose(event=event, exposure_fields=event_context_fields)
+
+        return decision.variant
+
+    def get_variant_with_context_without_expose(
+        self,
+        experiment_name: str,
+        decider_context: DeciderContext,
+    ) -> Optional[str]:
+        """Return a bucketing variant, if any, without emitting exposure event.
+        Takes an instance of DeciderContext for targeting/bucketing.
+
+        The :code:`expose()` function is available to be manually called afterward to emit
+        exposure event.
+
+        However, experiments in Holdout Groups will still send an exposure for
+        the holdout parent experiment, since it is not possible to
+        manually expose the holdout later (because it's impossible to know if a
+        returned :code:`None` or :code:`"control_1"` string
+        came from the holdout group or its child experiment once this function exits).
+
+        :param experiment_name: Name of the experiment you want a variant for.
+
+        :param decider_context: DeciderContext instance used for targeting/bucketing.
+
+        :return: Variant name if a variant is assigned, None otherwise.
+        """
+        if decider_context is None:
+            logger.warning('Missing "decider_context" param.')
+            return None
+
+        ctx = decider_context.to_dict()
+        decision = self._get_decision(experiment_name, ctx)
+
+        if decision is None:
+            return None
+
+        event_context_fields = decider_context.to_event_dict()
 
         # expose Holdout if the experiment is part of one
         for event in decision.events:

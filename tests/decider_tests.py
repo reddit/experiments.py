@@ -3,14 +3,12 @@ import json
 import logging
 import tempfile
 import unittest
-import warnings
 
 from unittest import mock
 
 from baseplate import RequestContext
 from baseplate import ServerSpan
 from baseplate.lib.events import DebugLogger
-from baseplate.lib.file_watcher import FileWatcher
 from reddit_edgecontext import ValidatedAuthenticationToken
 
 from reddit_decider import Decider
@@ -819,6 +817,36 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         # exposure isn't emitted either
         self.assertEqual(self.event_logger.log.call_count, 0)
 
+    def test_get_variant_with_context(self):
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(f, DeciderContext(), self.mock_span, self.event_logger)
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant_with_context(
+                experiment_name="exp_1", decider_context=self.dc
+            )
+            self.assertEqual(variant, "variant_4")
+
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+            self.assert_exposure_event_fields(
+                experiment_name="exp_1", variant=variant, event_fields=event_fields
+            )
+
+    def test_get_variant_with_context_without_expose(self):
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(f, DeciderContext(), self.mock_span, self.event_logger)
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant_with_context_without_expose(
+                experiment_name="exp_1", decider_context=self.dc
+            )
+            self.assertEqual(variant, "variant_4")
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
     def test_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:
             decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
@@ -1409,7 +1437,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             with self.assertLogs() as captured:
                 variant_arr = decider.get_all_variants_for_identifier_without_expose(
-                    identifier=identifier, identifier_type="blah"
+                    identifier=identifier, identifier_type=identifier_type
                 )
 
                 self.assertEqual(len(variant_arr), 0)
@@ -1497,7 +1525,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_without_expose("exp_1")
 
-            assert variant == None
+            assert variant is None
 
             # exposure from control_1 of "hg"
             self.assertEqual(self.event_logger.log.call_count, 1)
