@@ -192,6 +192,9 @@ class Decider:
         else:
             self._event_logger = DebugLogger()
 
+    def internal_decider(self) -> RustDecider:
+        return self._internal
+
     def _send_expose(self, event: str, exposure_fields: dict) -> None:
         event_fields = deepcopy(exposure_fields)
         try:

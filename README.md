@@ -10,12 +10,13 @@ Documentation: https://reddit-experiments.readthedocs.io/
 Install the library:
 
 ```console
-$ pip install reddit-experiments
+$ pip install reddit-experiments reddit-v2-events>=2.8.2
 ```
 
 Add the client to your application's Baseplate context:
 
 ```python
+ from event_utils.v2_event_utils import ExperimentLogger
  from reddit_decider import decider_client_from_config
 
  decider = decider_client_from_config(
