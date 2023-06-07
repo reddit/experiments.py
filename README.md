@@ -10,6 +10,7 @@ Documentation: https://reddit-experiments.readthedocs.io/
 Install the library:
 
 ```console
+# `reddit-v2-events` is a Reddit internal package used for emitting exposure events
 $ pip install reddit-experiments reddit-v2-events>=2.8.2
 ```
 
