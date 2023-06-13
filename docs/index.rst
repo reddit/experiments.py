@@ -1,7 +1,7 @@
  .. _reddit_decider:
 
 ``reddit_decider``
-===============================
+==================
 
 .. automodule:: reddit_decider
 
@@ -103,6 +103,24 @@ Make sure :code:`EdgeContext` is accessible on :code:`request` object like so:
 
     request.edge_context
 
+If you **don't have access** to :code:`edge_context` in your service, you can access the SDK’s internal decider instance for a lower level API,
+allowing you to pass in targeting context fields as a :code:`dict` param,
+e.g. "user_is_employee", "app_name", other targeting fields (instead of them being derived from :code:`edge_context`).
+
+See full API in `readme <https://github.snooguts.net/reddit/decider/tree/master/decider-py#class-decider>`_ (reddit internal).
+
+The internal decider instance can be accessed from a top-level decider instance via:
+
+.. code-block:: python
+
+    internal_decider = request.decider.internal_decider()  # requires `reddit-experiments >= 1.4.1`
+    internal_decider.choose("experiment_name", {
+            "user_id": "t2_abc",
+            "user_is_employee": True,
+            "other_info": { "arbitrary_field": "some_val" }
+        }
+    )
+
 
 [Optional] Define request field extractor function (`example <https://github.snooguts.net/reddit/reddit-service-graphql/blob/master/graphql-py/graphql_api/models/experiment.py#L67-L92>`_)
 
@@ -132,7 +150,7 @@ Make sure :code:`EdgeContext` is accessible on :code:`request` object like so:
 
 Basic Usage
 -----------
-Use the attached :py:class:`~reddit_decider.Decider` object in request to call
+Use the attached :py:class:`~reddit_decider.Decider` instance in request to call
 :code:`decider.get_variant()` (automatically sends an expose event)::
 
     def my_method(request):
@@ -146,11 +164,12 @@ or optionally, if manual exposure is necessary, use::
         ...
         request.decider.expose(experiment_name='experiment_name', variant_name=variant)
 
-and this is an example of using a dynamic configuration::
+This is an example of using a dynamic configuration::
 
     def my_method(request):
         if request.decider.get_bool("foo") == True:
             ...
+
 
 Decider API
 -----------
