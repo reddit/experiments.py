@@ -67,10 +67,6 @@ class DeciderContext:
 
     :param user_id: user's t2 id
     :param device_id: device installation uuid
-    :param canonical_url: an url string
-    :param subreddit_id: subreddit link's t3 identifier
-    :param ad_account_id: an ad_account id string identifier
-    :param business_id: business id identifier used by ads
     :param country_code: 2-letter country codes
     :param locale: ISO 639-1 primary language subtag and an optional ISO 3166-1 alpha-2 region subtag
     :param user_is_employee:
@@ -86,9 +82,6 @@ class DeciderContext:
         self,
         user_id: Optional[str] = None,
         device_id: Optional[str] = None,
-        subreddit_id: Optional[str] = None,
-        ad_account_id: Optional[str] = None,
-        business_id: Optional[str] = None,
         country_code: Optional[str] = None,
         locale: Optional[str] = None,
         user_is_employee: Optional[bool] = None,
@@ -101,9 +94,6 @@ class DeciderContext:
     ):
         self._user_id = user_id
         self._device_id = device_id
-        self._subreddit_id = subreddit_id
-        self._ad_account_id = ad_account_id
-        self._business_id = business_id
         self._country_code = country_code
         self._locale = locale
         self._user_is_employee = user_is_employee
@@ -120,9 +110,6 @@ class DeciderContext:
         return {
             "user_id": self._user_id,
             "device_id": self._device_id,
-            "subreddit_id": self._subreddit_id,
-            "ad_account_id": self._ad_account_id,
-            "business_id": self._business_id,
             "country_code": self._country_code,
             "locale": self._locale,
             "user_is_employee": self._user_is_employee,
@@ -167,10 +154,6 @@ class DeciderContext:
         if self._device_id:
             platform_fields["device_id"] = self._device_id
 
-        subreddit_fields = {}
-        if self._subreddit_id:
-            subreddit_fields["id"] = self._subreddit_id
-
         return {
             "user_id": self._user_id,
             "country_code": self._country_code,
@@ -185,7 +168,6 @@ class DeciderContext:
             "geo": geo_fields,
             "request": request_fields,
             "platform": platform_fields,
-            "subreddit": subreddit_fields,
             **ef,
         }
 

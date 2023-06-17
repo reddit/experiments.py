@@ -735,6 +735,13 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["subreddit_id"], identifier)
 
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+            self.assert_exposure_event_fields(
+                experiment_name="exp_1", variant=variant, event_fields=event_fields, bucket_val=bucket_val, identifier=identifier
+            )
+
     def test_get_variant_for_identifier_ad_account_id(self):
         identifier = AD_ACCOUNT_ID
         bucket_val = "ad_account_id"
