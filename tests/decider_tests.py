@@ -3,14 +3,12 @@ import json
 import logging
 import tempfile
 import unittest
-import warnings
 
 from unittest import mock
 
 from baseplate import RequestContext
 from baseplate import ServerSpan
 from baseplate.lib.events import DebugLogger
-from baseplate.lib.file_watcher import FileWatcher
 from reddit_edgecontext import ValidatedAuthenticationToken
 
 from reddit_decider import Decider
@@ -737,6 +735,17 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["subreddit_id"], identifier)
 
+            # exposure assertions
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            event_fields = self.event_logger.log.call_args[1]
+            self.assert_exposure_event_fields(
+                experiment_name="exp_1",
+                variant=variant,
+                event_fields=event_fields,
+                bucket_val=bucket_val,
+                identifier=identifier,
+            )
+
     def test_get_variant_for_identifier_ad_account_id(self):
         identifier = AD_ACCOUNT_ID
         bucket_val = "ad_account_id"
@@ -1409,7 +1418,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             with self.assertLogs() as captured:
                 variant_arr = decider.get_all_variants_for_identifier_without_expose(
-                    identifier=identifier, identifier_type="blah"
+                    identifier=identifier, identifier_type=identifier_type
                 )
 
                 self.assertEqual(len(variant_arr), 0)
@@ -1497,7 +1506,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(self.event_logger.log.call_count, 0)
             variant = decider.get_variant_without_expose("exp_1")
 
-            assert variant == None
+            assert variant is None
 
             # exposure from control_1 of "hg"
             self.assertEqual(self.event_logger.log.call_count, 1)
