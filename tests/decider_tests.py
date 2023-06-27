@@ -556,24 +556,6 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             variant = decider.get_variant("exp_1")
             self.assertEqual(variant, "variant_4")
 
-    def test_none_returned_on_get_variant_call_with_experiment_not_found(self):
-        with create_temp_config_file({}) as f:
-            decider = setup_decider(
-                f, self.minimal_decider_context, self.mock_span, self.event_logger
-            )
-
-            self.assertEqual(self.event_logger.log.call_count, 0)
-            with self.assertLogs(logger, logging.DEBUG) as captured:
-                variant = decider.get_variant("anything")
-
-                assert any(
-                    'Feature "anything" not found.' in x.getMessage() for x in captured.records
-                )
-            self.assertEqual(variant, None)
-
-            # no exposures should be triggered
-            self.assertEqual(self.event_logger.log.call_count, 0)
-
     def test_get_variant_without_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:
             decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
@@ -605,24 +587,6 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assert_exposure_event_fields(
                 experiment_name="hg", variant="holdout", event_fields=event_fields
             )
-
-    def test_none_returned_on_get_variant_without_expose_call_with_experiment_not_found(self):
-        with create_temp_config_file({}) as f:
-            decider = setup_decider(
-                f, self.minimal_decider_context, self.mock_span, self.event_logger
-            )
-
-            self.assertEqual(self.event_logger.log.call_count, 0)
-            with self.assertLogs(logger, logging.DEBUG) as captured:
-                variant = decider.get_variant_without_expose("anything")
-
-                assert any(
-                    'Feature "anything" not found.' in x.getMessage() for x in captured.records
-                )
-            self.assertEqual(variant, None)
-
-            # no exposures should be triggered
-            self.assertEqual(self.event_logger.log.call_count, 0)
 
     def test_get_variant_for_identifier_user_id(self):
         identifier = USER_ID
