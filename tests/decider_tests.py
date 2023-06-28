@@ -88,14 +88,14 @@ class DeciderClientFromConfigTests(unittest.TestCase):
         self.mock_span = mock.MagicMock(spec=ServerSpan)
         self.mock_span.context = None
 
-    def test_make_clients(self, file_watcher_mock):
+    def test_make_client_without_timeout_set(self, file_watcher_mock):
         with create_temp_config_file({}) as f:
             decider_ctx_factory = decider_client_from_config(
                 {"experiments.path": f.name}, self.event_logger
             )
         self.assertIsInstance(decider_ctx_factory, DeciderContextFactory)
         file_watcher_mock.assert_called_once_with(
-            path=f.name, parser=init_decider_parser, timeout=None, backoff=None
+            path=f.name, parser=init_decider_parser, timeout=30.0, backoff=None
         )
 
     def test_timeout(self, file_watcher_mock):
