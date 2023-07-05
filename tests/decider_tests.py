@@ -1488,7 +1488,13 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
         self.exp_base_config["exp_1"]["experiment"].update({"overrides": [group_overrides]})
         # reset variant for override to make sure it's not organically bucketed into it
-        self.exp_base_config["exp_1"]["experiment"].update({"variants": [{"range_start": 0.0, "range_end": 0.0, "name": "variant_2"},]})
+        self.exp_base_config["exp_1"]["experiment"].update(
+            {
+                "variants": [
+                    {"range_start": 0.0, "range_end": 0.0, "name": "variant_2"},
+                ]
+            }
+        )
 
         og_cfg = {
             "$override_groups": {
@@ -1506,9 +1512,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "owner": "test",
                 "name": "$override_group",
                 "value_type": "Map",
-                "experiment": {
-                    "experiment_version": 1
-                }
+                "experiment": {"experiment_version": 1},
             },
         }
         self.exp_base_config.update(og_cfg)

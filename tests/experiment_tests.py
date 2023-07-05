@@ -710,6 +710,7 @@ class TestExperiments(unittest.TestCase):
 
         self.assertEqual(variant, "active")
 
+
 @mock.patch("reddit_experiments.FileWatcher")
 class ExperimentsClientFromConfigTests(unittest.TestCase):
     def test_make_clients(self, file_watcher_mock):
