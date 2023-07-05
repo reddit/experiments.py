@@ -62,7 +62,7 @@ Upgrade or integrate reddit-experiments package:
 .. code-block:: python
 
     # import latest reddit-experiments package in service requirements.txt
-    reddit-experiments>=1.6.0
+    reddit-experiments>=1.7.0
 
 Initialize :code:`decider` instance on Baseplate context
 --------------------------------------------------------
