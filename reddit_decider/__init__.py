@@ -689,6 +689,10 @@ class Decider:
 
         :return: the boolean value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
+        if self._internal is None:
+            logger.error("rs_decider is None--did not initialize.")
+            return default
+
         return self._get_dynamic_config_value(feature_name, default, bool, self._internal.get_bool)
 
     def get_int(self, feature_name: str, default: int = 0) -> int:
@@ -701,6 +705,10 @@ class Decider:
 
         :return: the int value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
+        if self._internal is None:
+            logger.error("rs_decider is None--did not initialize.")
+            return default
+
         return self._get_dynamic_config_value(feature_name, default, int, self._internal.get_int)
 
     def get_float(self, feature_name: str, default: float = 0.0) -> float:
@@ -713,6 +721,10 @@ class Decider:
 
         :return: the float value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
+        if self._internal is None:
+            logger.error("rs_decider is None--did not initialize.")
+            return default
+
         return self._get_dynamic_config_value(
             feature_name, default, float, self._internal.get_float
         )
@@ -727,6 +739,10 @@ class Decider:
 
         :return: the string value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
+        if self._internal is None:
+            logger.error("rs_decider is None--did not initialize.")
+            return default
+
         return self._get_dynamic_config_value(feature_name, default, str, self._internal.get_string)
 
     def get_map(self, feature_name: str, default: Optional[dict] = None) -> Optional[dict]:
@@ -739,6 +755,10 @@ class Decider:
 
         :return: the map value of the dyanimc config if it is active/exists, :code:`default` parameter otherwise.
         """
+        if self._internal is None:
+            logger.error("rs_decider is None--did not initialize.")
+            return default
+
         return self._get_dynamic_config_value(feature_name, default, dict, self._internal.get_map)
 
     def get_all_dynamic_configs(self) -> List[Dict[str, Any]]:
@@ -830,10 +850,6 @@ class Decider:
         dc_type: Type[T],
         get_fn: Callable[..., Type[T]],
     ) -> T:
-        if self._internal is None:
-            logger.error("rs_decider is None--did not initialize.")
-            return default
-
         ctx = self._decider_context.to_dict()
 
         try:
