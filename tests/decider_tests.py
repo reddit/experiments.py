@@ -497,7 +497,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(self.event_logger.log.call_count, 0)
 
                 assert any(
-                    "Partially loaded Decider: 1 features failed to load: {'test': 'invalid type: string \"1\", expected u32'}"
+                    "Partially loaded Decider: 1 features failed to load: {'test': 'Manifest parsing error: invalid type: string \"1\", expected u32'}"
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -1480,6 +1480,58 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assert_exposure_event_fields(
                 experiment_name="hg", variant="control_1", event_fields=event_fields
             )
+
+    def test_get_variant_for_okta_groups(self):
+        identifier = "t2_test"
+        bucket_val = "user_id"
+        group_overrides = {"variant_2": {"EQ": {"field": "user_id", "values": ["$some_group_id"]}}}
+
+        self.exp_base_config["exp_1"]["experiment"].update({"overrides": [group_overrides]})
+        # reset variant for override to make sure it's not organically bucketed into it
+        self.exp_base_config["exp_1"]["experiment"].update({"variants": [{"range_start": 0.0, "range_end": 0.0, "name": "variant_2"},]})
+
+        og_cfg = {
+            "$override_groups": {
+                "id": 1337,
+                "value": {
+                    "$some_group_id": {
+                        "name": "some_group_id",
+                        "values": [identifier],
+                        "field": "user_id",
+                    }
+                },
+                "type": "dynamic_config",
+                "version": "1",
+                "enabled": False,
+                "owner": "test",
+                "name": "$override_group",
+                "value_type": "Map",
+                "experiment": {
+                    "experiment_version": 1
+                }
+            },
+        }
+        self.exp_base_config.update(og_cfg)
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant_for_identifier_without_expose(
+                experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val
+            )
+            self.assertEqual(variant, "variant_2")
+
+            self.dc._user_id = identifier
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+            variant = decider.get_variant_without_expose(experiment_name="exp_1")
+            self.assertEqual(variant, "variant_2")
+
+            # no exposures should be triggered
+            self.assertEqual(self.event_logger.log.call_count, 0)
+
+    def test_get_variant_for_okta_groups_non_user_id_identifier(self):
+        pass
 
 
 class TestDeciderGetDynamicConfig(unittest.TestCase):

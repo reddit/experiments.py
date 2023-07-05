@@ -674,6 +674,41 @@ class TestExperiments(unittest.TestCase):
         variant = experiments.variant("test", user=self.user)
         self.assertEqual(variant, None)
 
+    def test_new_identifier_compatibility(self):
+        self.mock_filewatcher.get_data.return_value = {
+            "test": {
+                "id": 1,
+                "name": "test",
+                "enabled": True,
+                "owner": "test_owner",
+                "version": "1",
+                "emit_event": True,
+                "type": "range_variant",
+                "start_ts": time.time() - THIRTY_DAYS,
+                "stop_ts": time.time() + THIRTY_DAYS,
+                "experiment": {
+                    "variants": [
+                        {"name": "active", "size": 1, "range_end": 1.0, "range_start": 0},
+                    ],
+                    "experiment_version": 5,
+                    "shuffle_version": 91,
+                    "bucket_val": "ad_account_id",
+                    "log_bucketing": False,
+                },
+            }
+        }
+
+        experiments = Experiments(
+            config_watcher=self.mock_filewatcher,
+            server_span=self.mock_span,
+            context_name="test",
+            event_logger=self.event_logger,
+        )
+
+        self.assertEqual(self.event_logger.log.call_count, 0)
+        variant = experiments.variant("test", ad_account_id="a2_xxx")
+
+        self.assertEqual(variant, "active")
 
 @mock.patch("reddit_experiments.FileWatcher")
 class ExperimentsClientFromConfigTests(unittest.TestCase):

@@ -43,7 +43,9 @@ Setup :code:`reddit-experiments` in your application's configuration file:
    experiments.path = /var/local/foo.json
 
    # optional: how long to wait for the experiments file to exist before failing
-   # (default: do not wait. fail immediately if not available)
+   # default:
+   #    >= v1.7.0 wait 30 seconds
+   #    <  v1.7.0 do not wait, fail immediately if not available
    experiments.timeout = 60 seconds
 
    # optional: the base amount of time for exponential backoff while waiting
