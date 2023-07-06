@@ -1642,7 +1642,6 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             res = decider.get_map("dc_1")
             self.assertEqual(res, None)
 
-
     def test_get_all_values(self):
         base_cfg = self.dc_base_config["dc_1"].copy()
 
