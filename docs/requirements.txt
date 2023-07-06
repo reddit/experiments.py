@@ -4,7 +4,7 @@ docutils==0.16
 Jinja2==2.11.2
 MarkupSafe==1.1.1
 pydocstyle==5.1.1
-reddit-decider==1.4.0
+reddit-decider==1.4.1
 reddit-edgecontext==1.0.0a3
 Sphinx==3.4.0
 sphinx-autodoc-typehints==1.11.1

@@ -1630,6 +1630,19 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
             res = decider.get_string("dc_1")
             self.assertEqual(res, "")
 
+    def test_get_map_disabled(self):
+        self.dc_base_config["dc_1"].update(
+            {"value_type": "Map", "value": {"key": "value", "another_key": "another_value"}}
+        )
+        self.dc_base_config["dc_1"].update({"enabled": False})
+
+        with create_temp_config_file(self.dc_base_config) as f:
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+
+            res = decider.get_map("dc_1")
+            self.assertEqual(res, None)
+
+
     def test_get_all_values(self):
         base_cfg = self.dc_base_config["dc_1"].copy()
 
