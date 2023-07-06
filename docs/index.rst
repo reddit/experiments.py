@@ -43,7 +43,9 @@ Setup :code:`reddit-experiments` in your application's configuration file:
    experiments.path = /var/local/foo.json
 
    # optional: how long to wait for the experiments file to exist before failing
-   # (default: do not wait. fail immediately if not available)
+   # default:
+   #    >= v1.7.0 wait 30 seconds
+   #    <  v1.7.0 do not wait, fail immediately if not available
    experiments.timeout = 60 seconds
 
    # optional: the base amount of time for exponential backoff while waiting
@@ -62,7 +64,7 @@ Upgrade or integrate reddit-experiments package:
 .. code-block:: python
 
     # import latest reddit-experiments package in service requirements.txt
-    reddit-experiments>=1.4.0
+    reddit-experiments>=1.7.0
 
 Initialize :code:`decider` instance on Baseplate context
 --------------------------------------------------------
