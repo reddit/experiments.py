@@ -1534,9 +1534,6 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # no exposures should be triggered
             self.assertEqual(self.event_logger.log.call_count, 0)
 
-    def test_get_variant_for_okta_groups_non_user_id_identifier(self):
-        pass
-
 
 class TestDeciderGetDynamicConfig(unittest.TestCase):
     def setUp(self):
