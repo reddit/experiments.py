@@ -33,13 +33,16 @@ from typing_extensions import Literal
 
 from .prometheus_metrics import experiments_client_counter
 
-# get package's version for metrics
+# get package's version for prometheus metrics
 if py_version >= (3, 8):
-    from importlib.metadata import version as pkg_version
+    from importlib.metadata import version as pkg_version, PackageNotFoundError  # type: ignore
 else:
-    from importlib_metadata import version as pkg_version
+    from importlib_metadata import version as pkg_version, PackageNotFoundError
 
-_pkg_version = pkg_version("reddit-experiments")
+try:
+    _pkg_version = pkg_version("reddit-experiments")
+except PackageNotFoundError:
+    _pkg_version = ""
 
 logger = logging.getLogger(__name__)
 
