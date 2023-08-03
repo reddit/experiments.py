@@ -35,9 +35,9 @@ from .prometheus_metrics import experiments_client_counter
 
 # get package's version for metrics
 if py_version >= (3, 8):
-    from importlib.metadata import version as pkg_version, PackageNotFoundError
+    from importlib.metadata import version as pkg_version
 else:
-    from importlib_metadata import version as pkg_version, PackageNotFoundError
+    from importlib_metadata import version as pkg_version
 
 _pkg_version = pkg_version("reddit-experiments")
 
