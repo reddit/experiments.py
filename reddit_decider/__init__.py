@@ -4,9 +4,10 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
-from sys import version_info as py_version
+import sys
 from typing import Any
 from typing import Callable
+from typing import cast
 from typing import Dict
 from typing import IO
 from typing import List
@@ -34,13 +35,15 @@ from typing_extensions import Literal
 from .prometheus_metrics import experiments_client_counter
 
 # get package's version for prometheus metrics
-if py_version >= (3, 8):
-    from importlib.metadata import version as pkg_version, PackageNotFoundError  # type: ignore
+if sys.version_info >= (3, 8):
+    from importlib.metadata import version as pkg_version, PackageNotFoundError
 else:
     from importlib_metadata import version as pkg_version, PackageNotFoundError
 
 try:
-    _pkg_version = pkg_version("reddit-experiments")
+    # see https://github.com/python/mypy/issues/8823#issuecomment-1484368501
+    # for why cast is used (mypy)
+    _pkg_version = cast(Callable[[str], str], pkg_version)("reddit-experiments")
 except PackageNotFoundError:
     _pkg_version = ""
 
