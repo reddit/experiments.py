@@ -1006,7 +1006,7 @@ class DeciderContextFactory(ContextFactory):
         )
 
     def make_object_for_context(self, name: str, span: Span) -> Decider:
-        def inc_failure_counter(failure_type: str):
+        def inc_failure_counter(failure_type: str) -> None:
             experiments_client_counter.labels(
                 operation="make_object_for_context",
                 success="false",
