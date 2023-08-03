@@ -4,6 +4,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
+from sys import version_info as py_version
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -30,6 +31,15 @@ from rust_decider import FeatureNotFoundException
 from rust_decider import ValueTypeMismatchException
 from typing_extensions import Literal
 
+from .prometheus_metrics import experiments_client_counter
+
+# get package's version for metrics
+if py_version >= (3, 8):
+    from importlib.metadata import version as pkg_version, PackageNotFoundError
+else:
+    from importlib_metadata import version as pkg_version, PackageNotFoundError
+
+_pkg_version = pkg_version("reddit-experiments")
 
 logger = logging.getLogger(__name__)
 
@@ -990,21 +1000,52 @@ class DeciderContextFactory(ContextFactory):
         )
 
     def make_object_for_context(self, name: str, span: Span) -> Decider:
+        # initialize rust decider from watched manifest file
         rs_decider = None
         try:
             rs_decider = self._filewatcher.get_data()
         except WatchedFileNotAvailableError as exc:
+            experiments_client_counter.labels(
+                operation="make_object_for_context",
+                success="false",
+                error_type="watched_file_not_available",
+                pkg_version=_pkg_version,
+            ).inc()
+
             logger.error(f"Experiment config file unavailable: {exc}")
 
+        # check for `span`'s presence
         if span is None:
+            experiments_client_counter.labels(
+                operation="make_object_for_context",
+                success="false",
+                error_type="missing_span",
+                pkg_version=_pkg_version,
+            ).inc()
+
             logger.debug("`span` is `None` in reddit_decider `make_object_for_context()`.")
             return self._minimal_decider(internal=rs_decider, name=name, span=span)
 
-        request = None
+        # check for `span.context`'s presence
+        request = getattr(span, "context", None)
+
+        if request is None:
+            experiments_client_counter.labels(
+                operation="make_object_for_context",
+                success="false",
+                error_type="missing_span_context",
+                pkg_version=_pkg_version,
+            ).inc()
+
+            return self._minimal_decider(
+                internal=rs_decider,
+                name=name,
+                span=span,
+            )
+
+        # extract fields from `span.context` if `self._request_field_extractor` is defined
         parsed_extracted_fields = None
         try:
-            request = span.context
-
             if self._request_field_extractor:
                 extracted_fields = self._request_field_extractor(request)
                 # prune any invalid keys/values
@@ -1012,34 +1053,23 @@ class DeciderContextFactory(ContextFactory):
                     extracted_dict=extracted_fields
                 )
         except Exception as exc:
+            experiments_client_counter.labels(
+                operation="make_object_for_context",
+                success="false",
+                error_type="request_field_extractor",
+                pkg_version=_pkg_version,
+            ).inc()
+
             logger.info(
                 f"Unable to extract fields from `request_field_extractor()` in `make_object_for_context()`. details: {exc}"
             )
+            # re-raise exception raised by `_request_field_extractor`
+            # since it's user-defined & should be made visible
+            raise exc
 
-        ec = None
-        try:
-            # if `edge_context` is inaccessible, bail early
-            if request is None:
-                return self._minimal_decider(
-                    internal=rs_decider,
-                    name=name,
-                    span=span,
-                    parsed_extracted_fields=parsed_extracted_fields,
-                )
-
-            ec = request.edge_context
-
-            if ec is None:
-                return self._minimal_decider(
-                    internal=rs_decider,
-                    name=name,
-                    span=span,
-                    parsed_extracted_fields=parsed_extracted_fields,
-                )
-        except Exception as exc:
-            logger.info(
-                f"Unable to access `request.edge_context` in `make_object_for_context()`. details: {exc}"
-            )
+        ec = getattr(request, "edge_context", None)
+        # if `edge_context` is inaccessible, bail field extraction early
+        if ec is None:
             return self._minimal_decider(
                 internal=rs_decider,
                 name=name,
@@ -1048,7 +1078,6 @@ class DeciderContextFactory(ContextFactory):
             )
 
         # All fields below are derived from `edge_context`
-
         user_id = None
         logged_in = None
         cookie_created_timestamp = None
@@ -1139,6 +1168,13 @@ class DeciderContextFactory(ContextFactory):
                 extracted_fields=parsed_extracted_fields,
             )
         except Exception as exc:
+            experiments_client_counter.labels(
+                operation="make_object_for_context",
+                success="false",
+                error_type="DeciderContext_init_failed",
+                pkg_version=_pkg_version,
+            ).inc()
+
             logger.warning(
                 f"Could not create full DeciderContext() (defaulting to empty DeciderContext()): {exc}"
             )
