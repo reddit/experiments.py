@@ -1006,29 +1006,25 @@ class DeciderContextFactory(ContextFactory):
         )
 
     def make_object_for_context(self, name: str, span: Span) -> Decider:
+        def inc_failure_counter(failure_type: str):
+            experiments_client_counter.labels(
+                operation="make_object_for_context",
+                success="false",
+                error_type=failure_type,
+                pkg_version=_pkg_version,
+            ).inc()
+
         # initialize rust decider from watched manifest file
         rs_decider = None
         try:
             rs_decider = self._filewatcher.get_data()
         except WatchedFileNotAvailableError as exc:
-            experiments_client_counter.labels(
-                operation="make_object_for_context",
-                success="false",
-                error_type="watched_file_not_available",
-                pkg_version=_pkg_version,
-            ).inc()
-
+            inc_failure_counter("watched_file_not_available")
             logger.error(f"Experiment config file unavailable: {exc}")
 
         # check for `span`'s presence
         if span is None:
-            experiments_client_counter.labels(
-                operation="make_object_for_context",
-                success="false",
-                error_type="missing_span",
-                pkg_version=_pkg_version,
-            ).inc()
-
+            inc_failure_counter("missing_span")
             logger.debug("`span` is `None` in reddit_decider `make_object_for_context()`.")
             return self._minimal_decider(internal=rs_decider, name=name, span=span)
 
@@ -1036,13 +1032,7 @@ class DeciderContextFactory(ContextFactory):
         request = getattr(span, "context", None)
 
         if request is None:
-            experiments_client_counter.labels(
-                operation="make_object_for_context",
-                success="false",
-                error_type="missing_span_context",
-                pkg_version=_pkg_version,
-            ).inc()
-
+            inc_failure_counter("missing_span_context")
             return self._minimal_decider(
                 internal=rs_decider,
                 name=name,
@@ -1059,14 +1049,8 @@ class DeciderContextFactory(ContextFactory):
                     extracted_dict=extracted_fields
                 )
         except Exception as exc:
-            experiments_client_counter.labels(
-                operation="make_object_for_context",
-                success="false",
-                error_type="request_field_extractor",
-                pkg_version=_pkg_version,
-            ).inc()
-
-            logger.info(
+            inc_failure_counter("request_field_extractor")
+            logger.error(
                 f"Unable to extract fields from `request_field_extractor()` in `make_object_for_context()`. details: {exc}"
             )
             # re-raise exception raised by `_request_field_extractor`
@@ -1174,13 +1158,7 @@ class DeciderContextFactory(ContextFactory):
                 extracted_fields=parsed_extracted_fields,
             )
         except Exception as exc:
-            experiments_client_counter.labels(
-                operation="make_object_for_context",
-                success="false",
-                error_type="DeciderContext_init_failed",
-                pkg_version=_pkg_version,
-            ).inc()
-
+            inc_failure_counter("DeciderContext_init_failed")
             logger.warning(
                 f"Could not create full DeciderContext() (defaulting to empty DeciderContext()): {exc}"
             )
