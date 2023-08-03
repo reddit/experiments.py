@@ -1,10 +1,10 @@
 import logging
+import sys
 
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
-import sys
 from typing import Any
 from typing import Callable
 from typing import cast
