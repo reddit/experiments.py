@@ -39,8 +39,9 @@ Setup :code:`reddit-experiments` in your application's configuration file:
    ...
 
    # optional: a path to the file where experiment configuration is written
-   # (default: /var/local/experiments.json)
-   experiments.path = /var/local/foo.json
+   # default: /var/local/experiments.json
+   # note: production systems load the experiments.json file under nested `live-data/` dir
+   experiments.path = /var/local/live-data/experiments.json
 
    # optional: how long to wait for the experiments file to exist before failing
    # default:
@@ -50,7 +51,7 @@ Setup :code:`reddit-experiments` in your application's configuration file:
 
    # optional: the base amount of time for exponential backoff while waiting
    # for the file to be available.
-   # (default: no backoff time between tries)
+   # default: no backoff time between tries
    experiments.backoff = 1 second
 
    ...
