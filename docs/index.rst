@@ -51,7 +51,8 @@ Setup :code:`reddit-experiments` in your application's configuration file:
 
    # optional: the base amount of time for exponential backoff while waiting
    # for the file to be available.
-   # default: no backoff time between tries
+   # default: 0.01
+   # see https://github.com/reddit/baseplate.py/blob/114248987ce0e8a0ddd102c80b00ef43f4dbf14e/baseplate/lib/file_watcher.py#L56C1-L56C35
    experiments.backoff = 1 second
 
    ...
