@@ -273,7 +273,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
             metric_counter_labels.assert_called_once_with(
                 operation="make_object_for_context",
                 success="false",
-                error_type="missing:'span_context'",
+                error_type="missing:'span.context'",
                 pkg_version=mock.ANY,
             )
 
