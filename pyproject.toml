@@ -1,3 +1,8 @@
 [tool.black]
 line-length = 100
 target-version = ['py36']
+
+[project]
+dynamic = ["version"]
+
+[tool.setuptools_scm]

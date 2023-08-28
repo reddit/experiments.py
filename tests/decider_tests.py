@@ -86,7 +86,6 @@ class DeciderClientFromConfigTests(unittest.TestCase):
         super().setUp()
         self.event_logger = mock.Mock(spec=DebugLogger)
         self.mock_span = mock.MagicMock(spec=ServerSpan)
-        self.mock_span.context = None
 
     def test_make_client_without_timeout_set(self, file_watcher_mock):
         with create_temp_config_file({}) as f:
@@ -219,7 +218,8 @@ class DeciderContextFactoryTests(unittest.TestCase):
         self.assertEqual(decider_event_dict["canonical_url"], CANONICAL_URL)
         self.assertEqual(decider_event_dict["request"]["canonical_url"], CANONICAL_URL)
 
-    def test_make_object_for_context_and_decider_context_without_span(self):
+    @mock.patch("reddit_decider.experiments_client_counter.labels")
+    def test_make_object_for_context_without_span(self, metric_counter_labels):
         with create_temp_config_file({}) as f:
             decider_ctx_factory = decider_client_from_config(
                 {"experiments.path": f.name, "experiments.timeout": "2 seconds"},
@@ -236,13 +236,56 @@ class DeciderContextFactoryTests(unittest.TestCase):
             assert len(captured.records) == 1
             self.assertEqual(["WARNING:root:Dummy warning"], captured.output)
 
+            metric_counter_labels.assert_called_once_with(
+                operation="make_object_for_context",
+                success="false",
+                error_type="missing:'span'",
+                pkg_version=mock.ANY,
+            )
+
         self.assertIsInstance(decider, Decider)
 
         decider_ctx_dict = decider._decider_context.to_dict()
         self.assertEqual(decider_ctx_dict["user_id"], None)
 
-    def test_make_object_for_context_and_decider_context_with_broken_decider_field_extractor(self):
-        def broken_decider_field_extractor(_request: RequestContext):
+    @mock.patch("reddit_decider.experiments_client_counter.labels")
+    def test_make_object_for_context_with_span_context_as_None(self, metric_counter_labels):
+        with create_temp_config_file({}) as f:
+            decider_ctx_factory = decider_client_from_config(
+                {"experiments.path": f.name, "experiments.timeout": "2 seconds"},
+                self.event_logger,
+                prefix="experiments.",
+                request_field_extractor=decider_field_extractor,
+            )
+
+        mock_span = mock.MagicMock(spec=ServerSpan)
+        # span is missing context
+
+        with self.assertLogs(logger, logging.WARN) as captured:
+            # ensure no warnings are printed except for the dummy one
+            # https://stackoverflow.com/a/61381576/4260179
+            logger.warning("Dummy warning")
+
+            decider = decider_ctx_factory.make_object_for_context(name="test", span=mock_span)
+            assert len(captured.records) == 1
+            self.assertEqual(["WARNING:root:Dummy warning"], captured.output)
+
+            metric_counter_labels.assert_called_once_with(
+                operation="make_object_for_context",
+                success="false",
+                error_type="missing:'span.context'",
+                pkg_version=mock.ANY,
+            )
+
+        self.assertIsInstance(decider, Decider)
+
+        decider_ctx_dict = decider._decider_context.to_dict()
+        self.assertEqual(decider_ctx_dict["user_id"], None)
+
+    def test_make_object_for_context_and_decider_context_with_malformed_decider_field_extractor(
+        self,
+    ):
+        def decider_field_extractor_with_malformed_fields(_request: RequestContext):
             return {
                 "app_name": {},
                 "build_number": BUILD_NUMBER,
@@ -256,7 +299,7 @@ class DeciderContextFactoryTests(unittest.TestCase):
                 {"experiments.path": f.name, "experiments.timeout": "2 seconds"},
                 self.event_logger,
                 prefix="experiments.",
-                request_field_extractor=broken_decider_field_extractor,
+                request_field_extractor=decider_field_extractor_with_malformed_fields,
             )
 
         with self.assertLogs() as captured:
@@ -279,6 +322,39 @@ class DeciderContextFactoryTests(unittest.TestCase):
                 in x.getMessage()
                 for x in captured.records
             )
+
+    @mock.patch("reddit_decider.experiments_client_counter.labels")
+    def test_make_object_for_context_with_broken_decider_field_extractor_raises_exception(
+        self, metric_counter_labels
+    ):
+        class SomeException(Exception):
+            pass
+
+        def broken_decider_field_extractor(_request: RequestContext):
+            raise SomeException("bad extractor")
+
+        with create_temp_config_file({}) as f:
+            decider_ctx_factory = decider_client_from_config(
+                {"experiments.path": f.name, "experiments.timeout": "2 seconds"},
+                self.event_logger,
+                prefix="experiments.",
+                request_field_extractor=broken_decider_field_extractor,
+            )
+
+        with self.assertRaises(SomeException) as e:
+            decider_ctx_factory.make_object_for_context(name="test", span=self.mock_span)
+
+        self.assertEqual(
+            str(e.exception),
+            "bad extractor",
+        )
+
+        metric_counter_labels.assert_called_once_with(
+            operation="make_object_for_context",
+            success="false",
+            error_type="request_field_extractor",
+            pkg_version=mock.ANY,
+        )
 
 
 # Todo: test DeciderClient()
