@@ -1024,7 +1024,7 @@ class DeciderContextFactory(ContextFactory):
 
         # check for `span`'s presence
         if span is None:
-            inc_failure_counter("missing_span")
+            inc_failure_counter("missing:'span'")
             logger.debug("`span` is `None` in reddit_decider `make_object_for_context()`.")
             return self._minimal_decider(internal=rs_decider, name=name, span=span)
 
@@ -1032,7 +1032,7 @@ class DeciderContextFactory(ContextFactory):
         request = getattr(span, "context", None)
 
         if request is None:
-            inc_failure_counter("missing_span_context")
+            inc_failure_counter("missing:'span.context'")
             return self._minimal_decider(
                 internal=rs_decider,
                 name=name,
@@ -1060,6 +1060,7 @@ class DeciderContextFactory(ContextFactory):
         ec = getattr(request, "edge_context", None)
         # if `edge_context` is inaccessible, bail field extraction early
         if ec is None:
+            inc_failure_counter("missing:'request.edge_context'")
             return self._minimal_decider(
                 internal=rs_decider,
                 name=name,
