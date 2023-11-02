@@ -414,7 +414,7 @@ class Decider:
         except FeatureNotFoundException:
             return
         except DeciderException as exc:
-            logger.info(str(exc))
+            logger.error("[decider] %s", str(exc))
             return
 
         # drop exposure for feature rollouts
@@ -820,7 +820,7 @@ class Decider:
         try:
             values = self._internal.all_values(ctx)
         except DeciderException as exc:
-            logger.info(str(exc))
+            logger.error("[decider] %s", str(exc))
             return []
 
         parsed_configs = []
@@ -844,7 +844,7 @@ class Decider:
         except FeatureNotFoundException:
             return None
         except DeciderException as exc:
-            logger.info(str(exc))
+            logger.error("[decider] %s", str(exc))
             return None
 
     def _get_all_decisions(
@@ -857,7 +857,7 @@ class Decider:
         try:
             return self._internal.choose_all(ctx, bucketing_field_filter)
         except DeciderException as exc:
-            logger.info(str(exc))
+            logger.error("[decider] %s %s", str(exc))
             return None
 
     def _get_dynamic_config_value(
@@ -877,7 +877,7 @@ class Decider:
             logger.info(str(exc))
             return default
         except DeciderException as exc:
-            logger.info(str(exc))
+            logger.error("[decider] %s", str(exc))
             return default
 
         try:
@@ -910,7 +910,7 @@ class Decider:
         except FeatureNotFoundException:
             return None
         except DeciderException as exc:
-            logger.info(str(exc))
+            logger.error("[decider] %s", str(exc))
             return None
 
         return ExperimentConfig(
