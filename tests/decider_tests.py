@@ -500,7 +500,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         cfg = self.exp_base_config[experiment_name]
         self.assertEqual(getattr(event_fields["experiment"], "id"), cfg["id"])
         self.assertEqual(getattr(event_fields["experiment"], "name"), cfg["name"])
-        self.assertEqual(getattr(event_fields["experiment"], "owner"), cfg["owner"])
+        self.assertEqual(getattr(event_fields["experiment"], "owner"), None)
         self.assertEqual(getattr(event_fields["experiment"], "version"), cfg["version"])
         self.assertEqual(getattr(event_fields["experiment"], "bucket_val"), bucket_val)
 
@@ -520,7 +520,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         cfg = self.exp_base_config[experiment_name]
         self.assertEqual(getattr(event_fields["experiment"], "id"), cfg["id"])
         self.assertEqual(getattr(event_fields["experiment"], "name"), cfg["name"])
-        self.assertEqual(getattr(event_fields["experiment"], "owner"), cfg["owner"])
+        self.assertEqual(getattr(event_fields["experiment"], "owner"), None)
         self.assertEqual(getattr(event_fields["experiment"], "version"), cfg["version"])
         self.assertEqual(getattr(event_fields["experiment"], "bucket_val"), bucket_val)
 
@@ -573,7 +573,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(self.event_logger.log.call_count, 0)
 
                 assert any(
-                    "Partially loaded Decider: 1 features failed to load: {'test': 'Manifest parsing error: invalid type: string \"1\", expected u32'}"
+                    'Partially loaded Decider: 1 feature(s) failed to load: {"test": ParsingError(Error("invalid type: string \\"1\\", expected u32", line: 0, column: 0))'
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -1508,6 +1508,86 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # exposure assertions
             self.assertEqual(self.event_logger.log.call_count, 0)
 
+    def test_range_variant_emit_event_override(self):
+        cfg = {
+            "feature_rollout_100": {
+                "id": 9110,
+                "name": "feature_rollout_100",
+                "enabled": True,
+                "version": "1",
+                "start_ts": 1522306800,
+                "stop_ts": 32533405261,
+                "owner": "test_user@reddit.com",
+                "type": "feature_rollout",
+                "emit_event": False,
+                "experiment": {
+                "variants": [
+                    {
+                    "name": "enabled",
+                    "size": 1.0,
+                    "range_end": 1.0,
+                    "range_start": 0.0
+                    }
+                ],
+                "experiment_version": 1,
+                "shuffle_version": 0,
+                "bucket_val": "user_id",
+                "log_bucketing": False
+                }
+            },
+            "measured_rollout_100": {
+                "id": 9119,
+                "name": "measured_rollout_100",
+                "enabled": True,
+                "version": "1",
+                "start_ts": 1522306800,
+                "stop_ts": 32533405261,
+                "owner": "test_user@reddit.com",
+                "type": "range_variant",
+                "emit_event": False,
+                "measured": True,
+                "experiment": {
+                "variants": [
+                    {
+                    "name": "enabled",
+                    "size": 1.0,
+                    "range_end": 1.0,
+                    "range_start": 0.0,
+                    "emit_event_override": True
+                    }
+                ],
+                "experiment_version": 1,
+                "shuffle_version": 0,
+                "bucket_val": "user_id",
+                "log_bucketing": False
+                }
+            }
+        }
+
+        with create_temp_config_file(cfg) as f:
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            variant = decider.get_variant(experiment_name="feature_rollout_100")
+            self.assertEqual(variant, "enabled")
+
+            # FR does NOT emit exposure
+            self.assertEqual(self.event_logger.log.call_count, 0)
+            
+            # FR is NOT "measured"
+            fr_cfg = decider.get_experiment(experiment_name="feature_rollout_100")
+            self.assertEqual(fr_cfg.measured, False)
+
+            variant = decider.get_variant(experiment_name="measured_rollout_100")
+            self.assertEqual(variant, "enabled")
+
+            # Measured Rollout DOES emit exposure (due to RV "emit_event_override" field)
+            self.assertEqual(self.event_logger.log.call_count, 1)
+            
+            # MR IS "measured"
+            mr_cfg = decider.get_experiment(experiment_name="measured_rollout_100")
+            self.assertEqual(mr_cfg.measured, True)
+
     def test_get_experiment(self):
         with create_temp_config_file(self.exp_base_config) as f:
             decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
@@ -1521,7 +1601,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assertEqual(experiment.bucket_val, cfg["experiment"]["bucket_val"])
             self.assertEqual(experiment.start_ts, cfg["start_ts"])
             self.assertEqual(experiment.stop_ts, cfg["stop_ts"])
-            self.assertEqual(experiment.owner, cfg["owner"])
+            self.assertEqual(experiment.owner, None)
             self.assertEqual(experiment.emit_event, True)
 
     def test_get_variant_without_expose_with_HG_as_control_1_and_child_returns_none_does_expose(
