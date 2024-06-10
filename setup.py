@@ -14,7 +14,7 @@ setup(
     license="BSD",
     use_scm_version=True,
     packages=find_packages(),
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     setup_requires=["setuptools_scm"],
     install_requires=[
         "baseplate>=2.0.0a1,<3.0",
@@ -28,7 +28,6 @@ setup(
         "Development Status :: 5 - Production/Stable",
         "License :: OSI Approved :: BSD License",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Topic :: Software Development :: Libraries",
