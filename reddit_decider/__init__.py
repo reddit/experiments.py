@@ -5,11 +5,6 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
-from rust_decider import Decider as RustDecider
-from rust_decider import DeciderException
-from rust_decider import Decision
-from rust_decider import FeatureNotFoundException
-from rust_decider import ValueTypeMismatchException
 from typing import Any
 from typing import Callable
 from typing import cast
@@ -30,6 +25,11 @@ from baseplate.lib.events import EventLogger
 from baseplate.lib.file_watcher import FileWatcher
 from baseplate.lib.file_watcher import WatchedFileNotAvailableError
 from reddit_edgecontext import ValidatedAuthenticationToken
+from rust_decider import Decider as RustDecider
+from rust_decider import DeciderException
+from rust_decider import Decision
+from rust_decider import FeatureNotFoundException
+from rust_decider import ValueTypeMismatchException
 from typing_extensions import Literal
 
 from .prometheus_metrics import experiments_client_counter

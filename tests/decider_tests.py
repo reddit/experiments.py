@@ -9,14 +9,13 @@ from unittest import mock
 from baseplate import RequestContext
 from baseplate import ServerSpan
 from baseplate.lib.events import DebugLogger
-from reddit_edgecontext import ValidatedAuthenticationToken
-
 from reddit_decider import Decider
 from reddit_decider import decider_client_from_config
 from reddit_decider import DeciderContext
 from reddit_decider import DeciderContextFactory
 from reddit_decider import EventType
 from reddit_decider import init_decider_parser
+from reddit_edgecontext import ValidatedAuthenticationToken
 
 logger = logging.getLogger()
 
