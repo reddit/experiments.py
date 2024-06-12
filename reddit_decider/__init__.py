@@ -73,8 +73,9 @@ class ExperimentConfig:
     bucket_val: str
     start_ts: int
     stop_ts: int
-    owner: str
+    owner: None = None
     emit_event: Optional[bool] = None
+    measured: Optional[bool] = None
 
 
 class DeciderContext:
@@ -236,7 +237,6 @@ class Decider:
                 bucket_val,
                 start_ts,
                 stop_ts,
-                owner,
             ) = event.split("::::")
         except ValueError:
             logger.warning(
@@ -251,7 +251,6 @@ class Decider:
             bucket_val=bucket_val,
             start_ts=self._cast_to_int(start_ts),
             stop_ts=self._cast_to_int(stop_ts),
-            owner=owner,
         )
 
         event_fields = {**event_fields, **{bucket_val: bucketing_value}}
@@ -279,7 +278,6 @@ class Decider:
                 bucket_val,
                 start_ts,
                 stop_ts,
-                owner,
             ) = event.split("::::")
         except ValueError:
             logger.warning(
@@ -299,7 +297,6 @@ class Decider:
                 bucket_val=bucket_val,
                 start_ts=self._cast_to_int(start_ts),
                 stop_ts=self._cast_to_int(stop_ts),
-                owner=owner,
             )
 
             event_fields = {**event_fields, **{bucket_val: bucketing_value}}
@@ -432,7 +429,6 @@ class Decider:
             bucket_val=feature.bucket_val,
             start_ts=feature.start_ts,
             stop_ts=feature.stop_ts,
-            owner=feature.owner,
         )
 
         self._event_logger.log(
@@ -920,8 +916,8 @@ class Decider:
             bucket_val=feature.bucket_val,
             start_ts=feature.start_ts,
             stop_ts=feature.stop_ts,
-            owner=feature.owner,
             emit_event=feature.emit_event,
+            measured=feature.measured,
         )
 
 
