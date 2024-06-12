@@ -1521,19 +1521,14 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "type": "feature_rollout",
                 "emit_event": False,
                 "experiment": {
-                "variants": [
-                    {
-                    "name": "enabled",
-                    "size": 1.0,
-                    "range_end": 1.0,
-                    "range_start": 0.0
-                    }
-                ],
-                "experiment_version": 1,
-                "shuffle_version": 0,
-                "bucket_val": "user_id",
-                "log_bucketing": False
-                }
+                    "variants": [
+                        {"name": "enabled", "size": 1.0, "range_end": 1.0, "range_start": 0.0}
+                    ],
+                    "experiment_version": 1,
+                    "shuffle_version": 0,
+                    "bucket_val": "user_id",
+                    "log_bucketing": False,
+                },
             },
             "measured_rollout_100": {
                 "id": 9119,
@@ -1547,21 +1542,21 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "emit_event": False,
                 "measured": True,
                 "experiment": {
-                "variants": [
-                    {
-                    "name": "enabled",
-                    "size": 1.0,
-                    "range_end": 1.0,
-                    "range_start": 0.0,
-                    "emit_event_override": True
-                    }
-                ],
-                "experiment_version": 1,
-                "shuffle_version": 0,
-                "bucket_val": "user_id",
-                "log_bucketing": False
-                }
-            }
+                    "variants": [
+                        {
+                            "name": "enabled",
+                            "size": 1.0,
+                            "range_end": 1.0,
+                            "range_start": 0.0,
+                            "emit_event_override": True,
+                        }
+                    ],
+                    "experiment_version": 1,
+                    "shuffle_version": 0,
+                    "bucket_val": "user_id",
+                    "log_bucketing": False,
+                },
+            },
         }
 
         with create_temp_config_file(cfg) as f:
@@ -1573,7 +1568,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             # FR does NOT emit exposure
             self.assertEqual(self.event_logger.log.call_count, 0)
-            
+
             # FR is NOT "measured"
             fr_cfg = decider.get_experiment(experiment_name="feature_rollout_100")
             self.assertEqual(fr_cfg.measured, False)
@@ -1583,7 +1578,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
             # Measured Rollout DOES emit exposure (due to RV "emit_event_override" field)
             self.assertEqual(self.event_logger.log.call_count, 1)
-            
+
             # MR IS "measured"
             mr_cfg = decider.get_experiment(experiment_name="measured_rollout_100")
             self.assertEqual(mr_cfg.measured, True)
