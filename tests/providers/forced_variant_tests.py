@@ -16,7 +16,7 @@ class TestForcedVariantExperiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "unknown",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -32,7 +32,7 @@ class TestForcedVariantExperiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -47,7 +47,7 @@ class TestForcedVariantExperiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -62,7 +62,7 @@ class TestForcedVariantExperiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() + THIRTY_DAYS,
@@ -77,7 +77,7 @@ class TestForcedVariantExperiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS * 2,
@@ -93,7 +93,7 @@ class TestForcedVariantExperiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "expires": expires,
@@ -108,7 +108,7 @@ class TestForcedVariantExperiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() + THIRTY_DAYS,
@@ -124,7 +124,7 @@ class TestForcedVariantExperiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,

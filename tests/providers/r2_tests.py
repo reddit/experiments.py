@@ -52,7 +52,7 @@ class TestR2Experiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -68,7 +68,7 @@ class TestR2Experiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "start_ts": time.time() - THIRTY_DAYS,
             "stop_ts": time.time() + THIRTY_DAYS,
@@ -83,7 +83,7 @@ class TestR2Experiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -96,7 +96,7 @@ class TestR2Experiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -116,7 +116,7 @@ class TestR2Experiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -155,7 +155,7 @@ class TestR2Experiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -209,7 +209,7 @@ class TestR2Experiment(unittest.TestCase):
             {
                 "id": 1,
                 "name": "control_only",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -221,7 +221,7 @@ class TestR2Experiment(unittest.TestCase):
             {
                 "id": 1,
                 "name": "three_variants",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -235,7 +235,7 @@ class TestR2Experiment(unittest.TestCase):
             {
                 "id": 1,
                 "name": "three_variants_more",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -283,7 +283,7 @@ class TestR2Experiment(unittest.TestCase):
             {
                 "id": 1,
                 "name": "fifty_fifty",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -295,7 +295,7 @@ class TestR2Experiment(unittest.TestCase):
             {
                 "id": 1,
                 "name": "almost_fifty_fifty",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -329,7 +329,7 @@ class TestR2Experiment(unittest.TestCase):
             {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -350,7 +350,7 @@ class TestR2Experiment(unittest.TestCase):
             {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -482,7 +482,7 @@ class TestSimulatedR2Experiments(unittest.TestCase):
         config = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -514,7 +514,7 @@ class TestSimulatedR2Experiments(unittest.TestCase):
         config = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -530,7 +530,7 @@ class TestSimulatedR2Experiments(unittest.TestCase):
         config = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -547,7 +547,7 @@ class TestSimulatedR2Experiments(unittest.TestCase):
         config = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -565,7 +565,7 @@ class TestSimulatedR2Experiments(unittest.TestCase):
         config = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -583,7 +583,7 @@ class TestSimulatedR2Experiments(unittest.TestCase):
         config = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -600,7 +600,7 @@ class TestSimulatedR2Experiments(unittest.TestCase):
         config = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -620,7 +620,7 @@ class TestSimulatedR2Experiments(unittest.TestCase):
         config = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -638,7 +638,7 @@ class TestSimulatedR2Experiments(unittest.TestCase):
         config = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -656,7 +656,7 @@ class TestSimulatedR2Experiments(unittest.TestCase):
         config = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -674,7 +674,7 @@ class TestSimulatedR2Experiments(unittest.TestCase):
         config = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -693,7 +693,7 @@ class TestSimulatedR2Experiments(unittest.TestCase):
         config = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -711,7 +711,7 @@ class TestSimulatedR2Experiments(unittest.TestCase):
         config = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -739,7 +739,7 @@ class TestSimulatedR2Experiments(unittest.TestCase):
         config = {
             "id": 1,
             "name": "test",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
