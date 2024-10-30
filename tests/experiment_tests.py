@@ -862,7 +862,7 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
 
     def test_experiments_with_same_name_updated_cache(self):
         self.experiments_factory.cfg_mtime = 0.0
-        
+
         version_1 = "1"
         version_2 = "2"
 
@@ -916,10 +916,10 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
 
     def test_experiments_with_different_name_updated_cache(self):
         self.experiments_factory.cfg_mtime = 0.0
-        
+
         version_1 = "1"
         version_2 = "2"
-        
+
         value1 = {
             "id": 1,
             "name": "test1",
