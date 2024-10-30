@@ -862,18 +862,18 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
 
     def test_experiments_with_same_name_updated_cache(self):
         self.experiments_factory.cfg_mtime = 0.0
-        ts = time.time() - THIRTY_DAYS
-        stop_ts_1 = ts + 500
-        stop_ts_2 = stop_ts_1 + 1000
+        
+        version_1 = "1"
+        version_2 = "2"
 
         value1 = {
             "id": 1,
             "name": "test",
             "owner": "",
             "type": "r2",
-            "version": "1",
-            "start_ts": ts,
-            "stop_ts": stop_ts_1,
+            "version": version_1,
+            "start_ts": time.time() - THIRTY_DAYS,
+            "stop_ts": time.time() + THIRTY_DAYS,
             "experiment": {"variants": {"active": 10, "control_1": 10, "control_2": 10}},
         }
         value2 = {
@@ -881,9 +881,9 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
             "name": "test",
             "owner": "",
             "type": "r2",
-            "version": "1",
-            "start_ts": ts,
-            "stop_ts": stop_ts_2,
+            "version": version_2,
+            "start_ts": time.time() - THIRTY_DAYS,
+            "stop_ts": time.time() + THIRTY_DAYS,
             "experiment": {"variants": {"active": 10, "control_1": 10, "control_2": 10}},
         }
 
@@ -895,8 +895,8 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
         experiment_one._get_experiment("test")
 
         self.assertTrue("test" in self.experiments_factory._global_cache)
-        self.assertEqual(experiment_one._global_cache["test"].stop_ts, stop_ts_1)
-        self.assertEqual(self.experiments_factory._global_cache["test"].stop_ts, stop_ts_1)
+        self.assertEqual(experiment_one._global_cache["test"].version, version_1)
+        self.assertEqual(self.experiments_factory._global_cache["test"].version, version_1)
 
         # updated test config file to value2
         cfg_data = {"test": value2}
@@ -906,29 +906,28 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
 
         experiment_two._get_experiment("test")
         self.assertTrue("test" in self.experiments_factory._global_cache)
-        self.assertEqual(experiment_two._global_cache["test"].stop_ts, stop_ts_2)
+        self.assertEqual(experiment_two._global_cache["test"].version, version_2)
 
         # experiment_one global cache still use old one
-        self.assertEqual(experiment_one._global_cache["test"].stop_ts, stop_ts_1)
+        self.assertEqual(experiment_one._global_cache["test"].version, version_1)
 
         # global cache was updated by experiment_two
-        self.assertEqual(self.experiments_factory._global_cache["test"].stop_ts, stop_ts_2)
+        self.assertEqual(self.experiments_factory._global_cache["test"].version, version_2)
 
     def test_experiments_with_different_name_updated_cache(self):
         self.experiments_factory.cfg_mtime = 0.0
         
-        ts = time.time() - THIRTY_DAYS
-        stop_ts_1 = ts + 500
-        stop_ts_2 = stop_ts_1 + 1000
+        version_1 = "1"
+        version_2 = "2"
         
         value1 = {
             "id": 1,
             "name": "test1",
             "owner": "",
             "type": "r2",
-            "version": "1",
-            "start_ts": ts,
-            "stop_ts": stop_ts_1,
+            "version": version_1,
+            "start_ts": time.time() - THIRTY_DAYS,
+            "stop_ts": time.time() + THIRTY_DAYS,
             "experiment": {"variants": {"active": 10, "control_1": 10, "control_2": 10}},
         }
         value2 = {
@@ -936,9 +935,9 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
             "name": "test2",
             "owner": "test2",
             "type": "r2",
-            "version": "1",
-            "start_ts": ts,
-            "stop_ts": stop_ts_2,
+            "version": version_2,
+            "start_ts": time.time() - THIRTY_DAYS,
+            "stop_ts": time.time() + THIRTY_DAYS,
             "experiment": {"variants": {"active": 10, "control_1": 10, "control_2": 10}},
         }
 
@@ -951,7 +950,7 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
 
         self.assertTrue("test1" in self.experiments_factory._global_cache)
         self.assertFalse("test2" in self.experiments_factory._global_cache)
-        self.assertEqual(self.experiments_factory._global_cache["test1"].stop_ts, stop_ts_1)
+        self.assertEqual(self.experiments_factory._global_cache["test1"].version, version_1)
 
         # updated test config file
         # experiment_two add test2 into global cache
@@ -962,12 +961,12 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
         experiment_two._get_experiment("test2")
         self.assertTrue("test2" in experiment_two._global_cache)
         self.assertFalse("test1" in experiment_two._global_cache)
-        self.assertEqual(experiment_two._global_cache["test2"].stop_ts, stop_ts_1)
+        self.assertEqual(experiment_two._global_cache["test2"].version, version_2)
 
         # experiment_one global cache still use old one
-        self.assertEqual(experiment_one._global_cache["test1"].stop_ts, stop_ts_1)
+        self.assertEqual(experiment_one._global_cache["test1"].version, version_1)
 
         # global cache only contains test2 experiment
         self.assertTrue("test2" in self.experiments_factory._global_cache)
         self.assertFalse("test1" in self.experiments_factory._global_cache)
-        self.assertEqual(self.experiments_factory._global_cache["test2"].stops_ts, stop_ts_2)
+        self.assertEqual(self.experiments_factory._global_cache["test2"].version, version_2)
