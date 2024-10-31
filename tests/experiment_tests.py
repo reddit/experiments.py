@@ -46,7 +46,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test_owner",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -83,7 +83,7 @@ class TestExperiments(unittest.TestCase):
 
         self.assertEqual(getattr(event_fields["experiment"], "id"), 1)
         self.assertEqual(getattr(event_fields["experiment"], "name"), "test")
-        self.assertEqual(getattr(event_fields["experiment"], "owner"), "test_owner")
+        self.assertEqual(getattr(event_fields["experiment"], "owner"), "")
         self.assertEqual(getattr(event_fields["experiment"], "version"), "1")
 
     def test_bucketing_event_fields_with_cfg_data(self):
@@ -91,7 +91,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test_owner",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -130,7 +130,7 @@ class TestExperiments(unittest.TestCase):
 
         self.assertEqual(getattr(event_fields["experiment"], "id"), 1)
         self.assertEqual(getattr(event_fields["experiment"], "name"), "test")
-        self.assertEqual(getattr(event_fields["experiment"], "owner"), "test_owner")
+        self.assertEqual(getattr(event_fields["experiment"], "owner"), "")
         self.assertEqual(getattr(event_fields["experiment"], "version"), "1")
 
     def test_bucketing_event_fields_without_baseplate_user_with_cfg_data(self):
@@ -138,7 +138,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test_owner",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -176,7 +176,7 @@ class TestExperiments(unittest.TestCase):
 
         self.assertEqual(getattr(event_fields["experiment"], "id"), 1)
         self.assertEqual(getattr(event_fields["experiment"], "name"), "test")
-        self.assertEqual(getattr(event_fields["experiment"], "owner"), "test_owner")
+        self.assertEqual(getattr(event_fields["experiment"], "owner"), "")
         self.assertEqual(getattr(event_fields["experiment"], "version"), "1")
 
     def test_that_we_only_send_bucketing_event_once_with_cfg_data(self):
@@ -184,7 +184,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -219,7 +219,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test_owner",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -256,7 +256,7 @@ class TestExperiments(unittest.TestCase):
 
         self.assertEqual(getattr(event_fields["experiment"], "id"), 1)
         self.assertEqual(getattr(event_fields["experiment"], "name"), "test")
-        self.assertEqual(getattr(event_fields["experiment"], "owner"), "test_owner")
+        self.assertEqual(getattr(event_fields["experiment"], "owner"), "")
         self.assertEqual(getattr(event_fields["experiment"], "version"), "1")
 
     def test_expose_without_variant_name(self):
@@ -264,7 +264,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test_owner",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -296,7 +296,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -326,7 +326,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -353,7 +353,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -383,7 +383,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -393,7 +393,7 @@ class TestExperiments(unittest.TestCase):
             "test2": {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -419,7 +419,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -429,7 +429,7 @@ class TestExperiments(unittest.TestCase):
             "test2": {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -459,7 +459,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -492,7 +492,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -521,7 +521,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -572,7 +572,7 @@ class TestExperiments(unittest.TestCase):
             "other_test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -599,7 +599,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": "1",
                 "name": "test",
-                "owner": "test_owner",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -628,7 +628,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test_owner",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "experiment": {
@@ -655,7 +655,7 @@ class TestExperiments(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test_owner",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -680,7 +680,7 @@ class TestExperiments(unittest.TestCase):
                 "id": 1,
                 "name": "test",
                 "enabled": True,
-                "owner": "test_owner",
+                "owner": "",
                 "version": "1",
                 "emit_event": True,
                 "type": "range_variant",
@@ -771,7 +771,7 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
                 "test": {
                     "id": 1,
                     "name": "test",
-                    "owner": "test",
+                    "owner": "",
                     "type": "r2",
                     "version": "1",
                     "start_ts": time.time() - THIRTY_DAYS,
@@ -794,7 +794,7 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": time.time() - THIRTY_DAYS,
@@ -824,7 +824,7 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
         value1 = {
             "id": 1,
             "name": "test1",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -834,7 +834,7 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
         value2 = {
             "id": 2,
             "name": "test2",
-            "owner": "test",
+            "owner": "",
             "type": "r2",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -862,14 +862,16 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
 
     def test_experiments_with_same_name_updated_cache(self):
         self.experiments_factory.cfg_mtime = 0.0
-        owner1 = "test1"
-        owner2 = "test2"
+
+        version_1 = "1"
+        version_2 = "2"
+
         value1 = {
             "id": 1,
             "name": "test",
-            "owner": owner1,
+            "owner": "",
             "type": "r2",
-            "version": "1",
+            "version": version_1,
             "start_ts": time.time() - THIRTY_DAYS,
             "stop_ts": time.time() + THIRTY_DAYS,
             "experiment": {"variants": {"active": 10, "control_1": 10, "control_2": 10}},
@@ -877,9 +879,9 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
         value2 = {
             "id": 1,
             "name": "test",
-            "owner": owner2,
+            "owner": "",
             "type": "r2",
-            "version": "1",
+            "version": version_2,
             "start_ts": time.time() - THIRTY_DAYS,
             "stop_ts": time.time() + THIRTY_DAYS,
             "experiment": {"variants": {"active": 10, "control_1": 10, "control_2": 10}},
@@ -893,8 +895,8 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
         experiment_one._get_experiment("test")
 
         self.assertTrue("test" in self.experiments_factory._global_cache)
-        self.assertEqual(experiment_one._global_cache["test"].owner, owner1)
-        self.assertEqual(self.experiments_factory._global_cache["test"].owner, owner1)
+        self.assertEqual(experiment_one._global_cache["test"].version, version_1)
+        self.assertEqual(self.experiments_factory._global_cache["test"].version, version_1)
 
         # updated test config file to value2
         cfg_data = {"test": value2}
@@ -904,22 +906,26 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
 
         experiment_two._get_experiment("test")
         self.assertTrue("test" in self.experiments_factory._global_cache)
-        self.assertEqual(experiment_two._global_cache["test"].owner, owner2)
+        self.assertEqual(experiment_two._global_cache["test"].version, version_2)
 
         # experiment_one global cache still use old one
-        self.assertEqual(experiment_one._global_cache["test"].owner, owner1)
+        self.assertEqual(experiment_one._global_cache["test"].version, version_1)
 
         # global cache was updated by experiment_two
-        self.assertEqual(self.experiments_factory._global_cache["test"].owner, owner2)
+        self.assertEqual(self.experiments_factory._global_cache["test"].version, version_2)
 
     def test_experiments_with_different_name_updated_cache(self):
         self.experiments_factory.cfg_mtime = 0.0
+
+        version_1 = "1"
+        version_2 = "2"
+
         value1 = {
             "id": 1,
             "name": "test1",
-            "owner": "test1",
+            "owner": "",
             "type": "r2",
-            "version": "1",
+            "version": version_1,
             "start_ts": time.time() - THIRTY_DAYS,
             "stop_ts": time.time() + THIRTY_DAYS,
             "experiment": {"variants": {"active": 10, "control_1": 10, "control_2": 10}},
@@ -929,7 +935,7 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
             "name": "test2",
             "owner": "test2",
             "type": "r2",
-            "version": "1",
+            "version": version_2,
             "start_ts": time.time() - THIRTY_DAYS,
             "stop_ts": time.time() + THIRTY_DAYS,
             "experiment": {"variants": {"active": 10, "control_1": 10, "control_2": 10}},
@@ -944,7 +950,7 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
 
         self.assertTrue("test1" in self.experiments_factory._global_cache)
         self.assertFalse("test2" in self.experiments_factory._global_cache)
-        self.assertEqual(self.experiments_factory._global_cache["test1"].owner, "test1")
+        self.assertEqual(self.experiments_factory._global_cache["test1"].version, version_1)
 
         # updated test config file
         # experiment_two add test2 into global cache
@@ -955,12 +961,12 @@ class ExperimentsGlobalCacheTests(unittest.TestCase):
         experiment_two._get_experiment("test2")
         self.assertTrue("test2" in experiment_two._global_cache)
         self.assertFalse("test1" in experiment_two._global_cache)
-        self.assertEqual(experiment_two._global_cache["test2"].owner, "test2")
+        self.assertEqual(experiment_two._global_cache["test2"].version, version_2)
 
         # experiment_one global cache still use old one
-        self.assertEqual(experiment_one._global_cache["test1"].owner, "test1")
+        self.assertEqual(experiment_one._global_cache["test1"].version, version_1)
 
         # global cache only contains test2 experiment
         self.assertTrue("test2" in self.experiments_factory._global_cache)
         self.assertFalse("test1" in self.experiments_factory._global_cache)
-        self.assertEqual(self.experiments_factory._global_cache["test2"].owner, "test2")
+        self.assertEqual(self.experiments_factory._global_cache["test2"].version, version_2)

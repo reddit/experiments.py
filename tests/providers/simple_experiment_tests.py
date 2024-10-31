@@ -37,7 +37,7 @@ def get_simple_config():
     cfg = {
         "id": 1,
         "name": "test_experiment",
-        "owner": "test",
+        "owner": "",
         "type": "single_variant",
         "version": "1",
         "start_ts": time.time() - THIRTY_DAYS,
@@ -112,7 +112,7 @@ class TestSimpleExperiment(unittest.TestCase):
         seeded_cfg = {
             "id": 1,
             "name": "test_experiment",
-            "owner": "test",
+            "owner": "",
             "type": "single_variant",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -172,7 +172,7 @@ class TestSimpleExperiment(unittest.TestCase):
         seeded_cfg = {
             "id": 1,
             "name": "test_experiment",
-            "owner": "test",
+            "owner": "",
             "type": "single_variant",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -262,7 +262,7 @@ class TestSimpleExperiment(unittest.TestCase):
         experiments_cfg = {
             "id": 1,
             "name": "test_experiment",
-            "owner": "test",
+            "owner": "",
             "type": "single_variant",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,
@@ -288,7 +288,7 @@ class TestSimpleExperiment(unittest.TestCase):
         cfg = {
             "id": 1,
             "name": "test_experiment",
-            "owner": "test",
+            "owner": "",
             "type": "single_variant",
             "version": "1",
             "start_ts": time.time() - THIRTY_DAYS,

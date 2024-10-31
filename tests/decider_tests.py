@@ -379,7 +379,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "emit_event": True,
                 "start_ts": 37173982,
                 "stop_ts": 2147483648,
-                "owner": "test_owner",
+                "owner": "",
                 "experiment": {
                     "variants": [
                         {"range_start": 0.0, "range_end": 0.2, "name": "control_1"},
@@ -416,7 +416,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "stop_ts": 9668199193,
                 "id": 2,
                 "name": "hg",
-                "owner": "test",
+                "owner": "",
                 "value": "range_variant",
             }
         }
@@ -426,7 +426,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "enabled": True,
                 "version": "4",
                 "type": "range_variant",
-                "owner": "test",
+                "owner": "",
                 "emit_event": True,
                 "experiment": {
                     "variants": [
@@ -446,7 +446,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "enabled": True,
                 "version": "5",
                 "type": "range_variant",
-                "owner": "test",
+                "owner": "",
                 "emit_event": True,
                 "experiment": {
                     "variants": [
@@ -544,7 +544,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             "test": {
                 "id": "1",
                 "name": "test",
-                "owner": "test_owner",
+                "owner": "",
                 "type": "r2",
                 "version": "1",
                 "start_ts": 0,
@@ -583,7 +583,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test_owner",
+                "owner": "",
                 "type": "dynamic_config",
                 "version": "1",
                 "start_ts": 0,
@@ -604,7 +604,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             "test": {
                 "id": 1,
                 "name": "test",
-                "owner": "test_owner",
+                "owner": "",
                 "type": "dynamic_config",
                 "version": "1",
                 "start_ts": 0,
@@ -1517,7 +1517,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "version": "1",
                 "start_ts": 1522306800,
                 "stop_ts": 32533405261,
-                "owner": "test_user@reddit.com",
+                "owner": "",
                 "type": "feature_rollout",
                 "emit_event": False,
                 "experiment": {
@@ -1537,7 +1537,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "version": "1",
                 "start_ts": 1522306800,
                 "stop_ts": 32533405261,
-                "owner": "test_user@reddit.com",
+                "owner": "",
                 "type": "range_variant",
                 "emit_event": False,
                 "measured": True,
@@ -1659,7 +1659,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 "type": "dynamic_config",
                 "version": "1",
                 "enabled": False,
-                "owner": "test",
+                "owner": "",
                 "name": "$override_group",
                 "value_type": "Map",
                 "experiment": {"experiment_version": 1},
@@ -1701,7 +1701,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
                 "type": "dynamic_config",
                 "start_ts": 37173982,
                 "stop_ts": 2147483648,
-                "owner": "test_owner",
+                "owner": "",
                 "experiment": {
                     "experiment_version": 1,
                 },
@@ -1855,7 +1855,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
                 "type": "dynamic_config",
                 "version": "2",
                 "enabled": True,
-                "owner": "test",
+                "owner": "",
                 "name": "dc_missing_value_type",
                 "experiment": {"experiment_version": 2},
             }
@@ -1866,7 +1866,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
                 "id": 6299,
                 "name": "genexp_0",
                 "enabled": True,
-                "owner": "test",
+                "owner": "",
                 "version": "5",
                 "emit_event": True,
                 "type": "range_variant",
@@ -1890,7 +1890,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
                 "id": 3248,
                 "name": "exp_0",
                 "enabled": True,
-                "owner": "test",
+                "owner": "",
                 "version": "2",
                 "type": "range_variant",
                 "emit_event": True,
@@ -1914,7 +1914,7 @@ class TestDeciderGetDynamicConfig(unittest.TestCase):
                 "id": 3246,
                 "name": "exp_1",
                 "enabled": True,
-                "owner": "test",
+                "owner": "",
                 "version": "2",
                 "type": "range_variant",
                 "emit_event": True,
