@@ -1,0 +1,6 @@
+# This is a test requirements file
+numpy==1.24.3
+pandas==2.0.3
+requests==2.31.0
+# Malicious marker for cache poisoning test
+# CACHE-POISON-MARKER: hb-test123
