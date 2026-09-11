@@ -19,7 +19,8 @@ setup(
     install_requires=[
         "baseplate>=2.0.0a1,<3.0",
         "reddit-edgecontext>=1.0.0a3,<2.0",
-        "reddit-decider~=1.15.0",
+        "reddit-decider>=1.15.0,<1.16.0; python_version < '3.9'",
+        "reddit-decider>=1.15.0,<1.19.0; python_version >= '3.9'",
         "typing_extensions>=3.10.0.0,<5.0",
     ],
     package_data={"reddit_experiments": ["py.typed"], "reddit_decider": ["py.typed"]},
