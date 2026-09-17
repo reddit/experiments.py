@@ -4,11 +4,13 @@ import logging
 import tempfile
 import unittest
 
+from importlib.metadata import version as package_version
 from unittest import mock
 
 from baseplate import RequestContext
 from baseplate import ServerSpan
 from baseplate.lib.events import DebugLogger
+from packaging.version import Version
 from reddit_edgecontext import ValidatedAuthenticationToken
 
 from reddit_decider import Decider
@@ -19,6 +21,8 @@ from reddit_decider import EventType
 from reddit_decider import init_decider_parser
 
 logger = logging.getLogger()
+
+DECIDER_SUPPORTS_PROPERTY_REGISTRY = Version(package_version("reddit-decider")) >= Version("1.18.1")
 
 USER_ID = "t2_1234"
 IS_LOGGED_IN = True
@@ -538,6 +542,27 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assert_exposure_event_fields(
                 experiment_name="exp_1", variant=variant, event_fields=event_fields
             )
+
+    @unittest.skipUnless(
+        DECIDER_SUPPORTS_PROPERTY_REGISTRY,
+        "property registries require reddit-decider 1.18.1 or newer",
+    )
+    def test_manifest_with_property_registry_preserves_experiments(self):
+        config = dict(self.exp_base_config)
+        config["$properties"] = {
+            "ranking_algorithm": {
+                "type": "String",
+                "fallback_value": "hot_v1",
+                "targeted_values": [],
+            }
+        }
+
+        with create_temp_config_file(config) as f:
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+
+            variant = decider.get_variant_without_expose(experiment_name="exp_1")
+
+        self.assertEqual(variant, "variant_4")
 
     def test_none_returned_on_get_variant_call_with_bad_id(self):
         config = {
