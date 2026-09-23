@@ -4,6 +4,7 @@ import logging
 import tempfile
 import unittest
 
+from copy import deepcopy
 from importlib.metadata import version as package_version
 from unittest import mock
 
@@ -12,6 +13,7 @@ from baseplate import ServerSpan
 from baseplate.lib.events import DebugLogger
 from packaging.version import Version
 from reddit_edgecontext import ValidatedAuthenticationToken
+from rust_decider import init as init_manifest_validator
 
 from reddit_decider import Decider
 from reddit_decider import decider_client_from_config
@@ -23,6 +25,24 @@ from reddit_decider import init_decider_parser
 logger = logging.getLogger()
 
 DECIDER_SUPPORTS_PROPERTY_REGISTRY = Version(package_version("reddit-decider")) >= Version("1.18.1")
+DECIDER_SUPPORTS_COHORT_FIELDS = Version(package_version("reddit-decider")) >= Version("1.19.0b1")
+
+COHORT_REGISTRY = {
+    "id": 1337,
+    "name": "$cohort_fields",
+    "version": "1",
+    "type": "dynamic_config",
+    "enabled": False,
+    "experiment": {"experiment_version": 1},
+    "value_type": "Map",
+    "value": {
+        "$cohort_power_users": {
+            "object_type": "user",
+            "group_id": "cohort:power_users",
+            "value_field": "power_users",
+        }
+    },
+}
 
 USER_ID = "t2_1234"
 IS_LOGGED_IN = True
@@ -563,6 +583,70 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             variant = decider.get_variant_without_expose(experiment_name="exp_1")
 
         self.assertEqual(variant, "variant_4")
+
+    @unittest.skipUnless(
+        DECIDER_SUPPORTS_COHORT_FIELDS,
+        "cohort registries require reddit-decider 1.19.0b1 or newer",
+    )
+    def test_manifest_with_cohort_registry_preserves_experiments(self):
+        config = deepcopy(self.exp_base_config)
+        config["$cohort_fields"] = deepcopy(COHORT_REGISTRY)
+
+        with create_temp_config_file(config) as f:
+            self.assertIsNone(init_manifest_validator("", f.name).err())
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+            variant = decider.get_variant_without_expose(experiment_name="exp_1")
+
+        self.assertEqual(variant, "variant_4")
+
+    @unittest.skipUnless(
+        DECIDER_SUPPORTS_COHORT_FIELDS,
+        "cohort registries require reddit-decider 1.19.0b1 or newer",
+    )
+    def test_invalid_cohort_definition_reports_manifest_error(self):
+        for key, value in [("group_id", ""), ("value_type", "unsupported")]:
+            with self.subTest(key=key):
+                config = deepcopy(self.exp_base_config)
+                config["$cohort_fields"] = deepcopy(COHORT_REGISTRY)
+                config["$cohort_fields"]["value"]["$cohort_power_users"][key] = value
+
+                with create_temp_config_file(config) as f:
+                    error = init_manifest_validator("", f.name).err()
+                    self.assertIsNotNone(error)
+                    self.assertIn("$cohort_fields", error)
+                    with self.assertLogs("rust_decider", level="ERROR") as captured:
+                        parsed = init_decider_parser(f)
+                    self.assertIn("$cohort_fields", " ".join(captured.output))
+                    decider = Decider(
+                        decider_context=self.dc,
+                        internal=parsed,
+                        server_span=self.mock_span,
+                        context_name="test",
+                        event_logger=self.event_logger,
+                    )
+                    self.assertEqual(decider.get_variant_without_expose("exp_1"), "variant_4")
+
+    @unittest.skipUnless(
+        DECIDER_SUPPORTS_COHORT_FIELDS,
+        "cohort registries require reddit-decider 1.19.0b1 or newer",
+    )
+    def test_cohort_targeting_uses_typed_context_without_mutating_input(self):
+        config = deepcopy(self.exp_base_config)
+        config["$cohort_fields"] = deepcopy(COHORT_REGISTRY)
+        config["exp_1"]["experiment"]["targeting"] = {
+            "EQ": {"field": "$cohort_power_users", "value": True}
+        }
+
+        with create_temp_config_file(config) as f:
+            for membership, expected in [(True, "variant_4"), (False, None), ("true", None)]:
+                with self.subTest(membership=membership):
+                    fields = {"$cohort_power_users": membership}
+                    ctx = DeciderContext(user_id=USER_ID, extracted_fields=fields)
+                    decider = setup_decider(f, ctx, self.mock_span, self.event_logger)
+
+                    self.assertEqual(decider.get_variant_without_expose("exp_1"), expected)
+                    self.assertEqual(fields, {"$cohort_power_users": membership})
+                    self.assertEqual(ctx.to_dict()["other_fields"], fields)
 
     def test_none_returned_on_get_variant_call_with_bad_id(self):
         config = {
