@@ -21,13 +21,13 @@ jobs:
         - python-version: '3.9'
           reddit-decider-version: '1.18.1'
         - python-version: '3.9'
-          reddit-decider-version: '1.19.0b1'
+          reddit-decider-version: '1.19.0b2'
         - python-version: '3.10'
           reddit-decider-version: '1.15.0'
         - python-version: '3.10'
           reddit-decider-version: '1.18.1'
         - python-version: '3.10'
-          reddit-decider-version: '1.19.0b1'
+          reddit-decider-version: '1.19.0b2'
 
     steps:
     - uses: actions/checkout@v2

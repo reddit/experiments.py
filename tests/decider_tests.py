@@ -26,6 +26,10 @@ logger = logging.getLogger()
 
 DECIDER_SUPPORTS_PROPERTY_REGISTRY = Version(package_version("reddit-decider")) >= Version("1.18.1")
 DECIDER_SUPPORTS_COHORT_FIELDS = Version(package_version("reddit-decider")) >= Version("1.19.0b1")
+DECIDER_SUPPORTS_TARGETING_GATES = Version(package_version("reddit-decider")) >= Version("1.19.0b2")
+DECIDER_SUPPORTS_MEGS_IN_HOLDOUT_GROUPS = Version(package_version("reddit-decider")) >= Version(
+    "1.19.0b2"
+)
 
 COHORT_REGISTRY = {
     "id": 1337,
@@ -648,6 +652,51 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                     self.assertEqual(fields, {"$cohort_power_users": membership})
                     self.assertEqual(ctx.to_dict()["other_fields"], fields)
 
+    @unittest.skipUnless(
+        DECIDER_SUPPORTS_TARGETING_GATES,
+        "targeting gates require reddit-decider 1.19.0b2 or newer",
+    )
+    def test_targeting_gate_controls_experiment(self):
+        config = deepcopy(self.exp_base_config)
+        config["minimum_build_gate"] = {
+            "id": 2,
+            "name": "minimum_build_gate",
+            "owner": "",
+            "enabled": True,
+            "version": "1",
+            "type": "targeting_gate",
+            "emit_event": False,
+            "start_ts": 0,
+            "stop_ts": 9999999999,
+            "experiment": {
+                "experiment_version": 1,
+                "targeting": {
+                    "GE": {
+                        "field": "build_number",
+                        "value": 100,
+                    }
+                },
+            },
+        }
+        config["exp_1"]["experiment"]["targeting"] = {
+            "gate": {
+                "name": "minimum_build_gate",
+            }
+        }
+
+        with create_temp_config_file(config) as f:
+            self.assertIsNone(init_manifest_validator("", f.name).err())
+
+            for build_number, expected in [(100, "variant_4"), (99, None)]:
+                with self.subTest(build_number=build_number):
+                    ctx = DeciderContext(
+                        user_id=USER_ID,
+                        extracted_fields={"build_number": build_number},
+                    )
+                    decider = setup_decider(f, ctx, self.mock_span, self.event_logger)
+
+                    self.assertEqual(decider.get_variant_without_expose("exp_1"), expected)
+
     def test_none_returned_on_get_variant_call_with_bad_id(self):
         config = {
             "test": {
@@ -772,6 +821,75 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             self.assert_exposure_event_fields(
                 experiment_name="hg", variant="holdout", event_fields=event_fields
             )
+
+    @unittest.skipUnless(
+        DECIDER_SUPPORTS_MEGS_IN_HOLDOUT_GROUPS,
+        "mutex groups in holdout groups require reddit-decider 1.19.0b2 or newer",
+    )
+    def test_mutex_group_in_holdout_group_preserves_holdout_exposure(self):
+        for holdout_variant, expected_variant in [
+            ("control_1", "enabled"),
+            ("holdout", None),
+        ]:
+            with self.subTest(holdout_variant=holdout_variant):
+                holdout_group = deepcopy(self.parent_hg_config["hg"])
+                holdout_group["experiment"]["variants"] = [
+                    {
+                        "name": holdout_variant,
+                        "range_start": 0.0,
+                        "range_end": 1.0,
+                    }
+                ]
+
+                mutex_group = deepcopy(self.exp_base_config["exp_1"])
+                mutex_group.update(
+                    {
+                        "id": 3,
+                        "name": "meg",
+                        "parent_hg_name": "hg",
+                    }
+                )
+                mutex_group["experiment"]["variants"] = [
+                    {
+                        "name": "child",
+                        "range_start": 0.0,
+                        "range_end": 1.0,
+                    }
+                ]
+
+                child = deepcopy(self.exp_base_config["exp_1"])
+                child.update(
+                    {
+                        "id": 4,
+                        "name": "child",
+                        "parent_meg_name": "meg",
+                    }
+                )
+                child["experiment"]["variants"] = [
+                    {
+                        "name": "enabled",
+                        "range_start": 0.0,
+                        "range_end": 1.0,
+                    }
+                ]
+
+                config = {
+                    "hg": holdout_group,
+                    "meg": mutex_group,
+                    "child": child,
+                }
+                self.event_logger.reset_mock()
+
+                with create_temp_config_file(config) as f:
+                    decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+                    variant = decider.get_variant_without_expose("child")
+
+                self.assertEqual(variant, expected_variant)
+                self.assertEqual(self.event_logger.log.call_count, 1)
+                event_fields = self.event_logger.log.call_args[1]
+                self.assertEqual(event_fields["experiment"].id, holdout_group["id"])
+                self.assertEqual(event_fields["experiment"].name, holdout_group["name"])
+                self.assertEqual(event_fields["variant"], holdout_variant)
 
     def test_get_variant_for_identifier_user_id(self):
         identifier = USER_ID
