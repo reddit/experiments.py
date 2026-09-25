@@ -149,6 +149,26 @@ class DeciderClientFromConfigTests(unittest.TestCase):
         )
 
 
+class DeciderContextTests(unittest.TestCase):
+    def test_conversion_pixel_id(self):
+        for pixel_id, fields, expected in (
+            ("pixel_1", {}, "pixel_1"),
+            (None, {"conversion_pixel_id": "pixel_2"}, "pixel_2"),
+            ("pixel_1", {"conversion_pixel_id": "pixel_2"}, "pixel_1"),
+            (None, {}, None),
+        ):
+            with self.subTest(pixel_id=pixel_id, fields=fields):
+                original_fields = deepcopy(fields)
+                context = DeciderContext(conversion_pixel_id=pixel_id, extracted_fields=fields)
+                serialized = context.to_dict()
+                self.assertEqual(serialized.get("conversion_pixel_id"), expected)
+                self.assertEqual(serialized["other_fields"].get("conversion_pixel_id"), expected)
+                self.assertEqual(context.to_event_dict().get("conversion_pixel_id"), expected)
+                serialized["other_fields"]["conversion_pixel_id"] = "changed"
+                self.assertEqual(context.to_dict().get("conversion_pixel_id"), expected)
+                self.assertEqual(fields, original_fields)
+
+
 class DeciderContextFactoryTests(unittest.TestCase):
     def setUp(self):
         super().setUp()
@@ -1069,6 +1089,48 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["business_id"], identifier)
 
+    def test_conversion_pixel_id_override(self):
+        experiment = self.exp_base_config["exp_1"]["experiment"]
+        experiment["bucket_val"] = "conversion_pixel_id"
+        experiment["variants"] = [
+            {"range_start": 0.0, "range_end": 1.0, "name": "control"},
+            {"range_start": 1.0, "range_end": 1.0, "name": "enabled"},
+        ]
+        experiment["overrides"] = [
+            {"enabled": {"EQ": {"field": "conversion_pixel_id", "values": ["t2_1"]}}}
+        ]
+
+        for method_name in (
+            "get_variant_for_identifier",
+            "get_variant_for_identifier_without_expose",
+            "get_all_variants_for_identifier_without_expose",
+        ):
+            for pixel_id, expected in (("t2_1", "enabled"), ("t2_2", "control")):
+                with self.subTest(method=method_name, pixel_id=pixel_id):
+                    self.event_logger.reset_mock()
+                    with create_temp_config_file(self.exp_base_config) as f:
+                        decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+                        method = getattr(decider, method_name)
+                        kwargs = {
+                            "identifier": pixel_id,
+                            "identifier_type": "conversion_pixel_id",
+                        }
+                        if method_name == "get_all_variants_for_identifier_without_expose":
+                            variants = method(**kwargs)
+                            self.assertEqual(len(variants), 1)
+                            variant = variants[0]["name"]
+                        else:
+                            variant = method(experiment_name="exp_1", **kwargs)
+                        self.assertEqual(variant, expected)
+                        if method_name == "get_variant_for_identifier":
+                            self.event_logger.log.assert_called_once()
+                            self.assertEqual(
+                                self.event_logger.log.call_args.kwargs["conversion_pixel_id"],
+                                pixel_id,
+                            )
+                        else:
+                            self.event_logger.log.assert_not_called()
+
     def test_get_variant_for_identifier_bogus_identifier_type(self):
         identifier = "anything"
         identifier_type = "blah"
@@ -1087,7 +1149,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(variant, None)
 
                 assert any(
-                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url', 'subreddit_id', 'ad_account_id', 'business_id']."
+                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url', 'subreddit_id', 'ad_account_id', 'business_id', 'conversion_pixel_id']."
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -1277,7 +1339,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(variant, None)
 
                 assert any(
-                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url', 'subreddit_id', 'ad_account_id', 'business_id']."
+                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url', 'subreddit_id', 'ad_account_id', 'business_id', 'conversion_pixel_id']."
                     in x.getMessage()
                     for x in captured.records
                 )
@@ -1691,7 +1753,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 self.assertEqual(len(variant_arr), 0)
 
                 assert any(
-                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url', 'subreddit_id', 'ad_account_id', 'business_id']."
+                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url', 'subreddit_id', 'ad_account_id', 'business_id', 'conversion_pixel_id']."
                     in x.getMessage()
                     for x in captured.records
                 )

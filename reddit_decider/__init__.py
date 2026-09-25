@@ -57,6 +57,7 @@ IDENTIFIERS = [
     "subreddit_id",
     "ad_account_id",
     "business_id",
+    "conversion_pixel_id",
 ]
 TYPE_STR_LOOKUP = {bool: "boolean", int: "integer", float: "float", str: "string", dict: "map"}
 
@@ -94,6 +95,8 @@ class DeciderContext:
     :param cookie_created_timestamp: When the authentication cookie was created
     :param loid_created_timestamp: Epoch milliseconds when the current LoID cookie was created
     :param extracted_fields: Optional dict of additional fields, e.g. app_name & build_number
+    :param conversion_pixel_id: Conversion pixel ID for bucketing, targeting, and overrides.
+        When supplied, takes precedence over the value in extracted_fields.
     """
 
     def __init__(
@@ -109,6 +112,7 @@ class DeciderContext:
         cookie_created_timestamp: Optional[float] = None,
         loid_created_timestamp: Optional[float] = None,
         extracted_fields: Optional[dict] = None,
+        conversion_pixel_id: Optional[str] = None,
     ):
         self._user_id = user_id
         self._device_id = device_id
@@ -121,9 +125,12 @@ class DeciderContext:
         self._cookie_created_timestamp = cookie_created_timestamp
         self._loid_created_timestamp = loid_created_timestamp
         self._extracted_fields = extracted_fields
+        self._conversion_pixel_id = conversion_pixel_id
 
     def to_dict(self) -> Dict:
         ef = deepcopy(self._extracted_fields or {})
+        if self._conversion_pixel_id is not None:
+            ef["conversion_pixel_id"] = self._conversion_pixel_id
 
         return {
             "user_id": self._user_id,
@@ -149,6 +156,9 @@ class DeciderContext:
         }
 
         ef = deepcopy(self._extracted_fields or {})
+
+        if self._conversion_pixel_id is not None:
+            ef["conversion_pixel_id"] = self._conversion_pixel_id
 
         app_fields = {}
         if ef.get("app_name"):
@@ -445,14 +455,20 @@ class Decider:
         experiment_name: str,
         identifier: str,
         identifier_type: Literal[
-            "user_id", "device_id", "canonical_url", "subreddit_id", "ad_account_id", "business_id"
+            "user_id",
+            "device_id",
+            "canonical_url",
+            "subreddit_id",
+            "ad_account_id",
+            "business_id",
+            "conversion_pixel_id",
         ],
         **exposure_kwargs: Optional[Dict[str, Any]],
     ) -> Optional[str]:
         """Return a bucketing variant, if any, with auto-exposure for a given :code:`identifier`.
 
         Note: If the experiment's :code:`bucket_val`
-            (e.g. "user_id", "device_id", "canonical_url", "subreddit_id", "ad_account_id", "business_id")
+            (for example, "user_id" or "conversion_pixel_id")
             does not match the :code:`identifier_type` param,
             the :code:`identifier` will be ignored and not used to bucket (:code:`{identifier_type: identifier}` is
             added to internal :code:`DeciderContext` instance, but doesn't act like a bucketing override).
@@ -489,6 +505,8 @@ class Decider:
 
         ctx = self._decider_context.to_dict()
         ctx[identifier_type] = identifier
+        if identifier_type == "conversion_pixel_id":
+            ctx["other_fields"][identifier_type] = identifier
 
         decision = self._get_decision(experiment_name, ctx)
 
@@ -508,13 +526,19 @@ class Decider:
         experiment_name: str,
         identifier: str,
         identifier_type: Literal[
-            "user_id", "device_id", "canonical_url", "subreddit_id", "ad_account_id", "business_id"
+            "user_id",
+            "device_id",
+            "canonical_url",
+            "subreddit_id",
+            "ad_account_id",
+            "business_id",
+            "conversion_pixel_id",
         ],
     ) -> Optional[str]:
         """Return a bucketing variant, if any, without emitting exposure event for a given :code:`identifier`.
 
         Note: If the experiment's :code:`bucket_val`
-            (e.g. "user_id", "device_id", "canonical_url", "subreddit_id", "ad_account_id", "business_id")
+            (for example, "user_id" or "conversion_pixel_id")
             does not match the :code:`identifier_type` param,
             the :code:`identifier` will be ignored and not used to bucket (:code:`{identifier_type: identifier}` is
             added to internal :code:`DeciderContext` instance, but doesn't act like a bucketing override).
@@ -552,6 +576,8 @@ class Decider:
 
         ctx = self._decider_context.to_dict()
         ctx[identifier_type] = identifier
+        if identifier_type == "conversion_pixel_id":
+            ctx["other_fields"][identifier_type] = identifier
 
         decision = self._get_decision(experiment_name, ctx)
 
@@ -629,7 +655,13 @@ class Decider:
         self,
         identifier: str,
         identifier_type: Literal[
-            "user_id", "device_id", "canonical_url", "subreddit_id", "ad_account_id", "business_id"
+            "user_id",
+            "device_id",
+            "canonical_url",
+            "subreddit_id",
+            "ad_account_id",
+            "business_id",
+            "conversion_pixel_id",
         ],
     ) -> List[Dict[str, Union[str, int]]]:
         """Return a list of experiment dicts for experiments having :code:`bucket_val` match
@@ -672,6 +704,8 @@ class Decider:
 
         ctx = self._decider_context.to_dict()
         ctx[identifier_type] = identifier
+        if identifier_type == "conversion_pixel_id":
+            ctx["other_fields"][identifier_type] = identifier
 
         all_decisions = self._get_all_decisions(ctx=ctx, bucketing_field_filter=identifier_type)
 
