@@ -3,6 +3,7 @@ line-length = 100
 target-version = ['py36']
 
 [project]
+name = "reddit-experiments"
 dynamic = ["version"]
 
 [tool.setuptools_scm]
