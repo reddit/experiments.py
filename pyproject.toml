@@ -3,18 +3,6 @@ line-length = 100
 target-version = ['py36']
 
 [project]
-name = "reddit-experiments"
-# Package metadata is supplied by setup.py and setuptools_scm.
-dynamic = [
-    "version",
-    "description",
-    "readme",
-    "requires-python",
-    "license",
-    "authors",
-    "classifiers",
-    "urls",
-    "dependencies",
-]
+dynamic = ["version"]
 
 [tool.setuptools_scm]
