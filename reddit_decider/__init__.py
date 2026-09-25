@@ -49,6 +49,16 @@ except PackageNotFoundError:
 logger = logging.getLogger(__name__)
 
 EMPLOYEE_ROLES = ["employee", "contractor"]
+# Retained for callers that import this list; custom identifier names are also supported.
+IDENTIFIERS = [
+    "user_id",
+    "device_id",
+    "canonical_url",
+    "subreddit_id",
+    "ad_account_id",
+    "business_id",
+    "conversion_pixel_id",
+]
 TYPE_STR_LOOKUP = {bool: "boolean", int: "integer", float: "float", str: "string", dict: "map"}
 
 
