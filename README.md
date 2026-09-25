@@ -36,6 +36,25 @@ def my_method(request):
        pass
 ```
 
+Custom context fields can be returned by `request_field_extractor` or supplied in
+`DeciderContext(extracted_fields={...})`. Values may be strings, booleans, integers,
+floats, or `None`. Fields without a native Rust type are passed through
+`other_fields` for targeting, overrides, and bucketing.
+
+The identifier APIs also accept custom field names without a library update:
+
+```python
+variant = request.decider.get_variant_for_identifier(
+    "merchant_experiment", identifier="merchant_123", identifier_type="merchant_id"
+)
+```
+
+The experiment must use `merchant_id` as its bucket field to bucket by this value.
+The override applies only to this call; the stored request context is unchanged.
+This also works with `get_variant_for_identifier_without_expose` and
+`get_all_variants_for_identifier_without_expose`. Empty names and the reserved
+`other_fields` name are rejected.
+
 See [the documentation] for more information (documentation builds can be found [here](https://readthedocs.org/projects/reddit-experiments/builds/))
 .
 
