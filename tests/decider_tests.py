@@ -670,7 +670,9 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
                     self.assertEqual(decider.get_variant_without_expose("exp_1"), expected)
                     self.assertEqual(fields, {"$cohort_power_users": membership})
-                    self.assertEqual(ctx.to_dict()["other_fields"], fields)
+                    self.assertEqual(
+                        ctx.to_dict()["other_fields"]["$cohort_power_users"], membership
+                    )
 
     @unittest.skipUnless(
         DECIDER_SUPPORTS_TARGETING_GATES,
@@ -1089,6 +1091,95 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
             # `identifier` passed to correct event field of experiment's `bucket_val` config
             self.assertEqual(event_fields["business_id"], identifier)
 
+    def test_identifier_apis_reject_malformed_field_names(self):
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+            for method_name in (
+                "get_variant_for_identifier",
+                "get_variant_for_identifier_without_expose",
+                "get_all_variants_for_identifier_without_expose",
+            ):
+                for identifier_type in (None, 123, "", "other_fields"):
+                    with self.subTest(method=method_name, identifier_type=identifier_type):
+                        kwargs = {"identifier": "anything", "identifier_type": identifier_type}
+                        expected = None
+                        if method_name == "get_all_variants_for_identifier_without_expose":
+                            expected = []
+                        else:
+                            kwargs["experiment_name"] = "exp_1"
+                        with self.assertLogs("reddit_decider", level="WARNING"):
+                            self.assertEqual(getattr(decider, method_name)(**kwargs), expected)
+                        self.event_logger.log.assert_not_called()
+
+    def test_custom_identifier_override_preserves_context(self):
+        experiment = self.exp_base_config["exp_1"]["experiment"]
+        experiment["bucket_val"] = "custom_identifier"
+        experiment["variants"] = [
+            {"range_start": 0.0, "range_end": 1.0, "name": "control"},
+            {"range_start": 1.0, "range_end": 1.0, "name": "enabled"},
+        ]
+        experiment["overrides"] = [
+            {"enabled": {"EQ": {"field": "custom_identifier", "values": ["matching"]}}}
+        ]
+        # All-variant evaluation must still filter out experiments with another bucket field.
+        self.exp_base_config.update(self.additional_two_exp)
+        fields = {"custom_identifier": "original"}
+        context = DeciderContext(user_id=USER_ID, extracted_fields=fields)
+        original_context = context.to_dict()
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(f, context, self.mock_span, self.event_logger)
+            for method_name in (
+                "get_variant_for_identifier",
+                "get_variant_for_identifier_without_expose",
+                "get_all_variants_for_identifier_without_expose",
+            ):
+                for identifier, expected in (("matching", "enabled"), ("different", "control")):
+                    with self.subTest(method=method_name, identifier=identifier):
+                        self.event_logger.reset_mock()
+                        method = getattr(decider, method_name)
+                        kwargs = {"identifier": identifier, "identifier_type": "custom_identifier"}
+                        if method_name == "get_all_variants_for_identifier_without_expose":
+                            variants = method(**kwargs)
+                            self.assertEqual(len(variants), 1)
+                            self.assertEqual(variants[0]["experimentName"], "exp_1")
+                            variant = variants[0]["name"]
+                        else:
+                            variant = method(experiment_name="exp_1", **kwargs)
+                        self.assertEqual(variant, expected)
+                        if method_name == "get_variant_for_identifier":
+                            self.event_logger.log.assert_called_once()
+                            self.assertEqual(
+                                self.event_logger.log.call_args.kwargs["custom_identifier"],
+                                identifier,
+                            )
+                        else:
+                            self.event_logger.log.assert_not_called()
+                        self.assertEqual(context.to_dict(), original_context)
+                        self.assertEqual(fields, {"custom_identifier": "original"})
+                        self.assertEqual(decider.get_variant_without_expose("exp_1"), "control")
+
+    def test_untyped_constructor_field_reaches_targeting(self):
+        self.exp_base_config["exp_1"]["experiment"]["targeting"] = {
+            "GE": {"field": "loid_created_timestamp", "value": 1500}
+        }
+        with create_temp_config_file(self.exp_base_config) as f:
+            for timestamp, extracted_fields, expected in (
+                (2000, {}, "variant_4"),
+                (1000, {}, None),
+                (None, {}, None),
+                (2000, {"loid_created_timestamp": 1000}, None),
+                (1000, {"loid_created_timestamp": 2000}, "variant_4"),
+            ):
+                with self.subTest(timestamp=timestamp, extracted_fields=extracted_fields):
+                    context = DeciderContext(
+                        user_id=USER_ID,
+                        loid_created_timestamp=timestamp,
+                        extracted_fields=extracted_fields,
+                    )
+                    decider = setup_decider(f, context, self.mock_span, self.event_logger)
+                    self.assertEqual(decider.get_variant_without_expose("exp_1"), expected)
+
     def test_conversion_pixel_id_override(self):
         experiment = self.exp_base_config["exp_1"]["experiment"]
         experiment["bucket_val"] = "conversion_pixel_id"
@@ -1130,32 +1221,6 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                             )
                         else:
                             self.event_logger.log.assert_not_called()
-
-    def test_get_variant_for_identifier_bogus_identifier_type(self):
-        identifier = "anything"
-        identifier_type = "blah"
-
-        with create_temp_config_file(self.exp_base_config) as f:
-            decider = setup_decider(
-                f, self.minimal_decider_context, self.mock_span, self.event_logger
-            )
-
-            self.assertEqual(self.event_logger.log.call_count, 0)
-            with self.assertLogs() as captured:
-                variant = decider.get_variant_for_identifier(
-                    experiment_name="exp_1", identifier=identifier, identifier_type=identifier_type
-                )
-
-                self.assertEqual(variant, None)
-
-                assert any(
-                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url', 'subreddit_id', 'ad_account_id', 'business_id', 'conversion_pixel_id']."
-                    in x.getMessage()
-                    for x in captured.records
-                )
-
-        # exposure isn't emitted either
-        self.assertEqual(self.event_logger.log.call_count, 0)
 
     def test_expose(self):
         with create_temp_config_file(self.exp_base_config) as f:
@@ -1319,30 +1384,6 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 experiment_name="exp_1", identifier=identifier, identifier_type=bucket_val
             )
             self.assertEqual(variant, "control_2")
-
-            # no exposures should be triggered
-            self.assertEqual(self.event_logger.log.call_count, 0)
-
-    def test_get_variant_for_identifier_without_expose_bogus_identifier_type(self):
-        identifier = "anything"
-        identifier_type = "blah"
-
-        with create_temp_config_file(self.exp_base_config) as f:
-            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
-
-            self.assertEqual(self.event_logger.log.call_count, 0)
-            with self.assertLogs() as captured:
-                variant = decider.get_variant_for_identifier_without_expose(
-                    experiment_name="exp_1", identifier=identifier, identifier_type=identifier_type
-                )
-
-                self.assertEqual(variant, None)
-
-                assert any(
-                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url', 'subreddit_id', 'ad_account_id', 'business_id', 'conversion_pixel_id']."
-                    in x.getMessage()
-                    for x in captured.records
-                )
 
             # no exposures should be triggered
             self.assertEqual(self.event_logger.log.call_count, 0)
@@ -1734,32 +1775,6 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                 bucket_val=bucket_val,
                 identifier=identifier,
             )
-
-    def test_get_all_variants_for_identifier_without_expose_bogus_identifier_type(self):
-        identifier = "anything"
-        # use non-supported `identifier_type`
-        identifier_type = "blah"
-
-        with create_temp_config_file(self.exp_base_config) as f:
-            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
-
-            self.assertEqual(self.event_logger.log.call_count, 0)
-
-            with self.assertLogs() as captured:
-                variant_arr = decider.get_all_variants_for_identifier_without_expose(
-                    identifier=identifier, identifier_type=identifier_type
-                )
-
-                self.assertEqual(len(variant_arr), 0)
-
-                assert any(
-                    "\"blah\" is not one of supported \"identifier_type\": ['user_id', 'device_id', 'canonical_url', 'subreddit_id', 'ad_account_id', 'business_id', 'conversion_pixel_id']."
-                    in x.getMessage()
-                    for x in captured.records
-                )
-
-            # no exposures should be triggered
-            self.assertEqual(self.event_logger.log.call_count, 0)
 
     def test_get_variant_with_exposure_kwargs(self):
         with create_temp_config_file(self.exp_base_config) as f:
