@@ -266,13 +266,17 @@ class Decider:
 
         event_fields = {**event_fields, **{bucket_val: bucketing_value}}
 
+        # Custom fields may share these names; logger metadata wins at the top level.
+        # `self` would collide with the bound log method's parameter, so it stays in inputs.
         self._event_logger.log(
-            experiment=experiment,
-            variant=event_variant,
-            span=self._span,
-            event_type=EventType.EXPOSE,
-            inputs=event_fields,
-            **event_fields,
+            **{
+                **{k: v for k, v in event_fields.items() if k != "self"},
+                "experiment": experiment,
+                "variant": event_variant,
+                "span": self._span,
+                "event_type": EventType.EXPOSE,
+                "inputs": event_fields,
+            }
         )
         return
 
@@ -312,13 +316,17 @@ class Decider:
 
             event_fields = {**event_fields, **{bucket_val: bucketing_value}}
 
+            # Custom fields may share these names; logger metadata wins at the top level.
+            # `self` would collide with the bound log method's parameter, so it stays in inputs.
             self._event_logger.log(
-                experiment=experiment,
-                variant=event_variant,
-                span=self._span,
-                event_type=EventType.EXPOSE,
-                inputs=event_fields,
-                **event_fields,
+                **{
+                    **{k: v for k, v in event_fields.items() if k != "self"},
+                    "experiment": experiment,
+                    "variant": event_variant,
+                    "span": self._span,
+                    "event_type": EventType.EXPOSE,
+                    "inputs": event_fields,
+                }
             )
         return
 
@@ -442,13 +450,17 @@ class Decider:
             stop_ts=feature.stop_ts,
         )
 
+        # Custom fields may share these names; logger metadata wins at the top level.
+        # `self` would collide with the bound log method's parameter, so it stays in inputs.
         self._event_logger.log(
-            experiment=experiment,
-            variant=variant_name,
-            span=self._span,
-            event_type=EventType.EXPOSE,
-            inputs=event_fields,
-            **event_fields,
+            **{
+                **{k: v for k, v in event_fields.items() if k != "self"},
+                "experiment": experiment,
+                "variant": variant_name,
+                "span": self._span,
+                "event_type": EventType.EXPOSE,
+                "inputs": event_fields,
+            }
         )
 
     def _context_for_identifier(self, identifier: str, identifier_type: str) -> Optional[Dict]:

@@ -55,6 +55,12 @@ This also works with `get_variant_for_identifier_without_expose` and
 `get_all_variants_for_identifier_without_expose`. Empty names and the reserved
 `other_fields` name are rejected.
 
+Other names are accepted, including `experiment`, `variant`, `span`, `event_type`,
+and `inputs`. In exposure events, those top-level logger arguments keep their
+metadata values, and a custom field with the same name is kept in `inputs`.
+A custom `self` field is also accepted, but exposure events log it only in `inputs`
+because the event logger's `log` method already has a `self` parameter.
+
 See [the documentation] for more information (documentation builds can be found [here](https://readthedocs.org/projects/reddit-experiments/builds/))
 .
 
