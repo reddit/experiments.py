@@ -30,6 +30,9 @@ DECIDER_SUPPORTS_TARGETING_GATES = Version(package_version("reddit-decider")) >=
 DECIDER_SUPPORTS_MEGS_IN_HOLDOUT_GROUPS = Version(package_version("reddit-decider")) >= Version(
     "1.19.0b2"
 )
+DECIDER_SUPPORTS_SPLIT_PERCENTAGE = Version(package_version("reddit-decider")) >= Version(
+    "1.19.0b5"
+)
 
 COHORT_REGISTRY = {
     "id": 1337,
@@ -716,6 +719,133 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                     decider = setup_decider(f, ctx, self.mock_span, self.event_logger)
 
                     self.assertEqual(decider.get_variant_without_expose("exp_1"), expected)
+
+    @unittest.skipUnless(
+        DECIDER_SUPPORTS_SPLIT_PERCENTAGE,
+        "split percentage targeting requires reddit-decider 1.19.0b5 or newer",
+    )
+    def test_split_percentage_uses_each_experiments_bucket_val(self):
+        split = {"SPLIT_PERCENTAGE": {"percentage": 50}}
+        config = {
+            "shared_split": {
+                "id": 10,
+                "name": "shared_split",
+                "version": "1",
+                "enabled": True,
+                "type": "targeting_gate",
+                "experiment": {"experiment_version": 1, "targeting": split},
+            }
+        }
+        for field in ("user_id", "device_id", "rolloutKey"):
+            for rule_name, rule in (
+                ("direct", split),
+                ("gate", {"gate": {"name": "shared_split"}}),
+            ):
+                name = field + "_" + rule_name
+                feature = deepcopy(self.exp_base_config["exp_1"])
+                feature.update(id=len(config) + 10, name=name)
+                feature["experiment"].update(
+                    bucket_val=field,
+                    shuffle_version=len(config),
+                    targeting={"ALL": [{"EQ": {"field": "country_code", "value": "US"}}, rule]},
+                    variants=[{"name": "enabled", "range_start": 0.0, "range_end": 1.0}],
+                )
+                config[name] = feature
+
+        with create_temp_config_file(config) as f:
+            self.assertIsNone(init_manifest_validator("", f.name).err())
+            parsed = init_decider_parser(f)
+            # Unsalted SHA1 buckets are 247 for user_1 and 814 for user_3.
+            for user, device, custom in (
+                ("user_1", "user_3", "user_3"),
+                ("user_3", "user_1", "user_3"),
+                ("user_3", "user_3", "user_1"),
+            ):
+                fields = {"rolloutKey": custom, "rolloutkey": "user_1"}
+                ctx = DeciderContext(
+                    user_id=user, device_id=device, country_code="US", extracted_fields=fields
+                )
+                before = deepcopy(ctx.to_dict())
+                decider = Decider(ctx, parsed, self.mock_span, "test", self.event_logger)
+                for field, identifier in (
+                    ("user_id", user),
+                    ("device_id", device),
+                    ("rolloutKey", custom),
+                ):
+                    for rule_name in ("direct", "gate"):
+                        with self.subTest(
+                            user=user, device=device, custom=custom, field=field, rule=rule_name
+                        ):
+                            expected = "enabled" if identifier == "user_1" else None
+                            for _ in range(2):
+                                self.assertEqual(
+                                    decider.get_variant_without_expose(field + "_" + rule_name),
+                                    expected,
+                                )
+                self.assertEqual(ctx.to_dict(), before)
+                self.assertEqual(fields, {"rolloutKey": custom, "rolloutkey": "user_1"})
+        self.event_logger.log.assert_not_called()
+
+    @unittest.skipUnless(
+        DECIDER_SUPPORTS_SPLIT_PERCENTAGE,
+        "split percentage targeting requires reddit-decider 1.19.0b5 or newer",
+    )
+    def test_split_percentage_rounds_and_excludes_upper_boundary(self):
+        # These identifiers hash to buckets 0, 499, 500, and 999 without feature salt.
+        for identifier, percentage, expected in (
+            ("rollout_576", 0, None),
+            ("rollout_576", 0.05, "enabled"),
+            ("rollout_272", 50, "enabled"),
+            ("rollout_806", 50, None),
+            ("rollout_806", 50.04, None),
+            ("rollout_806", 50.05, "enabled"),
+            ("rollout_205", 99.9, None),
+            ("rollout_205", 100, "enabled"),
+        ):
+            with self.subTest(identifier=identifier, percentage=percentage):
+                config = deepcopy(self.exp_base_config)
+                config["exp_1"]["experiment"].update(
+                    targeting={"SPLIT_PERCENTAGE": {"percentage": percentage}},
+                    variants=[{"name": "enabled", "range_start": 0.0, "range_end": 1.0}],
+                )
+                with create_temp_config_file(config) as f:
+                    self.assertIsNone(init_manifest_validator("", f.name).err())
+                    ctx = DeciderContext(user_id=identifier)
+                    decider = setup_decider(f, ctx, self.mock_span, self.event_logger)
+                    self.assertEqual(decider.get_variant_without_expose("exp_1"), expected)
+
+    @unittest.skipUnless(
+        DECIDER_SUPPORTS_SPLIT_PERCENTAGE,
+        "split percentage targeting requires reddit-decider 1.19.0b5 or newer",
+    )
+    def test_split_percentage_unavailable_identifier_does_not_match_under_not(self):
+        config = deepcopy(self.exp_base_config)
+        config["exp_1"]["experiment"].update(
+            bucket_val="rolloutKey",
+            targeting={"NOT": {"SPLIT_PERCENTAGE": {"percentage": 0}}},
+        )
+        with create_temp_config_file(config) as f:
+            self.assertIsNone(init_manifest_validator("", f.name).err())
+            for fields in [{}, *({"rolloutKey": value} for value in ("", None, 123, True, [], {}))]:
+                with self.subTest(fields=fields):
+                    ctx = DeciderContext(user_id=USER_ID, extracted_fields=fields)
+                    decider = setup_decider(f, ctx, self.mock_span, self.event_logger)
+                    self.assertIsNone(decider.get_variant_without_expose("exp_1"))
+        self.event_logger.log.assert_not_called()
+
+    @unittest.skipUnless(
+        DECIDER_SUPPORTS_SPLIT_PERCENTAGE,
+        "split percentage targeting requires reddit-decider 1.19.0b5 or newer",
+    )
+    def test_split_percentage_rejects_explicit_field(self):
+        config = deepcopy(self.exp_base_config)
+        config["exp_1"]["experiment"]["targeting"] = {
+            "SPLIT_PERCENTAGE": {"field": "user_id", "percentage": 50}
+        }
+        with create_temp_config_file(config) as f:
+            error = init_manifest_validator("", f.name).err()
+        self.assertIsNotNone(error)
+        self.assertIn("SPLIT_PERCENTAGE", error)
 
     def test_none_returned_on_get_variant_call_with_bad_id(self):
         config = {
