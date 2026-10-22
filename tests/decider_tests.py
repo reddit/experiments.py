@@ -1266,6 +1266,17 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                             self.assertEqual(getattr(decider, method_name)(**kwargs), expected)
                         self.event_logger.log.assert_not_called()
 
+    def test_context_fields_reject_malformed_field_names(self):
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+            for method_name in ("get_variant", "get_variant_without_expose"):
+                for name in (None, 123, "", "other_fields"):
+                    with self.subTest(method=method_name, name=name):
+                        method = getattr(decider, method_name)
+                        with self.assertLogs("reddit_decider", level="WARNING"):
+                            self.assertIsNone(method("exp_1", context_fields={name: "anything"}))
+                        self.event_logger.log.assert_not_called()
+
     def test_custom_identifier_override_preserves_context(self):
         experiment = self.exp_base_config["exp_1"]["experiment"]
         experiment["bucket_val"] = "custom_identifier"
@@ -1310,6 +1321,41 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                             )
                         else:
                             self.event_logger.log.assert_not_called()
+                        self.assertEqual(context.to_dict(), original_context)
+                        self.assertEqual(fields, {"custom_identifier": "original"})
+                        self.assertEqual(decider.get_variant_without_expose("exp_1"), "control")
+
+    def test_context_fields_override_preserves_context(self):
+        experiment = self.exp_base_config["exp_1"]["experiment"]
+        experiment["bucket_val"] = "custom_identifier"
+        experiment["variants"] = [
+            {"range_start": 0.0, "range_end": 1.0, "name": "control"},
+            {"range_start": 1.0, "range_end": 1.0, "name": "enabled"},
+        ]
+        experiment["overrides"] = [{"enabled": {"EQ": {"field": "tier", "values": ["gold"]}}}]
+        fields = {"custom_identifier": "original"}
+        context = DeciderContext(user_id=USER_ID, extracted_fields=fields)
+        original_context = context.to_dict()
+
+        with create_temp_config_file(self.exp_base_config) as f:
+            decider = setup_decider(f, context, self.mock_span, self.event_logger)
+            for method_name in ("get_variant", "get_variant_without_expose"):
+                for tier, expected in (("gold", "enabled"), ("silver", "control")):
+                    with self.subTest(method=method_name, tier=tier):
+                        self.event_logger.reset_mock()
+                        context_fields = {"custom_identifier": "per_call", "tier": tier}
+                        method = getattr(decider, method_name)
+                        self.assertEqual(method("exp_1", context_fields=context_fields), expected)
+                        if method_name == "get_variant":
+                            self.event_logger.log.assert_called_once()
+                            inputs = self.event_logger.log.call_args.kwargs["inputs"]
+                            self.assertEqual(inputs["custom_identifier"], "per_call")
+                            self.assertNotIn("tier", inputs)
+                        else:
+                            self.event_logger.log.assert_not_called()
+                        self.assertEqual(
+                            context_fields, {"custom_identifier": "per_call", "tier": tier}
+                        )
                         self.assertEqual(context.to_dict(), original_context)
                         self.assertEqual(fields, {"custom_identifier": "original"})
                         self.assertEqual(decider.get_variant_without_expose("exp_1"), "control")

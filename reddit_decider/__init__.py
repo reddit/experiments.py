@@ -10,8 +10,10 @@ from typing import Callable
 from typing import cast
 from typing import Dict
 from typing import IO
+from typing import Iterable
 from typing import List
 from typing import Optional
+from typing import Tuple
 from typing import Type
 from typing import TypeVar
 from typing import Union
@@ -340,7 +342,11 @@ class Decider:
         return out
 
     def get_variant(
-        self, experiment_name: str, **exposure_kwargs: Optional[Dict[str, Any]]
+        self,
+        experiment_name: str,
+        *,
+        context_fields: Optional[Dict[str, Any]] = None,
+        **exposure_kwargs: Optional[Dict[str, Any]],
     ) -> Optional[str]:
         """Return a bucketing variant, if any, with auto-exposure.
 
@@ -354,13 +360,20 @@ class Decider:
 
         :param experiment_name: Name of the experiment you want a variant for.
 
+        :param context_fields: Optional fields used for targeting, overrides, and bucketing
+            in this call only. They take precedence over the stored :code:`DeciderContext`.
+            Exposure events use the stored fields plus the experiment's bucketing value.
+
         :param exposure_kwargs:  Additional arguments that will be passed
             to :code:`events_logger` (keys must be part of v2 event schema,
             use dicts for nested fields) under :code:`inputs` and as :code:`kwargs`
 
         :return: Variant name if a variant is assigned, :code:`None` otherwise.
         """
-        ctx = self._decider_context.to_dict()
+        ctx = self._context_with_fields((context_fields or {}).items())
+        if ctx is None:
+            return None
+
         decision = self._get_decision(experiment_name, ctx)
 
         if decision is None:
@@ -374,7 +387,9 @@ class Decider:
 
         return decision.variant
 
-    def get_variant_without_expose(self, experiment_name: str) -> Optional[str]:
+    def get_variant_without_expose(
+        self, experiment_name: str, *, context_fields: Optional[Dict[str, Any]] = None
+    ) -> Optional[str]:
         """Return a bucketing variant, if any, without emitting exposure event.
 
         The :code:`expose()` function is available to be manually called afterward.
@@ -387,9 +402,16 @@ class Decider:
 
         :param experiment_name: Name of the experiment you want a variant for.
 
+        :param context_fields: Optional fields used for targeting, overrides, and bucketing
+            in this call only. They take precedence over the stored :code:`DeciderContext`.
+            Exposure events use the stored fields plus the experiment's bucketing value.
+
         :return: Variant name if a variant is assigned, None otherwise.
         """
-        ctx = self._decider_context.to_dict()
+        ctx = self._context_with_fields((context_fields or {}).items())
+        if ctx is None:
+            return None
+
         decision = self._get_decision(experiment_name, ctx)
 
         if decision is None:
@@ -463,20 +485,16 @@ class Decider:
             }
         )
 
-    def _context_for_identifier(self, identifier: str, identifier_type: str) -> Optional[Dict]:
-        if (
-            not isinstance(identifier_type, str)
-            or not identifier_type
-            or identifier_type == "other_fields"
-        ):
-            logger.warning(
-                'identifier_type must be a non-empty field name other than "other_fields".'
-            )
-            return None
-
+    def _context_with_fields(self, fields: Iterable[Tuple[str, Any]]) -> Optional[Dict]:
         ctx = self._decider_context.to_dict()
-        ctx[identifier_type] = identifier
-        ctx["other_fields"][identifier_type] = identifier
+        for name, value in fields:
+            if not isinstance(name, str) or not name or name == "other_fields":
+                logger.warning(
+                    'Context field names must be non-empty strings other than "other_fields".'
+                )
+                return None
+            ctx[name] = value
+            ctx["other_fields"][name] = value
         return ctx
 
     def get_variant_for_identifier(
@@ -518,7 +536,7 @@ class Decider:
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
-        ctx = self._context_for_identifier(identifier, identifier_type)
+        ctx = self._context_with_fields([(identifier_type, identifier)])
         if ctx is None:
             return None
 
@@ -574,7 +592,7 @@ class Decider:
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
-        ctx = self._context_for_identifier(identifier, identifier_type)
+        ctx = self._context_with_fields([(identifier_type, identifier)])
         if ctx is None:
             return None
 
@@ -687,7 +705,7 @@ class Decider:
 
         :return: list of experiment dicts with non-:code:`None` variants.
         """
-        ctx = self._context_for_identifier(identifier, identifier_type)
+        ctx = self._context_with_fields([(identifier_type, identifier)])
         if ctx is None:
             return []
 

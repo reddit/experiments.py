@@ -55,6 +55,18 @@ This also works with `get_variant_for_identifier_without_expose` and
 `get_all_variants_for_identifier_without_expose`. Empty names and the reserved
 `other_fields` name are rejected.
 
+`get_variant` and `get_variant_without_expose` also accept fields for one call:
+
+```python
+variant = request.decider.get_variant(
+    "merchant_experiment", context_fields={"merchant_tier": "gold"}
+)
+```
+
+These fields take precedence over stored fields for that call only. Empty names and
+`other_fields` are rejected here too. Exposure events use the stored fields plus the
+experiment's bucketing value.
+
 Other names are accepted, including `experiment`, `variant`, `span`, `event_type`,
 and `inputs`. In exposure events, those top-level logger arguments keep their
 metadata values, and a custom field with the same name is kept in `inputs`.
