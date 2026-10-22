@@ -10,8 +10,10 @@ from typing import Callable
 from typing import cast
 from typing import Dict
 from typing import IO
+from typing import Iterable
 from typing import List
 from typing import Optional
+from typing import Tuple
 from typing import Type
 from typing import TypeVar
 from typing import Union
@@ -30,7 +32,6 @@ from rust_decider import DeciderException
 from rust_decider import Decision
 from rust_decider import FeatureNotFoundException
 from rust_decider import ValueTypeMismatchException
-from typing_extensions import Literal
 
 from .prometheus_metrics import experiments_client_counter
 
@@ -50,6 +51,7 @@ except PackageNotFoundError:
 logger = logging.getLogger(__name__)
 
 EMPLOYEE_ROLES = ["employee", "contractor"]
+# Retained for callers that import this list; custom identifier names are also supported.
 IDENTIFIERS = [
     "user_id",
     "device_id",
@@ -132,7 +134,7 @@ class DeciderContext:
         if self._conversion_pixel_id is not None:
             ef["conversion_pixel_id"] = self._conversion_pixel_id
 
-        return {
+        fields = {
             "user_id": self._user_id,
             "device_id": self._device_id,
             "country_code": self._country_code,
@@ -143,9 +145,10 @@ class DeciderContext:
             "origin_service": self._origin_service,
             "cookie_created_timestamp": self._cookie_created_timestamp,
             "loid_created_timestamp": self._loid_created_timestamp,
-            "other_fields": ef,
             **ef,
         }
+        # Native typed fields use top-level values; all other fields use this fallback.
+        return {**fields, "other_fields": fields}
 
     def to_event_dict(self) -> Dict:
         user_fields = {
@@ -265,13 +268,17 @@ class Decider:
 
         event_fields = {**event_fields, **{bucket_val: bucketing_value}}
 
+        # Custom fields may share these names; logger metadata wins at the top level.
+        # `self` would collide with the bound log method's parameter, so it stays in inputs.
         self._event_logger.log(
-            experiment=experiment,
-            variant=event_variant,
-            span=self._span,
-            event_type=EventType.EXPOSE,
-            inputs=event_fields,
-            **event_fields,
+            **{
+                **{k: v for k, v in event_fields.items() if k != "self"},
+                "experiment": experiment,
+                "variant": event_variant,
+                "span": self._span,
+                "event_type": EventType.EXPOSE,
+                "inputs": event_fields,
+            }
         )
         return
 
@@ -311,13 +318,17 @@ class Decider:
 
             event_fields = {**event_fields, **{bucket_val: bucketing_value}}
 
+            # Custom fields may share these names; logger metadata wins at the top level.
+            # `self` would collide with the bound log method's parameter, so it stays in inputs.
             self._event_logger.log(
-                experiment=experiment,
-                variant=event_variant,
-                span=self._span,
-                event_type=EventType.EXPOSE,
-                inputs=event_fields,
-                **event_fields,
+                **{
+                    **{k: v for k, v in event_fields.items() if k != "self"},
+                    "experiment": experiment,
+                    "variant": event_variant,
+                    "span": self._span,
+                    "event_type": EventType.EXPOSE,
+                    "inputs": event_fields,
+                }
             )
         return
 
@@ -331,7 +342,11 @@ class Decider:
         return out
 
     def get_variant(
-        self, experiment_name: str, **exposure_kwargs: Optional[Dict[str, Any]]
+        self,
+        experiment_name: str,
+        *,
+        context_fields: Optional[Dict[str, Any]] = None,
+        **exposure_kwargs: Optional[Dict[str, Any]],
     ) -> Optional[str]:
         """Return a bucketing variant, if any, with auto-exposure.
 
@@ -345,13 +360,20 @@ class Decider:
 
         :param experiment_name: Name of the experiment you want a variant for.
 
+        :param context_fields: Optional fields used for targeting, overrides, and bucketing
+            in this call only. They take precedence over the stored :code:`DeciderContext`.
+            Exposure events use the stored fields plus the experiment's bucketing value.
+
         :param exposure_kwargs:  Additional arguments that will be passed
             to :code:`events_logger` (keys must be part of v2 event schema,
             use dicts for nested fields) under :code:`inputs` and as :code:`kwargs`
 
         :return: Variant name if a variant is assigned, :code:`None` otherwise.
         """
-        ctx = self._decider_context.to_dict()
+        ctx = self._context_with_fields((context_fields or {}).items())
+        if ctx is None:
+            return None
+
         decision = self._get_decision(experiment_name, ctx)
 
         if decision is None:
@@ -365,7 +387,9 @@ class Decider:
 
         return decision.variant
 
-    def get_variant_without_expose(self, experiment_name: str) -> Optional[str]:
+    def get_variant_without_expose(
+        self, experiment_name: str, *, context_fields: Optional[Dict[str, Any]] = None
+    ) -> Optional[str]:
         """Return a bucketing variant, if any, without emitting exposure event.
 
         The :code:`expose()` function is available to be manually called afterward.
@@ -378,9 +402,16 @@ class Decider:
 
         :param experiment_name: Name of the experiment you want a variant for.
 
+        :param context_fields: Optional fields used for targeting, overrides, and bucketing
+            in this call only. They take precedence over the stored :code:`DeciderContext`.
+            Exposure events use the stored fields plus the experiment's bucketing value.
+
         :return: Variant name if a variant is assigned, None otherwise.
         """
-        ctx = self._decider_context.to_dict()
+        ctx = self._context_with_fields((context_fields or {}).items())
+        if ctx is None:
+            return None
+
         decision = self._get_decision(experiment_name, ctx)
 
         if decision is None:
@@ -441,28 +472,36 @@ class Decider:
             stop_ts=feature.stop_ts,
         )
 
+        # Custom fields may share these names; logger metadata wins at the top level.
+        # `self` would collide with the bound log method's parameter, so it stays in inputs.
         self._event_logger.log(
-            experiment=experiment,
-            variant=variant_name,
-            span=self._span,
-            event_type=EventType.EXPOSE,
-            inputs=event_fields,
-            **event_fields,
+            **{
+                **{k: v for k, v in event_fields.items() if k != "self"},
+                "experiment": experiment,
+                "variant": variant_name,
+                "span": self._span,
+                "event_type": EventType.EXPOSE,
+                "inputs": event_fields,
+            }
         )
+
+    def _context_with_fields(self, fields: Iterable[Tuple[str, Any]]) -> Optional[Dict]:
+        ctx = self._decider_context.to_dict()
+        for name, value in fields:
+            if not isinstance(name, str) or not name or name == "other_fields":
+                logger.warning(
+                    'Context field names must be non-empty strings other than "other_fields".'
+                )
+                return None
+            ctx[name] = value
+            ctx["other_fields"][name] = value
+        return ctx
 
     def get_variant_for_identifier(
         self,
         experiment_name: str,
         identifier: str,
-        identifier_type: Literal[
-            "user_id",
-            "device_id",
-            "canonical_url",
-            "subreddit_id",
-            "ad_account_id",
-            "business_id",
-            "conversion_pixel_id",
-        ],
+        identifier_type: str,
         **exposure_kwargs: Optional[Dict[str, Any]],
     ) -> Optional[str]:
         """Return a bucketing variant, if any, with auto-exposure for a given :code:`identifier`.
@@ -497,16 +536,9 @@ class Decider:
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
-        if identifier_type not in IDENTIFIERS:
-            logger.warning(
-                f'"{identifier_type}" is not one of supported "identifier_type": {IDENTIFIERS}.'
-            )
+        ctx = self._context_with_fields([(identifier_type, identifier)])
+        if ctx is None:
             return None
-
-        ctx = self._decider_context.to_dict()
-        ctx[identifier_type] = identifier
-        if identifier_type == "conversion_pixel_id":
-            ctx["other_fields"][identifier_type] = identifier
 
         decision = self._get_decision(experiment_name, ctx)
 
@@ -525,15 +557,7 @@ class Decider:
         self,
         experiment_name: str,
         identifier: str,
-        identifier_type: Literal[
-            "user_id",
-            "device_id",
-            "canonical_url",
-            "subreddit_id",
-            "ad_account_id",
-            "business_id",
-            "conversion_pixel_id",
-        ],
+        identifier_type: str,
     ) -> Optional[str]:
         """Return a bucketing variant, if any, without emitting exposure event for a given :code:`identifier`.
 
@@ -568,16 +592,9 @@ class Decider:
 
         :return: Variant name if a variant is assigned, None otherwise.
         """
-        if identifier_type not in IDENTIFIERS:
-            logger.warning(
-                f'"{identifier_type}" is not one of supported "identifier_type": {IDENTIFIERS}.'
-            )
+        ctx = self._context_with_fields([(identifier_type, identifier)])
+        if ctx is None:
             return None
-
-        ctx = self._decider_context.to_dict()
-        ctx[identifier_type] = identifier
-        if identifier_type == "conversion_pixel_id":
-            ctx["other_fields"][identifier_type] = identifier
 
         decision = self._get_decision(experiment_name, ctx)
 
@@ -654,15 +671,7 @@ class Decider:
     def get_all_variants_for_identifier_without_expose(
         self,
         identifier: str,
-        identifier_type: Literal[
-            "user_id",
-            "device_id",
-            "canonical_url",
-            "subreddit_id",
-            "ad_account_id",
-            "business_id",
-            "conversion_pixel_id",
-        ],
+        identifier_type: str,
     ) -> List[Dict[str, Union[str, int]]]:
         """Return a list of experiment dicts for experiments having :code:`bucket_val` match
         :code:`identifier_type`, for a given :code:`identifier`, in this format:
@@ -696,16 +705,9 @@ class Decider:
 
         :return: list of experiment dicts with non-:code:`None` variants.
         """
-        if identifier_type not in IDENTIFIERS:
-            logger.warning(
-                f'"{identifier_type}" is not one of supported "identifier_type": {IDENTIFIERS}.'
-            )
+        ctx = self._context_with_fields([(identifier_type, identifier)])
+        if ctx is None:
             return []
-
-        ctx = self._decider_context.to_dict()
-        ctx[identifier_type] = identifier
-        if identifier_type == "conversion_pixel_id":
-            ctx["other_fields"][identifier_type] = identifier
 
         all_decisions = self._get_all_decisions(ctx=ctx, bucketing_field_filter=identifier_type)
 

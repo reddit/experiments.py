@@ -36,6 +36,43 @@ def my_method(request):
        pass
 ```
 
+Custom context fields can be returned by `request_field_extractor` or supplied in
+`DeciderContext(extracted_fields={...})`. Values may be strings, booleans, integers,
+floats, or `None`. Fields without a native Rust type are passed through
+`other_fields` for targeting, overrides, and bucketing.
+
+The identifier APIs also accept custom field names without a library update:
+
+```python
+variant = request.decider.get_variant_for_identifier(
+    "merchant_experiment", identifier="merchant_123", identifier_type="merchant_id"
+)
+```
+
+The experiment must use `merchant_id` as its bucket field to bucket by this value.
+The override applies only to this call; the stored request context is unchanged.
+This also works with `get_variant_for_identifier_without_expose` and
+`get_all_variants_for_identifier_without_expose`. Empty names and the reserved
+`other_fields` name are rejected.
+
+`get_variant` and `get_variant_without_expose` also accept fields for one call:
+
+```python
+variant = request.decider.get_variant(
+    "merchant_experiment", context_fields={"merchant_tier": "gold"}
+)
+```
+
+These fields take precedence over stored fields for that call only. Empty names and
+`other_fields` are rejected here too. Exposure events use the stored fields plus the
+experiment's bucketing value.
+
+Other names are accepted, including `experiment`, `variant`, `span`, `event_type`,
+and `inputs`. In exposure events, those top-level logger arguments keep their
+metadata values, and a custom field with the same name is kept in `inputs`.
+A custom `self` field is also accepted, but exposure events log it only in `inputs`
+because the event logger's `log` method already has a `self` parameter.
+
 See [the documentation] for more information (documentation builds can be found [here](https://readthedocs.org/projects/reddit-experiments/builds/))
 .
 
