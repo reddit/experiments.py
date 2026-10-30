@@ -27,10 +27,10 @@ logger = logging.getLogger()
 DECIDER_SUPPORTS_PROPERTY_REGISTRY = Version(package_version("reddit-decider")) >= Version("1.18.1")
 DECIDER_SUPPORTS_COHORT_FIELDS = Version(package_version("reddit-decider")) >= Version("1.19.1")
 DECIDER_SUPPORTS_TARGETING_GATES = Version(package_version("reddit-decider")) >= Version("1.19.1")
-DECIDER_SUPPORTS_MEGS_IN_HOLDOUT_GROUPS = Version(package_version("reddit-decider")) >= Version("1.19.1")
-DECIDER_SUPPORTS_SPLIT_PERCENTAGE = Version(package_version("reddit-decider")) >= Version(
+DECIDER_SUPPORTS_MEGS_IN_HOLDOUT_GROUPS = Version(package_version("reddit-decider")) >= Version(
     "1.19.1"
 )
+DECIDER_SUPPORTS_SPLIT_PERCENTAGE = Version(package_version("reddit-decider")) >= Version("1.19.1")
 DECIDER_SUPPORTS_REGEX = Version(package_version("reddit-decider")) >= Version("1.19.1")
 DECIDER_SUPPORTS_PARENT = Version(package_version("reddit-decider")) >= Version("1.19.1")
 
