@@ -25,14 +25,14 @@ from reddit_decider import init_decider_parser
 logger = logging.getLogger()
 
 DECIDER_SUPPORTS_PROPERTY_REGISTRY = Version(package_version("reddit-decider")) >= Version("1.18.1")
-DECIDER_SUPPORTS_COHORT_FIELDS = Version(package_version("reddit-decider")) >= Version("1.19.0b1")
-DECIDER_SUPPORTS_TARGETING_GATES = Version(package_version("reddit-decider")) >= Version("1.19.0b2")
+DECIDER_SUPPORTS_COHORT_FIELDS = Version(package_version("reddit-decider")) >= Version("1.19.1")
+DECIDER_SUPPORTS_TARGETING_GATES = Version(package_version("reddit-decider")) >= Version("1.19.1")
 DECIDER_SUPPORTS_MEGS_IN_HOLDOUT_GROUPS = Version(package_version("reddit-decider")) >= Version(
-    "1.19.0b2"
+    "1.19.1"
 )
-DECIDER_SUPPORTS_SPLIT_PERCENTAGE = Version(package_version("reddit-decider")) >= Version(
-    "1.19.0b5"
-)
+DECIDER_SUPPORTS_SPLIT_PERCENTAGE = Version(package_version("reddit-decider")) >= Version("1.19.1")
+DECIDER_SUPPORTS_REGEX = Version(package_version("reddit-decider")) >= Version("1.19.1")
+DECIDER_SUPPORTS_PARENT = Version(package_version("reddit-decider")) >= Version("1.19.1")
 
 COHORT_REGISTRY = {
     "id": 1337,
@@ -613,7 +613,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     @unittest.skipUnless(
         DECIDER_SUPPORTS_COHORT_FIELDS,
-        "cohort registries require reddit-decider 1.19.0b1 or newer",
+        "cohort registries require reddit-decider 1.19.1 or newer",
     )
     def test_manifest_with_cohort_registry_preserves_experiments(self):
         config = deepcopy(self.exp_base_config)
@@ -628,7 +628,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     @unittest.skipUnless(
         DECIDER_SUPPORTS_COHORT_FIELDS,
-        "cohort registries require reddit-decider 1.19.0b1 or newer",
+        "cohort registries require reddit-decider 1.19.1 or newer",
     )
     def test_invalid_cohort_definition_reports_manifest_error(self):
         for key, value in [("group_id", ""), ("value_type", "unsupported")]:
@@ -655,7 +655,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     @unittest.skipUnless(
         DECIDER_SUPPORTS_COHORT_FIELDS,
-        "cohort registries require reddit-decider 1.19.0b1 or newer",
+        "cohort registries require reddit-decider 1.19.1 or newer",
     )
     def test_cohort_targeting_uses_typed_context_without_mutating_input(self):
         config = deepcopy(self.exp_base_config)
@@ -677,7 +677,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     @unittest.skipUnless(
         DECIDER_SUPPORTS_TARGETING_GATES,
-        "targeting gates require reddit-decider 1.19.0b2 or newer",
+        "targeting gates require reddit-decider 1.19.1 or newer",
     )
     def test_targeting_gate_controls_experiment(self):
         config = deepcopy(self.exp_base_config)
@@ -719,6 +719,111 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
                     decider = setup_decider(f, ctx, self.mock_span, self.event_logger)
 
                     self.assertEqual(decider.get_variant_without_expose("exp_1"), expected)
+
+    @unittest.skipUnless(
+        DECIDER_SUPPORTS_REGEX,
+        "regex targeting requires reddit-decider 1.19.1 or newer",
+    )
+    def test_regex_targeting_matches_any_pattern(self):
+        config = deepcopy(self.exp_base_config)
+        config["exp_1"]["experiment"]["targeting"] = {
+            "REGEX": {"field": "locale", "values": ["(?i)^en-US$", "^fr-FR$"]}
+        }
+
+        with create_temp_config_file(config) as f:
+            self.assertIsNone(init_manifest_validator("", f.name).err())
+            for locale, expected in (
+                ("en-US", "variant_4"),
+                ("EN-us", "variant_4"),
+                ("fr-FR", "variant_4"),
+                ("FR-fr", None),
+                ("de-DE", None),
+                ("prefix-en-US", None),
+                ("", None),
+                (None, None),
+            ):
+                with self.subTest(locale=locale):
+                    ctx = DeciderContext(user_id=USER_ID, locale=locale)
+                    decider = setup_decider(f, ctx, self.mock_span, self.event_logger)
+                    self.assertEqual(decider.get_variant_without_expose("exp_1"), expected)
+        self.event_logger.log.assert_not_called()
+
+    @unittest.skipUnless(
+        DECIDER_SUPPORTS_REGEX,
+        "regex targeting requires reddit-decider 1.19.1 or newer",
+    )
+    def test_invalid_regex_reports_manifest_error(self):
+        config = deepcopy(self.exp_base_config)
+        config["exp_1"]["experiment"]["targeting"] = {"REGEX": {"field": "locale", "values": ["["]}}
+        with create_temp_config_file(config) as f:
+            error = init_manifest_validator("", f.name).err()
+        self.assertIsNotNone(error)
+        self.assertIn("REGEX", error)
+        self.assertIn("exp_1", error)
+
+    @unittest.skipUnless(
+        DECIDER_SUPPORTS_PARENT,
+        "parent targeting requires reddit-decider 1.19.1 or newer",
+    )
+    def test_parent_targeting_matches_variant_without_exposing_parent(self):
+        for values, enabled, country, expected in (
+            (["control", "treatment"], True, "US", "variant_4"),
+            (["control"], True, "US", None),
+            (["TREATMENT"], True, "US", None),
+            (["treatment"], False, "US", None),
+            (["treatment"], True, "CA", None),
+        ):
+            with self.subTest(values=values, enabled=enabled, country=country):
+                self.event_logger.reset_mock()
+                config = deepcopy(self.exp_base_config)
+                parent = deepcopy(config["exp_1"])
+                # PARENT references the manifest key, even if metadata uses another name.
+                parent.update(id=2, name="parent_metadata_name", enabled=enabled)
+                parent["experiment"].update(
+                    targeting={"EQ": {"field": "country_code", "value": "US"}},
+                    variants=[{"name": "treatment", "range_start": 0.0, "range_end": 1.0}],
+                )
+                config["parent_manifest_key"] = parent
+                config["exp_1"]["experiment"]["targeting"] = {
+                    "PARENT": {"field": "parent_manifest_key", "values": values}
+                }
+                ctx = DeciderContext(
+                    user_id=USER_ID,
+                    country_code=country,
+                    logged_in=IS_LOGGED_IN,
+                    cookie_created_timestamp=COOKIE_CREATED_TIMESTAMP,
+                    extracted_fields=decider_field_extractor(None),
+                )
+                with create_temp_config_file(config) as f:
+                    self.assertIsNone(init_manifest_validator("", f.name).err())
+                    decider = setup_decider(f, ctx, self.mock_span, self.event_logger)
+                    self.assertEqual(decider.get_variant("exp_1"), expected)
+
+                if expected is None:
+                    self.event_logger.log.assert_not_called()
+                else:
+                    self.event_logger.log.assert_called_once()
+                    self.assert_exposure_event_fields(
+                        experiment_name="exp_1",
+                        variant=expected,
+                        event_fields=self.event_logger.log.call_args[1],
+                    )
+
+    @unittest.skipUnless(
+        DECIDER_SUPPORTS_PARENT,
+        "parent targeting requires reddit-decider 1.19.1 or newer",
+    )
+    def test_missing_parent_does_not_match_even_under_not(self):
+        parent = {"PARENT": {"field": "missing_parent", "values": ["treatment"]}}
+        for targeting in (parent, {"NOT": parent}):
+            with self.subTest(targeting=targeting):
+                config = deepcopy(self.exp_base_config)
+                config["exp_1"]["experiment"]["targeting"] = targeting
+                with create_temp_config_file(config) as f:
+                    self.assertIsNone(init_manifest_validator("", f.name).err())
+                    decider = setup_decider(f, self.dc, self.mock_span, self.event_logger)
+                    self.assertIsNone(decider.get_variant("exp_1"))
+        self.event_logger.log.assert_not_called()
 
     @unittest.skipUnless(
         DECIDER_SUPPORTS_SPLIT_PERCENTAGE,
