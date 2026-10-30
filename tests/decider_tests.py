@@ -25,16 +25,16 @@ from reddit_decider import init_decider_parser
 logger = logging.getLogger()
 
 DECIDER_SUPPORTS_PROPERTY_REGISTRY = Version(package_version("reddit-decider")) >= Version("1.18.1")
-DECIDER_SUPPORTS_COHORT_FIELDS = Version(package_version("reddit-decider")) >= Version("1.19.0b1")
-DECIDER_SUPPORTS_TARGETING_GATES = Version(package_version("reddit-decider")) >= Version("1.19.0b2")
+DECIDER_SUPPORTS_COHORT_FIELDS = Version(package_version("reddit-decider")) >= Version("1.19.1")
+DECIDER_SUPPORTS_TARGETING_GATES = Version(package_version("reddit-decider")) >= Version("1.19.1")
 DECIDER_SUPPORTS_MEGS_IN_HOLDOUT_GROUPS = Version(package_version("reddit-decider")) >= Version(
-    "1.19.0b2"
+    "1.19.1"
 )
 DECIDER_SUPPORTS_SPLIT_PERCENTAGE = Version(package_version("reddit-decider")) >= Version(
-    "1.19.0b5"
+    "1.19.1"
 )
-DECIDER_SUPPORTS_REGEX = Version(package_version("reddit-decider")) >= Version("1.19.0")
-DECIDER_SUPPORTS_PARENT = Version(package_version("reddit-decider")) >= Version("1.19.0")
+DECIDER_SUPPORTS_REGEX = Version(package_version("reddit-decider")) >= Version("1.19.1")
+DECIDER_SUPPORTS_PARENT = Version(package_version("reddit-decider")) >= Version("1.19.1")
 
 COHORT_REGISTRY = {
     "id": 1337,
@@ -615,7 +615,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     @unittest.skipUnless(
         DECIDER_SUPPORTS_COHORT_FIELDS,
-        "cohort registries require reddit-decider 1.19.0b1 or newer",
+        "cohort registries require reddit-decider 1.19.1 or newer",
     )
     def test_manifest_with_cohort_registry_preserves_experiments(self):
         config = deepcopy(self.exp_base_config)
@@ -630,7 +630,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     @unittest.skipUnless(
         DECIDER_SUPPORTS_COHORT_FIELDS,
-        "cohort registries require reddit-decider 1.19.0b1 or newer",
+        "cohort registries require reddit-decider 1.19.1 or newer",
     )
     def test_invalid_cohort_definition_reports_manifest_error(self):
         for key, value in [("group_id", ""), ("value_type", "unsupported")]:
@@ -657,7 +657,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     @unittest.skipUnless(
         DECIDER_SUPPORTS_COHORT_FIELDS,
-        "cohort registries require reddit-decider 1.19.0b1 or newer",
+        "cohort registries require reddit-decider 1.19.1 or newer",
     )
     def test_cohort_targeting_uses_typed_context_without_mutating_input(self):
         config = deepcopy(self.exp_base_config)
@@ -679,7 +679,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     @unittest.skipUnless(
         DECIDER_SUPPORTS_TARGETING_GATES,
-        "targeting gates require reddit-decider 1.19.0b2 or newer",
+        "targeting gates require reddit-decider 1.19.1 or newer",
     )
     def test_targeting_gate_controls_experiment(self):
         config = deepcopy(self.exp_base_config)
@@ -724,7 +724,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     @unittest.skipUnless(
         DECIDER_SUPPORTS_REGEX,
-        "regex targeting requires reddit-decider 1.19.0 or newer",
+        "regex targeting requires reddit-decider 1.19.1 or newer",
     )
     def test_regex_targeting_matches_any_pattern(self):
         config = deepcopy(self.exp_base_config)
@@ -752,7 +752,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     @unittest.skipUnless(
         DECIDER_SUPPORTS_REGEX,
-        "regex targeting requires reddit-decider 1.19.0 or newer",
+        "regex targeting requires reddit-decider 1.19.1 or newer",
     )
     def test_invalid_regex_reports_manifest_error(self):
         config = deepcopy(self.exp_base_config)
@@ -765,7 +765,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     @unittest.skipUnless(
         DECIDER_SUPPORTS_PARENT,
-        "parent targeting requires reddit-decider 1.19.0 or newer",
+        "parent targeting requires reddit-decider 1.19.1 or newer",
     )
     def test_parent_targeting_matches_variant_without_exposing_parent(self):
         for values, enabled, country, expected in (
@@ -813,7 +813,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
 
     @unittest.skipUnless(
         DECIDER_SUPPORTS_PARENT,
-        "parent targeting requires reddit-decider 1.19.0 or newer",
+        "parent targeting requires reddit-decider 1.19.1 or newer",
     )
     def test_missing_parent_does_not_match_even_under_not(self):
         parent = {"PARENT": {"field": "missing_parent", "values": ["treatment"]}}
