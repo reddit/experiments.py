@@ -631,7 +631,7 @@ class TestDeciderGetVariantAndExpose(unittest.TestCase):
         "cohort registries require reddit-decider 1.19.1 or newer",
     )
     def test_invalid_cohort_definition_reports_manifest_error(self):
-        for key, value in [("group_id", ""), ("value_type", "unsupported")]:
+        for key, value in [("group_id", ""), ("value_type", "")]:
             with self.subTest(key=key):
                 config = deepcopy(self.exp_base_config)
                 config["$cohort_fields"] = deepcopy(COHORT_REGISTRY)
