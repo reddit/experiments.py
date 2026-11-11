@@ -21,7 +21,8 @@ packaging==20.8
 pathspec==0.8.1
 pluggy==0.13.1
 posix-ipc==1.0.5
-py==1.10.0
+py==1.10.0; python_version < "3.11"
+py==1.11.0; python_version >= "3.11"
 pycodestyle==2.7.0
 pyflakes==2.3.0
 Pygments==2.7.3
@@ -35,7 +36,7 @@ six==1.15.0
 snowballstemmer==2.0.0
 thrift==0.13.0
 toml==0.10.2
-typed-ast==1.4.3
+typed-ast==1.4.3; python_version < "3.11"
 typing-extensions==4.2.0
 urllib3==1.26.2
 zope.event==4.5.0
