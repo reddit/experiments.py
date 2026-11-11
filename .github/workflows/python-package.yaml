@@ -17,17 +17,11 @@ jobs:
         - python-version: '3.8'
           reddit-decider-version: '1.15.0'
         - python-version: '3.9'
-          reddit-decider-version: '1.15.0'
-        - python-version: '3.9'
-          reddit-decider-version: '1.18.1'
-        - python-version: '3.9'
-          reddit-decider-version: '1.21.0'
+          reddit-decider-version: '1.21.2'
         - python-version: '3.10'
-          reddit-decider-version: '1.15.0'
-        - python-version: '3.10'
-          reddit-decider-version: '1.18.1'
-        - python-version: '3.10'
-          reddit-decider-version: '1.21.0'
+          reddit-decider-version: '1.21.2'
+        - python-version: '3.11'
+          reddit-decider-version: '1.21.2'
 
     steps:
     - uses: actions/checkout@v2
